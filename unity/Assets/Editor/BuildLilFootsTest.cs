@@ -176,7 +176,7 @@ namespace LilFoots.EditorTools
             SpriteGo("cedarC", cedar, new Vector3(12.7f, 0.02f, 2f), 1.7f, 10, new Color(0.92f, 1f, 0.92f));
 
             // ---- player rig ----
-            float footH = feetL[0].bounds.size.y;
+            float footH = 0.24f; // ankle line (rig-info.json: lily 0.24, buddy/emma 0.23)
             GameObject player = new GameObject("Player");
             player.tag = "Player";
             player.transform.position = new Vector3(4f, 0f, 0f);
@@ -191,13 +191,13 @@ namespace LilFoots.EditorTools
             fl.transform.SetParent(player.transform, false);
             var flsr = fl.AddComponent<SpriteRenderer>();
             flsr.sprite = feetL[0]; flsr.sortingOrder = 19;
-            fl.transform.localPosition = new Vector3(-0.22f, footH, 0f);
+            fl.transform.localPosition = new Vector3(-0.27f, footH, 0f);
 
             GameObject fr = new GameObject("footR");
             fr.transform.SetParent(player.transform, false);
             var frsr = fr.AddComponent<SpriteRenderer>();
             frsr.sprite = feetR[0]; frsr.sortingOrder = 18;
-            fr.transform.localPosition = new Vector3(0.22f, footH, 0f);
+            fr.transform.localPosition = new Vector3(0.295f, footH, 0f);
 
             GameObject rigAssetsGo = new GameObject("RigAssets");
             var ra = rigAssetsGo.AddComponent<LilFoots.RigAssets>();
