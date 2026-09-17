@@ -1,0 +1,77 @@
+name: Lil Foots Unity WebGL Test
+
+# One-screen Unity test build (Bude greenlit the Unity move Sept 17):
+# rigged cutout character (idle/run/jump) + flat cartoon map + particles -> WebGL
+on:
+  workflow_dispatch:
+    inputs:
+      btok:
+        description: 'Telegram bot token (status relay to Bude)'
+        required: true
+      uuser:
+        description: 'Unity account email'
+        required: true
+      upass:
+        description: 'Unity account password'
+        required: true
+
+jobs:
+  webgl:
+    name: Unity WebGL test build
+    runs-on: ubuntu-latest
+    container: unityci/editor:ubuntu-6000.5.11f1-webgl-3.2.2
+    timeout-minutes: 40
+    env:
+      BIG_CHAT: "7257834686"
+      BTOK: ${{ inputs.btok }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Activate license
+        run: |
+          LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
+          if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
+          "$LIC" --activate-all --include-personal --username "${{ inputs.uuser }}" --password "${{ inputs.upass }}" > /tmp/act.log 2>&1 || true
+          grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log && echo "LICENSE OK" || (echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 1)
+      - name: Build WebGL test
+        run: |
+          set +e
+          UARGS="-batchmode -quit -logFile $GITHUB_WORKSPACE/unity-editor.log -projectPath $GITHUB_WORKSPACE/unity -executeMethod LilFoots.EditorTools.BuildLilFootsTest.Build"
+          xvfb-run -a /opt/unity/Editor/Unity $UARGS
+          CODE=$?
+          if [ "$CODE" -ne 0 ]; then
+            echo "First attempt exit $CODE - retrying with -nographics"
+            /opt/unity/Editor/Unity -batchmode -quit -nographics -logFile $GITHUB_WORKSPACE/unity-editor2.log -projectPath $GITHUB_WORKSPACE/unity -executeMethod LilFoots.EditorTools.BuildLilFootsTest.Build
+            CODE=$?
+          fi
+          echo "UNITY EXIT: $CODE"
+          cat unity/build_result.txt 2>/dev/null || echo "no result file"
+          exit $CODE
+      - name: Zip build
+        run: |
+          cd unity/Build
+          zip -rq $GITHUB_WORKSPACE/lilfoots-unity-webgl.zip .
+          ls -la $GITHUB_WORKSPACE/lilfoots-unity-webgl.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lilfoots-unity-webgl
+          path: lilfoots-unity-webgl.zip
+          retention-days: 14
+      - name: Relay success to Bude
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot$BTOK/sendMessage" -d chat_id=$BIG_CHAT \
+            -d text="Unity test build is done - WebGL demo going live on the play link shortly. Watch for my next message." > /dev/null
+      - name: Relay failure to MC
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot$BTOK/sendMessage" -d chat_id=$BIG_CHAT \
+            -d text="Unity test build FAILED - checking the logs, will fix and rerun. No action needed." > /dev/null
+      - name: Upload unity log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-editor-logs
+          path: |
+            unity-editor.log
+            unity-editor2.log
+          retention-days: 7

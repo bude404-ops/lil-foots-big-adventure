@@ -1,0 +1,79 @@
+name: Lil Foots Unity 2D Test
+
+# Unity test build (Bude's call, Sept 17): rigged character + clean map + effects.
+# WebGL demo build + headless QC pose shots, in one batch run.
+on:
+  workflow_dispatch:
+    inputs:
+      btok:
+        description: 'Telegram bot token'
+        required: true
+      uuser:
+        description: 'Unity account email'
+        required: true
+      upass:
+        description: 'Unity account password'
+        required: true
+
+jobs:
+  build:
+    name: WebGL test build + QC shots
+    runs-on: ubuntu-latest
+    container: unityci/editor:ubuntu-6000.5.11f1-webgl-3.2.2
+    timeout-minutes: 45
+    env:
+      BIG_CHAT: "7257834686"
+      BTOK: ${{ inputs.btok }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Activate license
+        run: |
+          LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
+          if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
+          "$LIC" --activate-all --include-personal --username "${{ inputs.uuser }}" --password "${{ inputs.upass }}" > /tmp/act.log 2>&1 || true
+          grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log && echo "LICENSE OK" || (echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 1)
+      - name: QC pose shots
+        id: qc
+        run: |
+          set +e
+          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit -nographics \
+            -logFile $GITHUB_WORKSPACE/unity-editor-qc.log -projectPath $GITHUB_WORKSPACE/unity-test/unity \
+            -executeMethod QCShots.Shoot
+          echo "qc_exit=$?" >> "$GITHUB_OUTPUT"
+          ls unity-test/unity/QCShots/ 2>/dev/null || (echo "no QC shots"; tail -30 $GITHUB_WORKSPACE/unity-editor-qc.log; exit 1)
+          exit 0
+      - name: Build WebGL
+        id: build
+        run: |
+          set +e
+          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit -nographics \
+            -logFile $GITHUB_WORKSPACE/unity-editor.log -projectPath $GITHUB_WORKSPACE/unity-test/unity \
+            -executeMethod BuildScript.BuildWebGL
+          echo "build_exit=$?" >> "$GITHUB_OUTPUT"
+          find unity-test/unity/dist -type f | head -20
+          exit 0
+      - name: Relay status + QC shot
+        if: always()
+        run: |
+          QCX="${{ steps.qc.outputs.qc_exit }}"; BX="${{ steps.build.outputs.build_exit }}"
+          if [ -f unity-test/unity/QCShots/run.png ]; then
+            curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" \
+              -F "chat_id=${BIG_CHAT}" -F "photo=@unity-test/unity/QCShots/run.png" \
+              -F "caption=LIL FOOTS UNITY TEST - QC render (run pose). QC=$QCX BUILD=$BX" || true
+          else
+            curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
+              -d "chat_id=${BIG_CHAT}" -d "text=LIL FOOTS UNITY TEST: QC=$QCX BUILD=$BX (no shot)" || true
+          fi
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lilfoots-unity-webgl
+          path: |
+            unity-test/unity/dist/**
+            unity-test/unity/QCShots/**
+            unity-editor*.log
+          retention-days: 7
+      - name: Fail flag
+        if: steps.build.outputs.build_exit != '0'
+        run: echo "BUILD FAILED"; exit 1
