@@ -33,3 +33,7 @@
 | Sept 17 | Facing flip, portal escape, cast select tap fix, sound+music | v0.4 shipped |
 | Sept 17 | Destructible cams/drones, lives/checkpoints, detection spawns hounds | v0.5 shipped |
 | Sept 17 | Real generated backgrounds (sky, treeline) replace code-drawn | v0.6 shipped |
+
+## 2026-09-17 ~6:15 PM ET — TOKEN SYMBOL SWITCH: BIG lettering -> FOOTPRINT
+- Bude (DM): "Big make sure the tokens have 👣 as their symbol"
+- Done same pass: token regenerated (all-gold coin, chunky black sasquatch footprint: big pad + 4 toes, dark outline, flat style), payload swapped in vertical-slice, QC'd in-world phone shot (tokens + HUD counter 1/36 both read footprint), zero page errors. Status: SHIPPED, awaiting verdict.
