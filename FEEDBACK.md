@@ -9,7 +9,8 @@
 ## Open items
 | Date | Item | Status |
 |------|------|--------|
-| Sept 17 | Bude's feedback on the background image (image 1) | NEVER RECEIVED — awaiting resend |
+| Sept 17 | Bude's background verdict (image 1, ~3:38 PM ET): "background is split into two sections — lower half should be where the player runs, upper should read as distance, looks weird" | RECEIVED → fixed in v0.8 (one continuous depth plate: sky→hazy distance→mist→near-forest floor; treeline demoted to light mid-veil). Reworked shot sent — awaiting verdict |
+| Sept 17 | Bude's earlier background feedback | was never received (pre-ledger); superseded by the 3:38 PM verdict above |
 | Sept 17 | One-at-a-time image rule for changes/approvals | ACTIVE — standing law |
 | Sept 17 | v0.7 painted platforms pass (grass/earth/roots slabs + foreground) | Built, pushed — awaiting Bude verdict (shot delivered after image-1 verdict per one-at-a-time rule) |
 | Sept 17 | GitHub Pages demo hosting (Bude request) | Workflow added — repo is PRIVATE on free plan, Pages needs the repo PUBLIC (Bude's call) |
