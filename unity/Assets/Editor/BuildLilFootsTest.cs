@@ -96,9 +96,8 @@ namespace LilFoots.EditorTools
             Sprite spark   = Load("art_spark.png", 0.5f, 0.5f);
             Sprite puff    = Load("art_puff.png", 0.5f, 0.5f);
 
-            Sprite[] bodies = { Load("rig_lily_body.png", 0.5f, 0f), Load("rig_buddy_body.png", 0.5f, 0f), Load("rig_emma_body.png", 0.5f, 0f) };
-            Sprite[] feetL  = { Load("rig_lily_footL.png", 0.5f, 1f), Load("rig_buddy_footL.png", 0.5f, 1f), Load("rig_emma_footL.png", 0.5f, 1f) };
-            Sprite[] feetR  = { Load("rig_lily_footR.png", 0.5f, 1f), Load("rig_buddy_footR.png", 0.5f, 1f), Load("rig_emma_footR.png", 0.5f, 1f) };
+            Sprite[] bodies = { Load("whole_lily.png", 0.5f, 0f), Load("whole_buddy.png", 0.5f, 0f), Load("whole_emma.png", 0.5f, 0f) };
+            Sprite[] feetL = null, feetR = null;   // whole-sprite mode: no cut pieces
 
             Scene sc = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -185,24 +184,13 @@ namespace LilFoots.EditorTools
             var bsr = body.AddComponent<SpriteRenderer>();
             bsr.sprite = bodies[0]; bsr.sortingOrder = 20;
 
-            GameObject fl = new GameObject("footL");
-            fl.transform.SetParent(player.transform, false);
-            var flsr = fl.AddComponent<SpriteRenderer>();
-            flsr.sprite = feetL[0]; flsr.sortingOrder = 19;
-
-            GameObject fr = new GameObject("footR");
-            fr.transform.SetParent(player.transform, false);
-            var frsr = fr.AddComponent<SpriteRenderer>();
-            frsr.sprite = feetR[0]; frsr.sortingOrder = 18;
-
             GameObject rigAssetsGo = new GameObject("RigAssets");
             var ra = rigAssetsGo.AddComponent<LilFoots.RigAssets>();
             ra.bodies = bodies; ra.feetL = feetL; ra.feetR = feetR;
 
             var rig = player.AddComponent<LilFoots.PlayerRig>();
-            rig.bodyT = body.transform; rig.footLT = fl.transform; rig.footRT = fr.transform;
-            rig.bodyR = bsr; rig.footLR = flsr; rig.footRR = frsr;
-            rig.SetCast(0);   // apply measured per-cast placement + scale
+            rig.bodyT = body.transform; rig.bodyR = bsr;
+            rig.SetCast(0);   // whole-sprite placement: bottom-center pivot at ground
 
             var pc = player.AddComponent<BoxCollider2D>();
             pc.size = new Vector2(1.3f, 2.0f); pc.isTrigger = true;

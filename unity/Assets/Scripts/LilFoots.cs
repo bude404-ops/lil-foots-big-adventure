@@ -7,42 +7,33 @@ namespace LilFoots
     // (Bude art bible s8: squash/stretch, anticipation, overshoot, exaggerated arcs)
     public class PlayerRig : MonoBehaviour
     {
-        public Transform bodyT, footLT, footRT;
-        public SpriteRenderer bodyR, footLR, footRR;
+        public Transform bodyT;
+        public SpriteRenderer bodyR;
         [HideInInspector] public int castIndex;
 
-        Vector3 bodyBase, flBase, frBase;
+        Vector3 bodyBase;
         float runPhase;
         float squash;   // 0..1 decaying
         float stretch;  // 0..1 decaying
 
-        // per-cast placement measured from the rig cuts (rects vs ground line)
-        static readonly float[] BODY_Y  = { 0.290f, 0.410f, 0.280f };
-        static readonly Vector2[] FL_XY = { new Vector2(-0.650f, 0.400f), new Vector2(-0.975f, 0.510f), new Vector2(-0.650f, 0.400f) };
-        static readonly Vector2[] FR_XY = { new Vector2(0.390f, 0.320f), new Vector2(0.475f, 0.400f), new Vector2(0.390f, 0.320f) };
-        static readonly float[] CAST_H   = { 4.52f, 6.59f, 4.41f };   // body sprite height, units
+        // WHOLE-SPRITE MODE (Bude, Sept 17: characters go in uncut - no rig cuts)
+        static readonly float[] CAST_H = { 4.82f, 7.01f, 4.70f };   // whole sprite heights, units
         const float TARGET_H = 2.2f;
 
         public void SetCast(int i)
         {
             castIndex = i;
             bodyR.sprite = RigAssets.S.bodies[i];
-            footLR.sprite = RigAssets.S.feetL[i];
-            footRR.sprite = RigAssets.S.feetR[i];
             float s = TARGET_H / CAST_H[i];
             Vector3 sc = new Vector3(s, s, 1f);
-            bodyR.transform.localScale = sc; footLR.transform.localScale = sc; footRR.transform.localScale = sc;
-            bodyT.localPosition = new Vector3(0f, BODY_Y[i] * s, 0f);
-            footLT.localPosition = new Vector3(FL_XY[i].x * s, FL_XY[i].y * s, 0f);
-            footRT.localPosition = new Vector3(FR_XY[i].x * s, FR_XY[i].y * s, 0f);
-            bodyBase = bodyT.localPosition; flBase = footLT.localPosition; frBase = footRT.localPosition;
+            bodyR.transform.localScale = sc;
+            bodyT.localPosition = new Vector3(0f, 0f, 0f);   // bottom-center pivot at ground
+            bodyBase = bodyT.localPosition;
         }
 
         void Start()
         {
             bodyBase = bodyT.localPosition;
-            flBase = footLT.localPosition;
-            frBase = footRT.localPosition;
         }
 
         void Update()
@@ -57,7 +48,6 @@ namespace LilFoots
             if (state == 1) runPhase += Time.deltaTime * 11f; else runPhase += Time.deltaTime * 1.2f;
 
             float bs = 1f, tilt = 0f, bob = 0f;
-            float fl = 0f, fr = 0f, flLift = 0f, frLift = 0f;
 
             if (state == 0)
             { // idle: breathing bob + tiny sway
@@ -65,17 +55,12 @@ namespace LilFoots
                 tilt = Mathf.Sin(runPhase * 0.5f) * 1.2f;
             }
             else if (state == 1)
-            { // run: alternating oversized-feet paddle + body bob at 2x + lean into it
-                fl = Mathf.Sin(runPhase) * 38f;
-                fr = Mathf.Sin(runPhase + Mathf.PI) * 38f;
-                flLift = Mathf.Max(0f, -Mathf.Sin(runPhase)) * 0.10f;
-                frLift = Mathf.Max(0f, Mathf.Sin(runPhase)) * 0.10f;
-                bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.055f;
+            { // run: whole-body bounce at stride frequency + lean into it
+                bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.06f;
                 tilt = 4.5f;
             }
             else
-            { // air: legs tuck, body stretches by vertical speed (cartoon physics)
-                fl = -14f; fr = -20f;
+            { // air: whole-body stretch by vertical speed (cartoon physics)
                 bs = 1f + Mathf.Clamp(vy * 0.012f, -0.08f, 0.16f);
             }
 
@@ -91,11 +76,6 @@ namespace LilFoots
             bodyT.localPosition = bodyBase + new Vector3(0f, bob - sq * 0.10f, 0f);
             bodyT.localRotation = Quaternion.Euler(0f, 0f, tilt * dir);
             bodyT.localScale = new Vector3(sx, sy, 1f);
-
-            footLT.localPosition = flBase + new Vector3(0f, flLift, 0f);
-            footRT.localPosition = frBase + new Vector3(0f, frLift, 0f);
-            footLT.localRotation = Quaternion.Euler(0f, 0f, fl);
-            footRT.localRotation = Quaternion.Euler(0f, 0f, fr);
         }
 
         public void OnJump() { stretch = 1f; squash = 0f; }
