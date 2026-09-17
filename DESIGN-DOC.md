@@ -13,8 +13,7 @@
 Per Bude: "use the images I sent as the characters dont modify them." No redraws, reinterpretations, or style-matched generated plates. Generated art is for WORLDS, enemies, and mockups only.
 - **LILY** (named by Bude, Sept 17 2026 ~11:18 AM) — formerly Lil Foot #1: green cartoon creature, light blue bow, multicolored polarized sunglasses.
 - **BUDDY** (named by Bude, Sept 16 ~11:15 PM) — red, yellow accents, yellow hard hat with paw print, tool belt.
-- **EMMA** (named by Bude, Sept 16 ~11:30 PM) — dark fur, striking white accents, glow detail around the face (the night-styled one).
-- **PINK Lil Foot** (imgur AZq3T31, Sept 16 ~11:31 PM) — magenta body, black details, gray accessories. Name pending Bude.
+- **EMMA** (pink Lil Foot; name corrected by Bude, Sept 17: "the character called pink needs to be name Emma") — magenta body, black details, gray accessories (imgur AZq3T31). The night-scene ref (bude-ref-03, dark fur/white accents/glow) is Emma's alt shot; clean hand-mask still pending.
 - NO-ROLES LAW (Bude, Sept 16 ~11:55 PM): "the little foots dont need roles they are just a character like Mario is in Mario bros." The cast is NOT role/class-based. Gameplay variety comes from LEVELS (enemies, traps, chases), not character jobs.
 
 ## Villain + Enemies (ROSTER LOCKED Sept 17, 2026)

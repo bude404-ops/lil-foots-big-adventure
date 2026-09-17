@@ -13,6 +13,7 @@
 | Sept 17 | One-at-a-time image rule for changes/approvals | ACTIVE — standing law |
 | Sept 17 | v0.7 painted platforms pass (grass/earth/roots slabs + foreground) | Built, pushed — awaiting Bude verdict (shot delivered after image-1 verdict per one-at-a-time rule) |
 | Sept 17 | GitHub Pages demo hosting (Bude request) | Workflow added — repo is PRIVATE on free plan, Pages needs the repo PUBLIC (Bude's call) |
+| Sept 17 | CAST NAME CORRECTION (Bude): the pink Lil Foot is named EMMA | FIXED same day — character select now reads LILY / BUDDY / EMMA; roster locked |
 
 ## Resolved / implemented
 | Date | Item | Outcome |
