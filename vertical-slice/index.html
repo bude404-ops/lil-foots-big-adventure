@@ -70,7 +70,7 @@ addEventListener("keydown", e=>{ keys[e.code]=true; if(e.code==="Space"||e.code=
 addEventListener("keyup", e=>{ keys[e.code]=false; });
 
 // touch buttons (left/right/jump)
-const tBtn = { left:{x:0.06,y:0.86,on:false}, right:{x:0.20,y:0.86,on:false}, jump:{x:0.90,y:0.86,on:false} };
+const tBtn = { left:{x:0.09,y:0.85,on:false}, right:{x:0.24,y:0.85,on:false}, jump:{x:0.87,y:0.85,on:false} };
 let touching = {};
 function drawTouch(){ return "ontouchstart" in window || Object.keys(touching).length>0; }
 cv.addEventListener("touchstart", tIn, {passive:false});
@@ -88,10 +88,10 @@ function tIn(e){
       } else startGame();
       return;
     }
-    if(y>0.68){ // bottom third = controls
-      if(x<0.38) touching.left=true;
-      else if(x<0.66) touching.jump=true;
-      else touching.right=true;
+    if(y>0.62){ // control deck: arrows bottom-left, JUMP bottom-right (thumb reach)
+      if(x<0.165) touching.left=true;
+      else if(x<0.33) touching.right=true;
+      else touching.jump=true;
     } else touching.jump=true; // tap upper area = jump too
   }
   for(const k in tBtn) tBtn[k].on=false;
@@ -109,7 +109,7 @@ const GATE_NEED = 14;
 
 const player = {
   x:120, y:GROUND_Y, vx:0, vy:0, w:46, h:64,
-  onGround:true, face:1, coyote:0, jumpHold:0, hurt:0,
+  onGround:true, face:1, coyote:0, jumpHold:0, hurt:0, jumpBuf:0, jumpWas:false,
   slide:0, // flagpole slide
 };
 
@@ -154,6 +154,7 @@ const drone = { x:3550, y:GROUND_Y-380, t:0, sx:0 };
 const snare = { x:2510, y:GROUND_Y-260, sprung:false, timer:0 };
 // catcher cameo: Carl runs across background near the flagpole
 const carl = { x:4620, y:GROUND_Y-4, dir:1, active:false, phase:0 };
+const poofs = []; // stomp dust
 
 // flagpole + portal
 const poleX = 5100, poleTop = GROUND_Y-420;
@@ -179,6 +180,7 @@ function update(dt){
   tick++;
   if(regionFade>0) regionFade-=dt;
   if(alarm>0) alarm-=dt;
+  for(let i=poofs.length-1;i>=0;i--){ poofs[i].t-=dt; if(poofs[i].t<=0) poofs.splice(i,1); }
 
   if(mode==="title"){ titleFade=Math.min(1,titleFade+dt); if(AUTO){ mode="play"; regionFade=3; } else return; }
   if(mode==="win") return;
@@ -192,18 +194,28 @@ function update(dt){
     let left = keys["ArrowLeft"]||keys["KeyA"]||tBtn.left.on;
     let right = AUTO||keys["ArrowRight"]||keys["KeyD"]||tBtn.right.on;
     let jump = keys["Space"]||keys["ArrowUp"]||keys["KeyW"]||tBtn.jump.on;
-    player.vx = (right?RUNSPD:0) - (left?RUNSPD:0);
-    if(right) player.face=1; if(left) player.face=-1;
+    // smooth accel/decel so movement FLOWS instead of snapping
+    const target = (right?RUNSPD:0) - (left?RUNSPD:0);
+    const accel = player.onGround? 3400 : 2100;
+    if(target > player.vx) player.vx = Math.min(target, player.vx + accel*dt);
+    else if(target < player.vx) player.vx = Math.max(target, player.vx - accel*dt);
+    if(right && !left) player.face=1; if(left && !right) player.face=-1;
 
-    // jump w/ coyote + hold
+    // jump: coyote + BUFFER (early press still fires on landing) + hold for height
+    if(jump && !player.jumpWas) player.jumpBuf=0.14; // fresh press
+    if(!jump) player.jumpBuf=0;
+    player.jumpWas=jump;
     if(player.onGround) player.coyote=0.12; else player.coyote-=dt;
-    if(jump && player.coyote>0){ player.vy=JUMPVEL; player.onGround=false; player.coyote=0; player.jumpHold=0.28; }
+    if(player.jumpBuf>0 && (player.onGround||player.coyote>0)){
+      player.vy=JUMPVEL; player.onGround=false; player.coyote=0; player.jumpBuf=0; player.jumpHold=0.28;
+    }
     if(jump && player.jumpHold>0){ player.vy += -GRAV*dt*0.9; player.jumpHold-=dt; }
     else player.jumpHold=0;
     if(!jump) player.jumpHold=0;
 
     player.vy += GRAV*dt;
     player.x += player.vx*dt;
+    player.py = player.y; // prev pos for swept stomp
     let ny = player.y + player.vy*dt;
 
     // platform collide (feet)
@@ -236,18 +248,21 @@ function update(dt){
       }
     }
 
-    // hounds
+    // hounds — DEAD STAYS DEAD (stomped = gone for the run)
     for(const hd of hounds){
+      if(hd.dead) continue;
       hd.x += hd.dir * hd.spd * (1 + (hd.alert>0?1.2:0)) * dt;
       if(hd.alert>0) hd.alert-=dt;
       if(hd.x>hd.max){hd.dir=-1;} if(hd.x<hd.min){hd.dir=1;}
       // chase if player close & on ground
       if(Math.abs(hd.x-player.x)<260 && player.onGround) hd.dir = (player.x>hd.x?1:-1);
-      // hit
-      if(Math.abs(hd.x-(player.x+player.w/2))<44 && Math.abs(hd.y-(player.y-10))<50){
-        if(player.y-10 < hd.y-40 && player.vy>200){ // stomped
-          player.vy=-520; hd.x = hd.dir>0?hd.min:hd.max; hd.alert=0;
-        } else {
+      // hit (swept stomp: can't tunnel through at high fall speed)
+      if(Math.abs(hd.x-(player.x+player.w/2))<44){
+        const feetNow = player.y-10, feetPrev = player.py-10;
+        if(player.vy>200 && feetPrev <= hd.y-25){
+          player.vy=-520; hd.dead=true; hd.alert=0;
+          poofs.push({x:hd.x, y:hd.y-20, t:0.5});
+        } else if(Math.abs(hd.y-feetNow)<50){
           player.x -= 90*Math.sign(player.x-hd.x || 1); player.hurt=0.8;
         }
       }
@@ -262,7 +277,7 @@ function update(dt){
         const dy = (player.y-40) - c.y;
         if(dy>120 && dy<340 && Math.abs(c.ang)<0.45){
           c.flash=1.5; alarm=4;
-          for(const hd of hounds) if(Math.abs(hd.x-c.x)<800) hd.alert=5;
+          for(const hd of hounds) if(!hd.dead && Math.abs(hd.x-c.x)<800) hd.alert=5;
         }
       }
     }
@@ -271,7 +286,7 @@ function update(dt){
     drone.t += dt;
     drone.sx = drone.x + Math.sin(drone.t*1.2)*160;
     const spotHit = Math.abs(player.x+20-drone.sx)<60 && player.y>GROUND_Y-80 && player.x>3400 && player.x<3760;
-    if(spotHit && alarm<=0){ alarm=3.5; for(const hd of hounds) hd.alert=4; }
+    if(spotHit && alarm<=0){ alarm=3.5; for(const hd of hounds) if(!hd.dead) hd.alert=4; }
 
     // snare trap
     if(!snare.sprung && Math.abs(player.x+20-snare.x)<26 && player.y>snare.y-40){
@@ -413,8 +428,21 @@ function drawWorld(){
     ctx.beginPath(); ctx.arc(snare.x, snare.y-40, 24, 0, 7); ctx.stroke();
   }
 
-  // hounds
+  // stomp poofs (expanding dust)
+  for(const p of poofs){
+    const k = 1-p.t/0.5;
+    ctx.globalAlpha = Math.max(0, p.t*2);
+    for(let j=0;j<4;j++){
+      const a = j*1.57 + k*2;
+      ctx.beginPath(); ctx.arc(p.x+Math.cos(a)*k*46, p.y+Math.sin(a)*k*30-8*k, 12*(1-k*0.6), 0, 7);
+      ctx.fillStyle="#eaffd8"; ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // hounds (dead ones stay gone)
   for(const hd of hounds){
+    if(hd.dead) continue;
     ctx.save(); ctx.translate(hd.x, hd.y);
     ctx.scale(hd.dir,1);
     // body
@@ -661,18 +689,21 @@ function drawHUD(){
     ctx.fillText("tap to replay", W/2, H*0.62); ctx.globalAlpha=1;
   }
 
-  // touch controls hint
-  if(drawTouch() && mode==="play"){
-    ctx.globalAlpha=0.25;
+  // touch control deck (arrows left, JUMP right)
+  if(drawTouch() && (mode==="play"||mode==="flag")){
+    ctx.globalAlpha=0.9; ctx.textAlign="center";
     for(const k in tBtn){
-      const b=tBtn[k];
-      ctx.beginPath(); ctx.arc(b.x*W, b.y*H, 52, 0,7);
-      ctx.fillStyle= b.on? "#39e6a0":"#eaffd8"; ctx.fill();
+      const b=tBtn[k], r = k==="jump"?64:46;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(b.x*W, b.y*H, r, 0, 7);
+      if(b.on){ ctx.fillStyle="rgba(57,230,160,0.85)"; ctx.shadowColor="#39e6a0"; ctx.shadowBlur=18; }
+      else ctx.fillStyle="rgba(234,255,216,0.16)";
+      ctx.fill(); ctx.shadowBlur=0;
+      ctx.lineWidth=3; ctx.strokeStyle= b.on? "#eaffd8":"rgba(234,255,216,0.5)"; ctx.stroke();
+      ctx.fillStyle = b.on? "#0a140f":"#eaffd8"; ctx.font="bold "+(k==="jump"?22:20)+"px Trebuchet MS";
+      ctx.fillText(k==="left"?"◀":k==="right"?"▶":"JUMP", b.x*W, b.y*H+7);
+      ctx.restore();
     }
-    ctx.globalAlpha=0.8; ctx.fillStyle="#12211c"; ctx.textAlign="center"; ctx.font="bold 16px Trebuchet MS";
-    ctx.fillText("◀", tBtn.left.x*W, tBtn.left.y*H+6);
-    ctx.fillText("▶", tBtn.right.x*W, tBtn.right.y*H+6);
-    ctx.fillText("JUMP", tBtn.jump.x*W, tBtn.jump.y*H+6);
     ctx.globalAlpha=1;
   }
 }
