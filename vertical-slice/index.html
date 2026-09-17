@@ -153,10 +153,10 @@ function update(dt){
   if(regionFade>0) regionFade-=dt;
   if(alarm>0) alarm-=dt;
 
-  if(mode==="title"){ titleFade=Math.min(1,titleFade+dt); return; }
+  if(mode==="title"){ titleFade=Math.min(1,titleFade+dt); if(AUTO){ mode="play"; regionFade=3; } else return; }
   if(mode==="win") return;
 
-  if(AUTO){ if(mode==="title") mode="play"; if(mode==="win") return;
+  if(AUTO){ if(mode==="win") return;
     autoT += dt;
     if(mode==="play" && autoT%0.85 < dt*1.2){ keys["Space"]=true; setTimeout(()=>keys["Space"]=false,90); }
   }
