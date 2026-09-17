@@ -1,0 +1,23 @@
+{
+ "lily": {
+  "footL_x": -0.27,
+  "footR_x": 0.295,
+  "body_x": 0.0,
+  "ankle_h": 0.24,
+  "feet_h": 0.07
+ },
+ "buddy": {
+  "footL_x": -0.28,
+  "footR_x": 0.165,
+  "body_x": 0.0,
+  "ankle_h": 0.23,
+  "feet_h": 0.07
+ },
+ "emma": {
+  "footL_x": -0.295,
+  "footR_x": 0.3,
+  "body_x": 0.0,
+  "ankle_h": 0.23,
+  "feet_h": 0.07
+ }
+}

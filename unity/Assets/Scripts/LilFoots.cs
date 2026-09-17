@@ -16,12 +16,26 @@ namespace LilFoots
         float squash;   // 0..1 decaying
         float stretch;  // 0..1 decaying
 
+        // per-cast placement measured from the rig cuts (rects vs ground line)
+        static readonly float[] BODY_Y  = { 0.290f, 0.410f, 0.280f };
+        static readonly Vector2[] FL_XY = { new Vector2(-0.650f, 0.400f), new Vector2(-0.975f, 0.510f), new Vector2(-0.650f, 0.400f) };
+        static readonly Vector2[] FR_XY = { new Vector2(0.390f, 0.320f), new Vector2(0.475f, 0.400f), new Vector2(0.390f, 0.320f) };
+        static readonly float[] CAST_H   = { 4.52f, 6.59f, 4.41f };   // body sprite height, units
+        const float TARGET_H = 2.2f;
+
         public void SetCast(int i)
         {
             castIndex = i;
             bodyR.sprite = RigAssets.S.bodies[i];
             footLR.sprite = RigAssets.S.feetL[i];
             footRR.sprite = RigAssets.S.feetR[i];
+            float s = TARGET_H / CAST_H[i];
+            Vector3 sc = new Vector3(s, s, 1f);
+            bodyR.transform.localScale = sc; footLR.transform.localScale = sc; footRR.transform.localScale = sc;
+            bodyT.localPosition = new Vector3(0f, BODY_Y[i] * s, 0f);
+            footLT.localPosition = new Vector3(FL_XY[i].x * s, FL_XY[i].y * s, 0f);
+            footRT.localPosition = new Vector3(FR_XY[i].x * s, FR_XY[i].y * s, 0f);
+            bodyBase = bodyT.localPosition; flBase = footLT.localPosition; frBase = footRT.localPosition;
         }
 
         void Start()
