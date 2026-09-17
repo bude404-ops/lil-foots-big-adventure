@@ -43,6 +43,10 @@ const WORLD_W = 5200;
 
 // ---------- INPUT ----------
 const keys = {};
+// AUTO-DEMO RIG: screenshot-only mode. Set window.AUTO_DEMO=true before load
+// (screenshot wrapper), and Lily self-drives: auto-start, hold right, hop on cadence.
+const AUTO = (typeof window!=="undefined" && window.AUTO_DEMO===true);
+let autoT = 0;
 addEventListener("keydown", e=>{ keys[e.code]=true; if(e.code==="Space"||e.code==="ArrowUp") e.preventDefault(); startGame(); });
 addEventListener("keyup", e=>{ keys[e.code]=false; });
 
@@ -152,10 +156,14 @@ function update(dt){
   if(mode==="title"){ titleFade=Math.min(1,titleFade+dt); return; }
   if(mode==="win") return;
 
+  if(AUTO){ if(mode==="title") mode="play"; if(mode==="win") return;
+    autoT += dt;
+    if(mode==="play" && autoT%0.85 < dt*1.2){ keys["Space"]=true; setTimeout(()=>keys["Space"]=false,90); }
+  }
   if(mode==="play"){
     // input
     let left = keys["ArrowLeft"]||keys["KeyA"]||tBtn.left.on;
-    let right = keys["ArrowRight"]||keys["KeyD"]||tBtn.right.on;
+    let right = AUTO||keys["ArrowRight"]||keys["KeyD"]||tBtn.right.on;
     let jump = keys["Space"]||keys["ArrowUp"]||keys["KeyW"]||tBtn.jump.on;
     player.vx = (right?RUNSPD:0) - (left?RUNSPD:0);
     if(right) player.face=1; if(left) player.face=-1;
