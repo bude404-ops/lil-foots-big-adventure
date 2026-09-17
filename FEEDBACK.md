@@ -9,6 +9,7 @@
 ## Open items
 | Date | Item | Status |
 |------|------|--------|
+| Sept 17 | Bude v0.9.1 verdict (~4:12 PM ET): "lower the plane where the player is actually running and jumping — it seems so high up in the screen, creating those giant earth blocks" | FIXED in v0.9.1: old zoom was width-only so tall phone screens pushed the walk line to ~22-27% of the screen (hence the giant earth mass below). Zoom now guarantees the walk line sits ~68% down in every orientation + pixel ratio; upper 2/3 = sky/distance, lower 1/3 = the ground you run on. Landscape framing unchanged |
 | Sept 17 | Bude v0.9 review pass (~3:52 PM ET): "look over the background again — upper/lower still an issue"; "terrain the model runs and jumps on needs to make sense, not just floating"; "then redo the enemy characters to fit better" | BG+TERRAIN fixed in v0.9 (treeline veil removed — its bottom edge was the split line; ground runs now extend to screen bottom as solid earth; floating platforms grow from earth spires w/ hanging roots). Enemy art redo = NEXT PASS queued after his v0.9 verdict |
 | Sept 17 | Bude's background verdict (image 1, ~3:38 PM ET): "background is split into two sections — lower half should be where the player runs, upper should read as distance, looks weird" | RECEIVED → fixed in v0.8 (one continuous depth plate: sky→hazy distance→mist→near-forest floor; treeline demoted to light mid-veil). Reworked shot sent — awaiting verdict |
 | Sept 17 | Bude's earlier background feedback | was never received (pre-ledger); superseded by the 3:38 PM verdict above |
