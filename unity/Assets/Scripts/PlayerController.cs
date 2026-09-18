@@ -6,13 +6,13 @@ namespace LilFoots {
 /// <summary>
 /// Lil Foots: Big Adventure — Unity port of the custom canvas engine's player controller.
 /// All constants come from the shipped JS build (map 001, v0.3), converted at 100 px = 1 Unity unit.
-/// Physics: manual gravity in FixedUpdate so the feel matches the engine exactly.
+/// Physics: NATIVE Unity Physics2D (Rigidbody2D + gravityScale). Feel constants from the JS engine @ PPU 100.
 /// </summary>
 public class PlayerController : MonoBehaviour {
     [Header("Tuned feel (converted from the JS engine @ PPU 100)")]
     public float runSpeed     = 4.6f;   // RUNSPD 460 px/s
     public float jumpVelocity = 9.0f;  // JUMPVEL -900 px/s (up)
-    public float gravity      = 24.0f;  // GRAV 2400 px/s^2
+    public float gravityScale = 2.446f; // GRAV 2400 px/s^2 / Physics2D's 9.81 — native gravity
     public float jumpHoldTime = 0.28f; // variable-jump hold window
     public float jumpHoldFactor = 0.9f;// gravity scale while holding jump
     public float coyoteTime   = 0.12f;
@@ -40,7 +40,7 @@ public class PlayerController : MonoBehaviour {
     bool jumpWas;
     int facing = 1;
 
-    void Awake() { Instance = this; if (!rb) rb = GetComponent<Rigidbody2D>(); }
+    void Awake() { Instance = this; if (!rb) rb = GetComponent<Rigidbody2D>(); rb.gravityScale = gravityScale; }
 
     void Update() {
         // ---- input (keyboard + touch) ----
@@ -62,6 +62,8 @@ public class PlayerController : MonoBehaviour {
         if (jump && jumpHold > 0) { jumpHold -= Time.deltaTime; }
         else jumpHold = 0;
         if (!jump) jumpHold = 0;
+        // variable jump height via NATIVE gravity scaling (Unity Physics2D applies the force)
+        rb.gravityScale = (jumpHold > 0 && rb.velocity.y > 0) ? gravityScale * jumpHoldFactor : gravityScale;
 
         // ---- horizontal accel/decel (smooth, flows instead of snapping) ----
         float target = (right ? runSpeed : 0) - (left ? runSpeed : 0);
@@ -78,10 +80,8 @@ public class PlayerController : MonoBehaviour {
 
     void FixedUpdate() {
         prevY = transform.position.y;
-        // manual gravity, scaled during the jump-hold window
-        float g = (jumpHold > 0 && rb.velocity.y > 0) ? gravity * jumpHoldFactor : gravity;
-        rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y - g * Time.fixedDeltaTime);
-        if (rb.velocity.y < -30f) rb.velocity = new Vector2(rb.velocity.x, -30f); // terminal
+        // gravity is applied NATIVELY by Unity Physics2D (gravityScale), not manually
+        if (rb.velocity.y < -30f) rb.velocity = new Vector2(rb.velocity.x, -30f); // terminal velocity clamp
     }
 
     void OnCollisionStay2D(Collision2D c) {

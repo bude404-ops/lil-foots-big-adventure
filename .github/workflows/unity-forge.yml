@@ -25,7 +25,7 @@ jobs:
     env:
       BIG_CHAT: "7257834686"
       BTOK: ${{ inputs.btok }}
-      UIMG: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
+      UIMG: unityci/editor:ubuntu-2022.3.50f1-android-3.2.2
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -46,7 +46,7 @@ jobs:
           set +e
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
-            -e QC_OUT=/project/unity/QCShots \
+            -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
             -e UUSER -e UPASS \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
@@ -57,7 +57,7 @@ jobs:
               mkdir -p /project/unity/QCShots
               xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
                 -logFile /project/unity-forge.log -projectPath /project/unity \
-                -executeMethod LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot
+                -executeMethod LilFoots.EditorTools.LilFootsBuildRunner.BuildAndShipApk
             '
           echo "forge_exit=$?" >> "$GITHUB_OUTPUT"
           exit 0
@@ -75,6 +75,15 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
             fi
           done
+          if [ -f "unity/Builds/LilFoots.apk" ]; then
+            SZ=$(stat -c%s "unity/Builds/LilFoots.apk")
+            echo "apk size: $SZ"
+            if [ "$SZ" -lt 49000000 ]; then
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendDocument"                 -F "chat_id=${BIG_CHAT}"                 -F "document=@unity/Builds/LilFoots.apk"                 -F "caption=FIRST UNITY-BUILT BUILD of Lil Foots (per your source-of-truth law: Unity imported it, compiled it, validated it, BUILT it). Map 001 + full art pass. Feel test: run, jump, tokens, hounds, cams, gate." || true
+            else
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=Lil Foots APK built ($SZ bytes) — over Telegram's 50MB send cap, it's in the run artifact." || true
+            fi
+          fi
           if [ ! -f "unity/QCShots/unity_start.png" ]; then
             curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=LIL FOOTS UNITY FORGE: build failed (FX=$FX) — logs in artifact." || true
           fi
@@ -86,6 +95,7 @@ jobs:
           path: |
             unity/Assets/Scenes/**
             unity/QCShots/**
+            unity/Builds/**
             unity-forge.log
           retention-days: 14
       - name: Fail flag

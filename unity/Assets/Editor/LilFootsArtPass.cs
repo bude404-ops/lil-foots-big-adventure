@@ -213,6 +213,12 @@ namespace LilFoots.EditorTools
 
         /// <summary>CI entry: build map 001, dress with art, save scene, render QC shots, exit.</summary>
         public static void BuildAndShoot() {
+            BuildAndShootCore();
+            EditorApplication.Exit(0);
+        }
+
+        /// <summary>Full scene pipeline without exiting — also used by the APK build runner.</summary>
+        public static void BuildAndShootCore() {
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             LilFootsLevelBuilder.Build();
             BuildArt();
@@ -244,7 +250,6 @@ namespace LilFoots.EditorTools
             Snap(rt, System.IO.Path.Combine(outDir, "unity_gate.png"));
 
             Debug.Log("[ArtPass] QC shots done.");
-            EditorApplication.Exit(0);
         }
 
         static void Snap(RenderTexture rt, string path) {

@@ -114,7 +114,7 @@ public static class LilFootsLevelBuilder {
         var pcol = player.AddComponent<CapsuleCollider2D>(); pcol.size = new Vector2(0.44f, 0.7f); pcol.offset = new Vector2(0, 0.35f);
         var prb = player.AddComponent<Rigidbody2D>();
         prb.freezeRotation = true; prb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-        prb.gravityScale = 0; // manual gravity (engine-exact feel)
+        prb.gravityScale = 2.446f; // native Physics2D gravity (GRAV 2400 @ PPU 100)
         pc.rb = prb;
         var srp = player.AddComponent<SpriteRenderer>();
         // wire the approved rig-ready/T-pose or run-cycle sprite in the art pass
