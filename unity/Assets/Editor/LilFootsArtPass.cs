@@ -78,22 +78,30 @@ namespace LilFoots.EditorTools
                 SpriteGo("TheSun", Art("art_sun.png"), Vector3.zero, 1.7f, -95, cam.transform)
                     .transform.localPosition = new Vector3(4.4f, 2.2f, 10f);
             }
-            // Cascade ridges + snow-capped volcano strip along the whole level
+            // Cascade ridges + snow-capped volcano — HORIZON BAND ~0.85u tall (demo proportion:
+            // camera sees 7.5u tall; the old 19u-wide strip was ~5.6u tall and buried the sky)
             var ridges = Art("art_ridges.png");
-            if (ridges != null)
-                for (float x = -8f; x < 98f; x += 19f)
-                    SpriteGo("Ridges", ridges, new Vector3(x, 4.6f, 0), 19f, -90, map.transform);
-            // dense fir wall midground
+            if (ridges != null) {
+                float rh = 0.85f;
+                float rw = rh * (ridges.bounds.size.x / ridges.bounds.size.y);
+                for (float x = -8f; x < 98f; x += rw - 0.03f)
+                    SpriteGo("Ridges", ridges, new Vector3(x, GY + 1.15f + rh / 2f, 0), rw, -90, map.transform);
+            }
+            // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
+            // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
             var firs = Art("art_firwall.png");
-            if (firs != null)
-                for (float x = -8f; x < 100f; x += 12f)
-                    SpriteGo("FirWall", firs, new Vector3(x, GY - 1.9f, 0), 12f, -80, map.transform);
-            // drifting PNW mist banks (soft sprites)
+            if (firs != null) {
+                float fh = 1.5f;
+                float fw = fh * (firs.bounds.size.x / firs.bounds.size.y);
+                for (float x = -8f; x < 100f; x += fw - 0.03f)
+                    SpriteGo("FirWall", firs, new Vector3(x, GY - 0.25f + fh / 2f, 0), fw, -80, map.transform);
+            }
+            // drifting PNW mist banks (soft sprites, ~1.4u tall, upper sky band)
             var mist = Art("art_mist.png");
             if (mist != null) {
                 float[] mx = { 6f, 30f, 62f, 88f };
                 float[] my = { GY + 1.6f, GY + 2.6f, GY + 1.9f, GY + 2.8f };
-                for (int i = 0; i < 4; i++) SpriteGo("MistBank", mist, new Vector3(mx[i], my[i], 0), 9f + (i % 2) * 3f, -70, map.transform);
+                for (int i = 0; i < 4; i++) SpriteGo("MistBank", mist, new Vector3(mx[i], my[i], 0), 3.6f, -70, map.transform);
             }
 
             // ---- STREAM WATER in the gaps ----
@@ -141,7 +149,8 @@ namespace LilFoots.EditorTools
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("TrailCam")) continue;
                 if (camTree != null)
-                    SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 2.35f, 0), 5.6f, -6, map.transform);
+                    float cth = 3.1f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
+                    SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
                 if (trailcamArt != null) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
             }
 
