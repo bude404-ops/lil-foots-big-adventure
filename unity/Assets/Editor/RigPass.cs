@@ -123,10 +123,16 @@ namespace LilFoots.EditorTools
 
             // ---- native SpriteSkin: Unity 2D Animation performs the deformation ----
             var skin = charGo.AddComponent<U2D.SpriteSkin>();
-            skin.rootBone = rig.Bones["hip"];
+            // 2D Animation 9.x: rootBone/boneTransforms setters are internal (verified in 9.2.2 source) —
+            // set the serialized fields through SerializedObject, the same path Unity's own inspector uses
             var bt = new List<Transform>();
             foreach (var kv in rig.Bones) bt.Add(kv.Value);
-            skin.boneTransforms = bt.ToArray();
+            var so = new UnityEditor.SerializedObject(skin);
+            so.FindProperty("m_RootBone").objectReferenceValue = rig.Bones["hip"];
+            var arrProp = so.FindProperty("m_BoneTransforms");
+            arrProp.arraySize = bt.Count;
+            for (int i = 0; i < bt.Count; i++) arrProp.GetArrayElementAtIndex(i).objectReferenceValue = bt[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
 
             // ---- Unity creates a native AnimatorController + walk AnimationClip ----
             Directory.CreateDirectory("Assets/Animation");

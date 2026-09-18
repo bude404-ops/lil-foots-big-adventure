@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using UnityEngine;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using System.IO;
 
@@ -19,7 +20,7 @@ public static class LilFootsBuildRunner {
         // player identity
         PlayerSettings.companyName = "Bigfoot404 LLC";
         PlayerSettings.productName = "Lil Foots Big Adventure";
-        PlayerSettings.SetApplicationIdentifier("com.bigfoot404.lilfootsbigadventure");
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.bigfoot404.lilfootsbigadventure");
 
         var scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true) };
         EditorBuildSettings.scenes = scenes;
@@ -43,7 +44,7 @@ public static class LilFootsBuildRunner {
 
         PlayerSettings.companyName = "Bigfoot404 LLC";
         PlayerSettings.productName = "Lil Foots Big Adventure";
-        PlayerSettings.SetApplicationIdentifier("com.bigfoot404.lilfootsbigadventure");
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.WebGL, "com.bigfoot404.lilfootsbigadventure");
 
         var scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true) };
         EditorBuildSettings.scenes = scenes;
