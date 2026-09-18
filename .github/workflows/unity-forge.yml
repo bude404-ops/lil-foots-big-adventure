@@ -1,0 +1,75 @@
+name: Lil Foots Unity Forge
+
+# Lil Foots: Big Adventure — the real Unity build (Bude's call, Sept 18 2026: "begin making it in unity").
+# Builds map 001 headlessly from level data, dresses it with the real art set (Unity Art Law:
+# no code-drawn visuals), saves the scene, renders QC shots and relays them to Bude's DM.
+on:
+  workflow_dispatch:
+    inputs:
+      btok:
+        description: 'Telegram bot token'
+        required: true
+      uuser:
+        description: 'Unity account email'
+        required: true
+      upass:
+        description: 'Unity account password'
+        required: true
+
+jobs:
+  build:
+    name: Build map 001 + QC shots
+    runs-on: ubuntu-latest
+    container: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
+    timeout-minutes: 45
+    env:
+      BIG_CHAT: "7257834686"
+      BTOK: ${{ inputs.btok }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Activate license
+        run: |
+          LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
+          if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
+          "$LIC" --activate-all --include-personal --username "${{ inputs.uuser }}" --password "${{ inputs.upass }}" > /tmp/act.log 2>&1 || true
+          grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log && echo "LICENSE OK" || (echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 1)
+      - name: Build scene + art pass + QC shots
+        id: forge
+        run: |
+          set +e
+          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit -nographics \
+            -logFile $GITHUB_WORKSPACE/unity-forge.log -projectPath $GITHUB_WORKSPACE/unity \
+            -executeMethod LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot
+          echo "forge_exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Relay QC shots to Bude
+        if: always()
+        run: |
+          FX="${{ steps.forge.outputs.forge_exit }}"
+          CAP1="LIL FOOTS UNITY PASS 1 — real art in-engine. Map 001 start: Lily on the grass strip, PNW sky + the one sun, fir wall, mist. FX=$FX"
+          CAP2="LIL FOOTS UNITY PASS 1 — mid-map: hound + cam tree on the stream level. FX=$FX"
+          CAP3="LIL FOOTS UNITY PASS 1 — finish: flagpole gate + portal. FX=$FX"
+          for i in 1 2 3; do
+            case $i in 1) F=unity_start.png; C="$CAP1";; 2) F=unity_mid.png; C="$CAP2";; 3) F=unity_gate.png; C="$CAP3";; esac
+            P="unity/QCShots/$F"
+            if [ -f "$P" ]; then
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
+            fi
+          done
+          if [ ! -f "unity/QCShots/unity_start.png" ]; then
+            tail -40 $GITHUB_WORKSPACE/unity-forge.log > /tmp/tail.log 2>/dev/null || true
+            curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=LIL FOOTS UNITY FORGE: build failed (FX=$FX) — logs in artifact." || true
+          fi
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lilfoots-unity-forge
+          path: |
+            unity/Assets/Scenes/**
+            unity/QCShots/**
+            unity-forge.log
+          retention-days: 14
+      - name: Fail flag
+        if: steps.forge.outputs.forge_exit != '0'
+        run: echo "FORGE FAILED"; exit 1

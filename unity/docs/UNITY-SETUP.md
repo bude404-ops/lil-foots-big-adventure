@@ -31,3 +31,26 @@ Everything below is data-identical to the playtested engine build (v0.3).
 3. Sound: port the WebAudio synth set to real clips.
 4. Missing set pieces to build: Carl's camp chase, snare trap, secret gully heart, flagpole finish + portal, objective rating screen (REWARD).
 5. Mobile: touch deck UI, then Android build settings (package `com.bigfoot404.lilfoots`).
+
+---
+
+## FORGE (CI build, Sept 18 2026 — Bude: "begin making it in unity")
+
+`.github/workflows/unity-forge.yml` — dispatch with `btok` / `uuser` / `upass`:
+1. Activates the Unity license (2022.3.50f1, unityci container).
+2. Runs `LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot` headlessly:
+   builds MAP001 from level data → dresses it with the REAL art set
+   (Unity Art Law: zero code-drawn visuals) → saves `Assets/Scenes/Map001.unity`
+   → renders 3 QC shots (start / mid-map hound+cam tree / finish gate).
+3. Relays the shots straight to Bude's DM and uploads scene + shots + log as artifacts.
+
+Art pass notes:
+- Sky plate + the ONE sun are parented to the camera (pinned, never scroll, never duplicate).
+- Platform bodies use `art_earth` tiles + `art_ground_strip` tops; procedural slabs are destroyed.
+- All gameplay art (Lily, hounds, drones, cams, tokens, hearts) renders on CHILD sprite objects,
+  so hitboxes/colliders are never rescaled by art.
+- HUD: 3 cartoon hearts + wooden panel with a TextMesh counter (LegacyRuntime font).
+- Water strips fill the stream gaps; mist banks + fir wall + ridges dress the PNW backdrop.
+- `SecretHeartPickup.cs` grants +1 life (engine behavior).
+
+BLOCKED ON: Unity account email/password (uuser/upass dispatch inputs) — MC holds these.
