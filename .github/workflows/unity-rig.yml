@@ -1,0 +1,74 @@
+name: Lil Foots Unity Rig Pass
+
+# Lil Foots: Big Adventure — RIG PASS (Bude: "can we begin rigging the characters as well?").
+# Builds the skeleton for each approved rig-ready T-pose (Lily, Buddy, Emma) and renders
+# rig sheet QC shots + a walk-cycle pose sheet, relayed to Bude's DM.
+# NOTE: NO -nographics — RT rendering needs a GL context (xvfb + mesa software GL).
+on:
+  workflow_dispatch:
+    inputs:
+      btok:
+        description: 'Telegram bot token'
+        required: true
+      uuser:
+        description: 'Unity account email'
+        required: true
+      upass:
+        description: 'Unity account password'
+        required: true
+
+jobs:
+  rig:
+    name: Character rig pass + QC shots
+    runs-on: ubuntu-latest
+    container: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
+    timeout-minutes: 45
+    env:
+      BIG_CHAT: "7257834686"
+      BTOK: ${{ inputs.btok }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: GL for headless render
+        run: apt-get update -qq && apt-get install -y -qq libgl1-mesa-dri libglx-mesa0 xvfb > /dev/null 2>&1 || true
+      - name: Activate license
+        run: |
+          LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
+          if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
+          "$LIC" --activate-all --include-personal --username "${{ inputs.uuser }}" --password "${{ inputs.upass }}" > /tmp/act.log 2>&1 || true
+          grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log && echo "LICENSE OK" || (echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 1)
+      - name: Build rigs + QC shots
+        id: rig
+        run: |
+          set +e
+          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
+            -logFile $GITHUB_WORKSPACE/unity-rig.log -projectPath $GITHUB_WORKSPACE/unity \
+            -executeMethod LilFoots.EditorTools.RigPass.BuildAndShoot
+          echo "rig_exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Relay rig shots to Bude
+        if: always()
+        run: |
+          RX="${{ steps.rig.outputs.rig_exit }}"
+          send() { curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$1" -F "caption=$2" || true; }
+          # Bude's one-at-a-time rule: Lily first as the verdict ask, then the rest as the same pass's supporting sheets
+          [ -f "unity/QCShots/rig_lily.png" ] && send "unity/QCShots/rig_lily.png" "LIL FOOTS RIG PASS 1 — Lily skeleton: bones + joints mapped onto her approved T-pose (art stays uncut). Hip->spine->chest->head, arms, legs. This is the layout every character gets. RX=$RX"
+          [ -f "unity/QCShots/rig_walkcycle.png" ] && send "unity/QCShots/rig_walkcycle.png" "LIL FOOTS RIG PASS 1 — walk-cycle pose sheet: Lily's skeleton articulated through contact/down/pass/up keyframes. The rig moves."
+          [ -f "unity/QCShots/rig_buddy.png" ] && send "unity/QCShots/rig_buddy.png" "LIL FOOTS RIG PASS 1 — Buddy skeleton, same bone layout on his T-pose. RX=$RX"
+          [ -f "unity/QCShots/rig_emma.png" ] && send "unity/QCShots/rig_emma.png" "LIL FOOTS RIG PASS 1 — Emma skeleton, same bone layout on her T-pose. RX=$RX"
+          if [ ! -f "unity/QCShots/rig_lily.png" ]; then
+            tail -40 $GITHUB_WORKSPACE/unity-rig.log > /tmp/tail.log 2>/dev/null || true
+            curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=LIL FOOTS RIG PASS: build failed (RX=$RX) — logs in artifact." || true
+          fi
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lilfoots-unity-rig
+          path: |
+            unity/Assets/Scenes/**
+            unity/QCShots/**
+            unity-rig.log
+          retention-days: 14
+      - name: Fail flag
+        if: steps.rig.outputs.rig_exit != '0'
+        run: echo "RIG FAILED"; exit 1

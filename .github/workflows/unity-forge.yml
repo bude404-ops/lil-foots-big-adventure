@@ -27,6 +27,8 @@ jobs:
       BTOK: ${{ inputs.btok }}
     steps:
       - uses: actions/checkout@v4
+      - name: GL for headless render
+        run: apt-get update -qq && apt-get install -y -qq libgl1-mesa-dri libglx-mesa0 xvfb > /dev/null 2>&1 || true
       - name: Activate license
         run: |
           LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
@@ -37,7 +39,7 @@ jobs:
         id: forge
         run: |
           set +e
-          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit -nographics \
+          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
             -logFile $GITHUB_WORKSPACE/unity-forge.log -projectPath $GITHUB_WORKSPACE/unity \
             -executeMethod LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot
           echo "forge_exit=$?" >> "$GITHUB_OUTPUT"
