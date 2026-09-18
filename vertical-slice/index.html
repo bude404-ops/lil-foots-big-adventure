@@ -689,20 +689,26 @@ function drawFore(){
   // sweeping past at the foreground plane. Gameplay stays readable between them.
   const gY = GROUND_Y*ZOOM;
   const fH = gY + 70;
-  for(let i=0;i<8;i++){
-    const wx=500+i*1400;
+  // v0.16.1 (Bude: "foreground art is blocking Lily"): trunks now RARE + EDGE-BIASED -
+  // sweep past only near the screen edges, never parked over the play band, and the
+  // fg undergrowth rim shrunk from 30% to 12% so it never covers her legs.
+  const pSX = (player.x-camX)*ZOOM;
+  for(let i=0;i<12;i++){
+    const wx=400+i*2900;
     const fx=(wx-camX*1.3)*ZOOM;
     const img = (i%2===0) ? ART.fgl : ART.fgr;
     if(!img.complete || !img.naturalWidth) continue;
-    const iw = fH*img.width/img.height;
+    const iw = Math.min(fH*img.width/img.height, W*0.24);
     if(fx < -iw-40 || fx > W+40) continue;
-    ctx.globalAlpha=0.96;
+    // never let a trunk sit over the player (center band excluded)
+    if(fx > pSX-iw*0.9 && fx < pSX+iw*0.9) continue;
+    ctx.globalAlpha=0.9;
     ctx.drawImage(img, fx-iw*0.5, gY-fH, iw, fH);
     ctx.globalAlpha=1;
   }
   // painted foreground undergrowth (generated art, v0.7) — dark rim-lit foliage at the boot line
   if(ART.fg.complete && ART.fg.naturalWidth){
-    const fh = H*0.30, fw = fh*ART.fg.width/ART.fg.height;
+    const fh = H*0.12, fw = fh*ART.fg.width/ART.fg.height;
     const off = (-camX*1.35*ZOOM) % fw;
     for(let k=-1; k<=Math.ceil(W/fw)+1; k++){
       ctx.drawImage(ART.fg, k*fw+off, H-fh, fw, fh+6);
