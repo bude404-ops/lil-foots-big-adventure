@@ -123,7 +123,7 @@ public static class LilFootsLevelBuilder {
         // ---- camera ----
         var cam = new GameObject("MainCamera");
         cam.transform.SetParent(root.transform);
-        cam.transform.position = new Vector3(6.7f, 4f, -10f);
+        cam.transform.position = new Vector3(6.7f, 4.5f, -10f); // up 0.5u: vista band + mist fit the frame (approved flowing composition)
         var camc = cam.AddComponent<Camera>(); camc.orthographic = true; camc.orthographicSize = 3.75f;
         camc.backgroundColor = new Color(0.10f, 0.20f, 0.14f);
         var cf = cam.AddComponent<CameraFollow>(); cf.target = player.transform;

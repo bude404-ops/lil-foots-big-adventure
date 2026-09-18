@@ -85,7 +85,7 @@ namespace LilFoots.EditorTools
                 float rh = 0.85f;
                 float rw = rh * (ridges.bounds.size.x / ridges.bounds.size.y);
                 for (float x = -8f; x < 98f; x += rw - 0.03f)
-                    SpriteGo("Ridges", ridges, new Vector3(x, GY + 1.15f + rh / 2f, 0), rw, -90, map.transform);
+                    SpriteGo("Ridges", ridges, new Vector3(x, GY + 1.05f + rh / 2f, 0), rw, -90, map.transform); // in-view: band 7.25-8.1 vs view top 8.25
             }
             // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
             // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
@@ -102,7 +102,7 @@ namespace LilFoots.EditorTools
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
                 float mw = 1.3f * (mist.bounds.size.x / mist.bounds.size.y);
                 float[] mx = { 6f, 30f, 62f, 88f };
-                float[] my = { GY + 1.6f, GY + 2.6f, GY + 1.9f, GY + 2.8f };
+                float[] my = { GY + 0.75f, GY + 1.35f, GY + 1.0f, GY + 1.5f }; // in-view: banks drift between fir-wall tops and the ridge band
                 for (int i = 0; i < 4; i++) SpriteGo("MistBank", mist, new Vector3(mx[i], my[i], 0), mw, -70, map.transform);
             }
 
