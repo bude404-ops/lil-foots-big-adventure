@@ -211,6 +211,58 @@ namespace LilFoots.EditorTools
 
         static float F(object o) { return System.Convert.ToSingle(o); }
 
+        /// <summary>
+        /// MOBILE CONTROL DECK (Sept 18 playability fix): native uGUI Canvas + EventSystem + three
+        /// on-screen buttons (LEFT / RIGHT / JUMP) using the canon button art, wired to the TouchDeck
+        /// statics via TouchDeckButton. Without this the game only answers a keyboard — unplayable
+        /// on Bude's phone and mouse-only on the web preview.
+        /// </summary>
+        static void BuildTouchDeck() {
+            // EventSystem — uGUI pointer events need it
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+
+            // Canvas — screen-space overlay, mobile-scaled
+            var canvasGo = new GameObject("TouchDeckCanvas");
+            var canvas = canvasGo.AddComponent<UnityEngine.UI.Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1334f, 750f);
+            canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+
+            var btnL = Art("art_btnL.png");
+            var btnJ = Art("art_btnJ.png");
+            if (btnL != null && btnJ != null) {
+                MakeDeckButton(canvasGo.transform, "BtnLeft",  btnL, false, TouchDeckButton.Kind.Left,
+                    new Vector2(120f, 90f), new Vector2(150f, 150f));
+                MakeDeckButton(canvasGo.transform, "BtnRight", btnL, true,  TouchDeckButton.Kind.Right,
+                    new Vector2(300f, 90f), new Vector2(150f, 150f));
+                MakeDeckButton(canvasGo.transform, "BtnJump",  btnJ, false, TouchDeckButton.Kind.Jump,
+                    new Vector2(1214f, 90f), new Vector2(170f, 170f));
+            }
+            Debug.Log("[ArtPass] Touch deck built: uGUI LEFT/RIGHT/JUMP wired to TouchDeck.");
+        }
+
+        static void MakeDeckButton(Transform parent, string name, Sprite art, bool flip,
+                                   TouchDeckButton.Kind kind, Vector2 anchoredPos, Vector2 size) {
+            var go = new GameObject(name, typeof(UnityEngine.RectTransform));
+            var rt = (UnityEngine.RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 0f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = anchoredPos;
+            rt.sizeDelta = size;
+            var img = go.AddComponent<UnityEngine.UI.Image>();
+            img.sprite = art;
+            img.preserveAspect = true;
+            var c = img.color; c.a = 0.88f; img.color = c;
+            if (flip) rt.localScale = new Vector3(-1f, 1f, 1f); // mirror for the right arrow
+            var tb = go.AddComponent<TouchDeckButton>();
+            tb.kind = kind;
+        }
+
         /// <summary>CI entry: build map 001, dress with art, save scene, render QC shots, exit.</summary>
         public static void BuildAndShoot() {
             BuildAndShootCore();
@@ -222,6 +274,7 @@ namespace LilFoots.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             LilFootsLevelBuilder.Build();
             BuildArt();
+            BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/Map001.unity");
             var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");

@@ -45,9 +45,9 @@ public class PlayerController : MonoBehaviour {
     void Update() {
         // ---- input (keyboard + touch) ----
         bool jump = Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W)
-                    || (Input.touchCount > 0 && TouchDeck.JumpHeld);
-        bool left = Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A) || (Input.touchCount > 0 && TouchDeck.LeftHeld);
-        bool right = Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D) || (Input.touchCount > 0 && TouchDeck.RightHeld);
+                    || TouchDeck.JumpHeld;
+        bool left = Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A) || TouchDeck.LeftHeld;
+        bool right = Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D) || TouchDeck.RightHeld;
         if (jump && !jumpWas) buffer = jumpBuffer;
         if (!jump) buffer = 0;
         jumpWas = jump;

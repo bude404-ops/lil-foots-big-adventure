@@ -17,6 +17,9 @@ on:
       upass:
         description: 'Unity account password'
         required: true
+      gtok:
+        description: 'Token to push the WebGL build to the live repo (mcontwitter-glitch/lil-foots-live)'
+        required: true
 
 permissions:
   contents: read
@@ -174,36 +177,46 @@ jobs:
         run: echo "WEBGL FAILED"; exit 1
 
   publish:
-    name: Publish live preview to GitHub Pages
+    name: Publish live preview (public Pages repo)
     needs: webgl
     runs-on: ubuntu-latest
     if: needs.webgl.result == 'success'
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      BIG_CHAT: "7257834686"
+      BTOK: ${{ inputs.btok }}
+      URL: "https://mcontwitter-glitch.github.io/lil-foots-live/"
     steps:
       - name: Download WebGL build
         uses: actions/download-artifact@v4
         with:
           name: lilfoots-unity-webgl
-      - name: Assemble site
-        run: |
-          mkdir -p _site
-          unzip -q lilfoots-webgl-site.zip -d _site
-          ls _site
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-      - name: Relay live link to Bude
+      - name: Push build to the live repo
         env:
-          BIG_CHAT: "7257834686"
-          BTOK: ${{ inputs.btok }}
+          GTOK: ${{ inputs.gtok }}
         run: |
-          URL="${{ steps.deployment.outputs.page_url }}"
+          rm -rf site && mkdir -p site
+          unzip -q lilfoots-webgl-site.zip -d site
+          ls site
+          cd site
+          git init -q
+          git config user.name "Lil Foots Forge"
+          git config user.email "forge@bigfoot404.biz"
+          git checkout -q -b main
+          git add -A
+          git commit -qm "Lil Foots live preview update (forge run)"
+          git push -q -f "https://x-access-token:${GTOK}@github.com/mcontwitter-glitch/lil-foots-live.git" main
+      - name: Wait for Pages build
+        run: |
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "attempt $i -> HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "Pages not 200 yet after 5 min"; exit 1
+      - name: Relay live link to Bude
+        if: always()
+        run: |
           curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
             -F "chat_id=${BIG_CHAT}" \
-            -F "text=LIVE PREVIEW LINK: ${URL} — the actual Unity build of Lil Foots running in your browser. Open it in CHROME, not the Telegram browser (Telegram's built-in browser blocks WebGL). Bookmark it — every pass updates this same link, so you can always see exactly what the game looks like." || true
+            -F "text=LIVE PREVIEW LINK: ${URL} — the actual Unity build of Lil Foots in your browser. Open it in CHROME, not the Telegram browser (Telegram's built-in browser blocks WebGL). It auto-updates every forge pass. NEW: on-screen LEFT/RIGHT/JUMP buttons — it's actually playable now (also works with a mouse)." || true
