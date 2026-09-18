@@ -148,9 +148,10 @@ namespace LilFoots.EditorTools
             var trailcamArt = Art("art_trailcam.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("TrailCam")) continue;
-                if (camTree != null)
+                if (camTree != null) {
                     float cth = 3.1f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
                     SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
+                }
                 if (trailcamArt != null) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
             }
 
