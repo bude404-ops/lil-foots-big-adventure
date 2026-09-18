@@ -53,6 +53,11 @@ public static class LilFootsBuildRunner {
         if (string.IsNullOrEmpty(outDir)) outDir = "Builds/WebGL";
         Directory.CreateDirectory(outDir);
 
+        // GitHub Pages serves raw files without Content-Encoding headers, so the gzip
+        // build can't be parsed by the loader ("Unable to parse WebGL.framework.js.gz").
+        // Disabled compression = plain .data/.framework.js/.wasm that any static host serves.
+        EditorUserBuildSettings.webGLCompressionFormat = WebGLCompressionFormat.Disabled;
+        Debug.Log("[BuildRunner] WebGL compression DISABLED for static hosting (Pages-safe).");
         Debug.Log("[BuildRunner] Unity building the game (WebGL): " + outDir);
         var report = BuildPipeline.BuildPlayer(scenes, outDir, BuildTarget.WebGL, BuildOptions.None);
         var sum = report.summary;
