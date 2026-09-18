@@ -166,8 +166,8 @@ public static class MiniJson {
         if (c=='{') { i++; var d = new System.Collections.Generic.Dictionary<string,object>();
             while (true) { while (char.IsWhiteSpace(s[i])) i++;
                 if (s[i]=='}') { i++; return d; }
-                int st=i; while (s[i]!='"') i++; i++; int en=i; while(!(s[i]=='"'&&s[i-1]!='\\')) i++;
-                var key=s.Substring(st,en-st); i++;
+                while (s[i]!='"') i++; i++; int en=i; while(!(s[i]=='"'&&s[i-1]!='\\')) i++;
+                var key=s.Substring(en,i-en); i++;
                 while (s[i]!=':') i++; i++;
                 d[key]=ParseValue(s, ref i);
                 while (char.IsWhiteSpace(s[i])) i++;
