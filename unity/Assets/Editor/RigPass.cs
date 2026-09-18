@@ -39,47 +39,39 @@ namespace LilFoots.EditorTools
         }
 
         // bone endpoint fractions of the T-pose art rect (x: 0..1 left->right, y: 0..1 bottom->top)
-        // T-pose: arms straight out at shoulder line (~0.66 height), legs slightly apart.
+        // BLUE-LINE SKELETON (Bude's ref, imgur L4ui1Jm): head, neck, SINGLE spine bone,
+        // single-bone arms straight off the shoulder girdle, hip, single-bone legs. No elbows, no knees.
         static readonly Dictionary<string, Vector2> Pose = new Dictionary<string, Vector2> {
-            {"hip",       new Vector2(0.50f, 0.42f)},
-            {"spine",     new Vector2(0.50f, 0.52f)},
-            {"chest",     new Vector2(0.50f, 0.63f)},
-            {"neck",      new Vector2(0.50f, 0.72f)},
-            {"headTop",   new Vector2(0.50f, 0.92f)},
-            {"shoulderL", new Vector2(0.34f, 0.66f)},
-            {"elbowL",    new Vector2(0.20f, 0.66f)},
-            {"handL",     new Vector2(0.07f, 0.66f)},
+            {"hip",       new Vector2(0.50f, 0.42f)},   // pelvis pivot (hip bar center)
+            {"neck",      new Vector2(0.50f, 0.72f)},   // top of the single spine bone
+            {"head",      new Vector2(0.50f, 0.92f)},   // head bone to top of skull
+            {"shoulderL", new Vector2(0.34f, 0.66f)},   // arm bone pivots at the shoulder girdle
+            {"handL",     new Vector2(0.07f, 0.66f)},   // single-bone arm: shoulder -> hand
             {"shoulderR", new Vector2(0.66f, 0.66f)},
-            {"elbowR",    new Vector2(0.80f, 0.66f)},
             {"handR",     new Vector2(0.93f, 0.66f)},
-            {"thighL",    new Vector2(0.44f, 0.30f)},
-            {"kneeL",     new Vector2(0.44f, 0.17f)},
-            {"footL",     new Vector2(0.44f, 0.04f)},
-            {"thighR",    new Vector2(0.56f, 0.30f)},
-            {"kneeR",     new Vector2(0.56f, 0.17f)},
+            {"legL",      new Vector2(0.44f, 0.42f)},   // leg bone pivots AT THE HIP
+            {"footL",     new Vector2(0.44f, 0.04f)},   // single-bone leg: hip -> foot
+            {"legR",      new Vector2(0.56f, 0.42f)},
             {"footR",     new Vector2(0.56f, 0.04f)},
         };
 
-        // parent chain for the bone hierarchy
+        // parent chain — matches the blue line exactly: hip -> neck (one spine) -> head + shoulders;
+        // hip -> legs (straight through, no knees)
         static readonly Dictionary<string, string> Parent = new Dictionary<string, string> {
-            {"spine", "hip"}, {"chest", "spine"}, {"neck", "chest"}, {"headTop", "neck"},
-            {"shoulderL", "chest"}, {"elbowL", "shoulderL"}, {"handL", "elbowL"},
-            {"shoulderR", "chest"}, {"elbowR", "shoulderR"}, {"handR", "elbowR"},
-            {"thighL", "hip"}, {"kneeL", "thighL"}, {"footL", "kneeL"},
-            {"thighR", "hip"}, {"kneeR", "thighR"}, {"footR", "kneeR"},
+            {"neck", "hip"}, {"head", "neck"},
+            {"shoulderL", "neck"}, {"handL", "shoulderL"},
+            {"shoulderR", "neck"}, {"handR", "shoulderR"},
+            {"legL", "hip"}, {"footL", "legL"},
+            {"legR", "hip"}, {"footR", "legR"},
         };
 
-        // walk-cycle articulation: local euler Z (deg) per bone per keyframe (contact/down/pass/up)
+        // walk cycle for the blue-line skeleton: swing at the hips, arms counter, slight torso/head bob
         static readonly Dictionary<string, float[]> Walk = new Dictionary<string, float[]> {
-            {"thighL",  new float[]{  32f,  18f,  -5f, -22f}},
-            {"kneeL",   new float[]{  -4f, -18f,  -28f, -10f}},
-            {"thighR",  new float[]{ -22f,  -5f,  18f,  32f}},
-            {"kneeR",   new float[]{ -10f, -28f, -18f,  -4f}},
-            {"shoulderL", new float[]{ -28f, -12f, 10f, 24f}},
-            {"elbowL",    new float[]{  -8f,  -4f,  -6f, -10f}},
-            {"shoulderR", new float[]{  24f,  10f, -12f, -28f}},
-            {"elbowR",    new float[]{ -10f,  -6f,  -4f,  -8f}},
-            {"chest",   new float[]{  4f,  2f, -2f, -4f}},
+            {"legL",      new float[]{  30f,  14f,  -6f, -24f}},
+            {"legR",      new float[]{ -24f,  -6f,  14f,  30f}},
+            {"shoulderL", new float[]{ -26f, -12f, 10f, 22f}},
+            {"shoulderR", new float[]{  22f,  10f, -12f, -26f}},
+            {"neck",      new float[]{   4f,   2f, -2f,  -4f}},
         };
 
         class CharRig {
