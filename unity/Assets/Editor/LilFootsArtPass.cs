@@ -99,9 +99,11 @@ namespace LilFoots.EditorTools
             // drifting PNW mist banks (soft sprites, ~1.4u tall, upper sky band)
             var mist = Art("art_mist.png");
             if (mist != null) {
+                // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
+                float mw = 1.3f * (mist.bounds.size.x / mist.bounds.size.y);
                 float[] mx = { 6f, 30f, 62f, 88f };
                 float[] my = { GY + 1.6f, GY + 2.6f, GY + 1.9f, GY + 2.8f };
-                for (int i = 0; i < 4; i++) SpriteGo("MistBank", mist, new Vector3(mx[i], my[i], 0), 3.6f, -70, map.transform);
+                for (int i = 0; i < 4; i++) SpriteGo("MistBank", mist, new Vector3(mx[i], my[i], 0), mw, -70, map.transform);
             }
 
             // ---- STREAM WATER in the gaps ----
@@ -153,6 +155,21 @@ namespace LilFoots.EditorTools
                     SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
                 }
                 if (trailcamArt != null) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
+            }
+
+            // ---- FOREGROUND DEPTH PROPS (Bude Depth Doctrine): small dark fern/grass
+            // silhouettes passing IN FRONT of the play plane, movie-like depth ----
+            var fore = Art("art_fore_props.png");
+            if (fore != null) {
+                float fh2 = 1.15f;
+                float fw2 = fh2 * (fore.bounds.size.x / fore.bounds.size.y);
+                float fx = -6f; int fi = 0;
+                while (fx < 104f) {
+                    var fg = SpriteGo("ForeProp", fore, new Vector3(fx, GY - 0.1f + fh2 / 2f, 0), fw2, 30, map.transform);
+                    var fsr = fg.GetComponent<SpriteRenderer>();
+                    if (fi % 2 == 1) fsr.flipX = true;   // alternate so the row doesn't visibly repeat
+                    fx += fw2 * 0.62f; fi++;
+                }
             }
 
             // ---- ENEMY ART (child sprites — hitboxes untouched) ----
