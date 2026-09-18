@@ -25,7 +25,8 @@ public class HoundController : MonoBehaviour {
     [HideInInspector] public bool alerted;
     [HideInInspector] public bool dead;
 
-    float dir = -1, alert;
+    [HideInInspector] public float dir = -1;
+    float alert;
     Rigidbody2D rb;
     Vector2 size;
 
