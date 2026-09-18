@@ -475,12 +475,18 @@ function update(dt){
     // hounds — DEAD STAYS DEAD (stomped = gone for the run)
     for(const hd of hounds){
       if(hd.dead) continue;
-      hd.x += hd.dir * hd.spd * (1 + (hd.alert>0?1.2:0)) * dt;
+      const hdSpd = hd.spd * (1 + (hd.alert>0?1.2:0));
       if(hd.alert>0) hd.alert-=dt;
+      // LEDGE GUARD (Bude playtest: dogs were running over the pits on nothing):
+      // probe the ground ahead — if there's no platform there, the hound turns around at the edge
+      if(onPlat(hd.x + hd.dir*42, hd.y, 2)) hd.x += hd.dir * hdSpd * dt;
+      else hd.dir *= -1;
       if(hd.x>hd.max){hd.dir=-1;} if(hd.x<hd.min){hd.dir=1;}
-      // chase if player close & on ground — but hounds stay leashed near their patrol zone
+      // chase if player close & on ground — but hounds stay leashed near their patrol zone,
+      // and only chase when there's solid ground between them and the player (no chasing across pits)
       const inLeash = hd.x >= hd.min-200 && hd.x <= hd.max+200;
-      if(inLeash && Math.abs(hd.x-player.x)<260 && player.onGround) hd.dir = (player.x>hd.x?1:-1);
+      const towardP = (player.x>hd.x?1:-1);
+      if(inLeash && Math.abs(hd.x-player.x)<260 && player.onGround && onPlat(hd.x + towardP*42, hd.y, 2)) hd.dir = towardP;
       else if(hd.x < hd.min-200) hd.dir = 1;
       else if(hd.x > hd.max+200) hd.dir = -1;
       // hit — stomp registers ONLY when feet actually reach the hound's head
@@ -931,12 +937,10 @@ function drawWorld(){
     ctx.restore();
   }
 
-  // trail camera (tree-mounted, detection cone)
+  // trail camera (tree-mounted, detection cone) — REAL TREES now, not poles (Bude playtest fix)
   for(const c of cams){
     if(c.dead) continue; // smashed = gone
-    ctx.fillStyle="#4a3a2a"; ctx.fillRect(c.x-6, c.y, 12, GROUND_Y-c.y); // trunk down to ground
-    ctx.beginPath(); ctx.ellipse(c.x-46, c.y+150, 60, 28, 0.3,0,7); ctx.fillStyle="#2f6b52"; ctx.fill();
-    ctx.beginPath(); ctx.ellipse(c.x+46, c.y+150, 60, 28, -0.3,0,7); ctx.fill();
+    drawCamTree(c.x, c.y);
     ctx.save(); ctx.translate(c.x, c.y);
     if(ART.trailcam.complete){
       const cw=42, chh=cw*ART.trailcam.height/ART.trailcam.width;
@@ -977,9 +981,7 @@ function drawWorld(){
       ctx.fillStyle= alarm>0 ? "#ff6a50":"#bfe8c8";
       ctx.beginPath(); ctx.moveTo(drone.sx-10,drone.y+10); ctx.lineTo(drone.sx-70,GROUND_Y); ctx.lineTo(drone.sx+70,GROUND_Y); ctx.lineTo(drone.sx+10,drone.y+10); ctx.closePath(); ctx.fill();
       ctx.globalAlpha=1;
-      // tether line up
-      ctx.strokeStyle="rgba(30,50,40,0.4)"; ctx.lineWidth=3;
-      ctx.beginPath(); ctx.moveTo(drone.x,0); ctx.lineTo(drone.sx,drone.y); ctx.stroke();
+      // tether removed (Bude playtest: "remove the line it's hanging from") — free-flying drone
     }
   }
 
@@ -1135,6 +1137,47 @@ function drawWorld(){
   }
 
   ctx.restore();
+}
+
+function drawCamTree(x, camY){ // chunky woodland cam-tree per the art bible: readable silhouette, thick outline
+  const gy = GROUND_Y, topY = camY - 150; // canopy sits above the cam
+  const tw = 34; // trunk half-width base
+  // trunk: flared roots -> straight up, dark outline
+  ctx.beginPath();
+  ctx.moveTo(x-tw*1.15, gy);
+  ctx.quadraticCurveTo(x-tw*0.55, gy-70, x-tw*0.42, camY-60);
+  ctx.lineTo(x-tw*0.42, topY+70);
+  ctx.quadraticCurveTo(x-tw*0.50, topY+40, x-tw*0.62, topY+18);
+  ctx.lineTo(x+tw*0.62, topY+18);
+  ctx.quadraticCurveTo(x+tw*0.50, topY+40, x+tw*0.42, topY+70);
+  ctx.lineTo(x+tw*0.42, camY-60);
+  ctx.quadraticCurveTo(x+tw*0.55, gy-70, x+tw*1.15, gy);
+  ctx.closePath();
+  outline("#6b4a32", 5);
+  // bark ridges
+  ctx.strokeStyle="#54382a"; ctx.lineWidth=3; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(x-8, gy-18); ctx.quadraticCurveTo(x-12, (gy+camY)/2, x-9, camY+40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+12, gy-26); ctx.quadraticCurveTo(x+16, (gy+camY)/2+30, x+11, camY+80); ctx.stroke();
+  // branch stub the cam straps to
+  ctx.beginPath();
+  ctx.moveTo(x-tw*0.42, camY+26); ctx.lineTo(x-tw*1.5, camY+8); ctx.lineTo(x-tw*1.5, camY+20); ctx.lineTo(x-tw*0.42, camY+42);
+  ctx.closePath(); outline("#6b4a32", 4);
+  // canopy: chunky overlapping masses, lit from upper-left
+  const blobs = [
+    [x, topY, 92, 54, "#37795a"],
+    [x-72, topY+26, 62, 40, "#2f6b52"],
+    [x+72, topY+26, 62, 40, "#2f6b52"],
+    [x-38, topY-28, 56, 36, "#41895f"],
+    [x+38, topY-28, 56, 36, "#41895f"],
+    [x, topY-46, 50, 34, "#48916a"],
+  ];
+  for(const b of blobs){
+    ctx.beginPath(); ctx.ellipse(b[0], b[1], b[2], b[3], 0, 0, 7); outline(b[4], 5);
+  }
+  // canopy highlight dabs
+  ctx.fillStyle="rgba(255,255,255,0.10)";
+  ctx.beginPath(); ctx.ellipse(x-20, topY-22, 30, 14, -0.3, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+34, topY-6, 22, 10, 0.2, 0, 7); ctx.fill();
 }
 
 function drawHUD(){
