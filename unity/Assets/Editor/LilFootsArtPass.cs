@@ -225,7 +225,7 @@ namespace LilFoots.EditorTools
 
             // Canvas — screen-space overlay, mobile-scaled
             var canvasGo = new GameObject("TouchDeckCanvas");
-            var canvas = canvasGo.AddComponent<UnityEngine.UI.Canvas>();
+            var canvas = canvasGo.AddComponent<UnityEngine.Canvas>(); // Canvas is in UnityEngine, not UnityEngine.UI
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
             scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
