@@ -186,7 +186,9 @@ namespace LilFoots.EditorTools
             cam.transform.position = new Vector3(0f, 2.6f, -10f);
             cam.tag = "MainCamera";
 
-            Directory.CreateDirectory("QCShots");
+            var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");
+            if (string.IsNullOrEmpty(outDir)) outDir = "QCShots";
+            Directory.CreateDirectory(outDir);
 
             var chars = new (string name, string file, Color bone, Color joint)[] {
                 ("lily",  "lily-rig-ready-v1.png",  new Color(0.60f, 0.98f, 0.25f), new Color(1f, 1f, 1f)),
@@ -217,7 +219,7 @@ namespace LilFoots.EditorTools
             foreach (var c in chars) {
                 var rig = rigs[c.name];
                 cam.transform.position = new Vector3(rig.Root.transform.position.x, 2.6f, -10f);
-                Snap(rt, "QCShots/rig_" + c.name + ".png");
+                Snap(rt, System.IO.Path.Combine(outDir, "rig_" + c.name + ".png"));
             }
 
             // walk-cycle pose sheet (Lily): 4 articulated skeletons over ghosted art
@@ -241,7 +243,7 @@ namespace LilFoots.EditorTools
                     JointDot(ghostRig.Bones[kv.Key].position, 0.30f, Color.white, 200, walkRoot.transform);
             }
             cam.transform.position = new Vector3(0f, 2.6f, -10f);
-            Snap(rt, "QCShots/rig_walkcycle.png");
+            Snap(rt, System.IO.Path.Combine(outDir, "rig_walkcycle.png"));
 
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/RigSheet.unity");

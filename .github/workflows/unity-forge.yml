@@ -1,8 +1,9 @@
 name: Lil Foots Unity Forge
 
 # Lil Foots: Big Adventure — the real Unity build (Bude's call, Sept 18 2026: "begin making it in unity").
-# Builds map 001 headlessly from level data, dresses it with the real art set (Unity Art Law:
-# no code-drawn visuals), saves the scene, renders QC shots and relays them to Bude's DM.
+# Host-runner + docker-run pattern: GitHub's runner disk cannot fit the unityci image pulled as a
+# job container (both Sept 18 runs died: "no space left on device"). We free ~25GB first, then pull
+# and run the image manually. QC_OUT pins shot output to <workspace>/unity/QCShots.
 on:
   workflow_dispatch:
     inputs:
@@ -20,28 +21,44 @@ jobs:
   build:
     name: Build map 001 + QC shots
     runs-on: ubuntu-latest
-    container: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       BIG_CHAT: "7257834686"
       BTOK: ${{ inputs.btok }}
+      UIMG: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
     steps:
-      - uses: actions/checkout@v4
-      - name: GL for headless render
-        run: apt-get update -qq && apt-get install -y -qq libgl1-mesa-dri libglx-mesa0 xvfb > /dev/null 2>&1 || true
-      - name: Activate license
+      - name: Free disk for the Unity image
         run: |
-          LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
-          if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
-          "$LIC" --activate-all --include-personal --username "${{ inputs.uuser }}" --password "${{ inputs.upass }}" > /tmp/act.log 2>&1 || true
-          grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log && echo "LICENSE OK" || (echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 1)
-      - name: Build scene + art pass + QC shots
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/lib/jvm \
+            /usr/local/lib/node_modules /usr/local/bin/terraform /usr/share/swift 2>/dev/null || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
+      - uses: actions/checkout@v4
+      - name: Pull Unity image
+        run: docker pull "$UIMG"
+      - name: License + build scene + art pass + QC shots
         id: forge
+        env:
+          UUSER: ${{ inputs.uuser }}
+          UPASS: ${{ inputs.upass }}
         run: |
           set +e
-          xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
-            -logFile $GITHUB_WORKSPACE/unity-forge.log -projectPath $GITHUB_WORKSPACE/unity \
-            -executeMethod LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/project" -w /project \
+            -e QC_OUT=/project/unity/QCShots \
+            -e UUSER -e UPASS \
+            "$UIMG" bash -c '
+              LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
+              if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
+              "$LIC" --activate-all --include-personal --username "$UUSER" --password "$UPASS" > /tmp/act.log 2>&1 || true
+              if ! grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log; then echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 10; fi
+              echo "LICENSE OK"
+              mkdir -p /project/unity/QCShots
+              xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
+                -logFile /project/unity-forge.log -projectPath /project/unity \
+                -executeMethod LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot
+            '
           echo "forge_exit=$?" >> "$GITHUB_OUTPUT"
           exit 0
       - name: Relay QC shots to Bude
@@ -59,7 +76,6 @@ jobs:
             fi
           done
           if [ ! -f "unity/QCShots/unity_start.png" ]; then
-            tail -40 $GITHUB_WORKSPACE/unity-forge.log > /tmp/tail.log 2>/dev/null || true
             curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=LIL FOOTS UNITY FORGE: build failed (FX=$FX) — logs in artifact." || true
           fi
       - name: Upload artifact

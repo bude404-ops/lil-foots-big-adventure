@@ -218,7 +218,9 @@ namespace LilFoots.EditorTools
             BuildArt();
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/Map001.unity");
-            Directory.CreateDirectory("QCShots");
+            var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");
+            if (string.IsNullOrEmpty(outDir)) outDir = "QCShots";
+            Directory.CreateDirectory(outDir);
 
             var cam = GameObject.Find("MainCamera").GetComponent<Camera>();
             var cf = cam.GetComponent<CameraFollow>();
@@ -231,15 +233,15 @@ namespace LilFoots.EditorTools
             cam.targetTexture = rt;
             // shot 1: start area, Lily on the grass
             cam.transform.position = new Vector3(lily.transform.position.x + 2.5f, 4.2f, -10f);
-            Snap(rt, "QCShots/unity_start.png");
+            Snap(rt, System.IO.Path.Combine(outDir, "unity_start.png"));
             // shot 2: mid-map, hound + cam tree
             float hx = hound != null ? hound.transform.position.x : 45f;
             cam.transform.position = new Vector3(hx + 2.2f, 4.2f, -10f);
-            Snap(rt, "QCShots/unity_mid.png");
+            Snap(rt, System.IO.Path.Combine(outDir, "unity_mid.png"));
             // shot 3: finish gate + flag + portal
             float gx = gate != null ? gate.transform.position.x : 86f;
             cam.transform.position = new Vector3(gx - 2.5f, 4.2f, -10f);
-            Snap(rt, "QCShots/unity_gate.png");
+            Snap(rt, System.IO.Path.Combine(outDir, "unity_gate.png"));
 
             Debug.Log("[ArtPass] QC shots done.");
             EditorApplication.Exit(0);
