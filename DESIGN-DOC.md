@@ -9,6 +9,10 @@
 - World: misty Pacific-Northwest-style Bigfoot country — giant cedars, ferns, mossy boulders, teal fog.
 - Lore basis: BIGFOOT lore (small sasquatches, cryptid-hunters, hoax culture). Global cryptid lore (yeti/yowie/skunk ape/mapinguari) = future region worlds.
 
+## REGION STRUCTURE (Bude, Sept 18 2026: "we are making these maps region specific based on where bigfoots are around the world")
+Maps are REGION-SPECIFIC — each region is themed on real-world Bigfoot/cryptid geography. Every region gets its own art skin (sky, treeline, terrain palette, weather/atmosphere) built in the cast's thick-outline cartoon style. Region art stays canon once Bude approves it.
+- **REGION 1: PACIFIC NORTHWEST, US** (Bude: "the first region needs to be the PNW") — Sasquatch home turf. Overcast ink-outlined sky, distant Cascade ridges with a snow-capped volcano, dense outlined Douglas-fir wall, drifting mist banks, mossy greens + teal fog. v0.18 skin shipped (overcast sky plate, fir strip, code ridges/volcano/mist).
+
 ## Characters (CAST CANON — Bude's images, UNMODIFIED, pixel-for-pixel)
 Per Bude: "use the images I sent as the characters dont modify them." No redraws, reinterpretations, or style-matched generated plates. Generated art is for WORLDS, enemies, and mockups only.
 - **LILY** (named by Bude, Sept 17 2026 ~11:18 AM) — formerly Lil Foot #1: green cartoon creature, light blue bow, multicolored polarized sunglasses.
