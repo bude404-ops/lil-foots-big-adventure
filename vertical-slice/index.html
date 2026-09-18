@@ -200,6 +200,7 @@ function puff(x,y,n,sp,col){ for(let i=0;i<n;i++){ const a=Math.random()*Math.PI
   parts.push({x:x+(Math.random()-0.5)*14, y:y+(Math.random()-0.5)*6, vx:Math.cos(a)*s*(Math.random()<0.5?-1:1), vy:-Math.abs(Math.sin(a))*s*0.6, r:5+Math.random()*7, life:1, dec:2.4+Math.random()*1.6, col}); } }
 let tokens=0, tokensTotal=0;
 const GATE_NEED = 18; // main route holds ~40 — the gate asks you to pick some up along the way
+let gateMsg = 0; // transient gate notice (mode='gate' soft-lock bug fix: notice, not a mode)
 
 const player = {
   x:120, y:GROUND_Y, vx:0, vy:0, w:46, h:64,
@@ -391,6 +392,7 @@ function update(dt){
   if(regionFade>0) regionFade-=dt;
   if(alarm>0) alarm-=dt;
   if(houndSpawnCd>0) houndSpawnCd-=dt;
+  if(gateMsg>0) gateMsg-=dt;
   if(player.safe>0) player.safe-=dt;
   for(let i=poofs.length-1;i>=0;i--){ poofs[i].t-=dt; if(poofs[i].t<=0) poofs.splice(i,1); }
 
@@ -489,14 +491,17 @@ function update(dt){
       if(inLeash && Math.abs(hd.x-player.x)<260 && player.onGround && onPlat(hd.x + towardP*42, hd.y, 2)) hd.dir = towardP;
       else if(hd.x < hd.min-200) hd.dir = 1;
       else if(hd.x > hd.max+200) hd.dir = -1;
-      // hit — stomp registers ONLY when feet actually reach the hound's head
-      if(Math.abs(hd.x-(player.x+player.w/2))<38){
+      // hit — STOMP HITBOX REWORK (Bude playtest: "dog hit boxes not killing them and them just killing me"):
+      // stomp now registers when falling and coming from above the hound's back line (forgiving, swept),
+      // side contact stays lethal. The old exact-plane crossing + 38px window missed real stomps.
+      if(Math.abs(hd.x-(player.x+player.w/2))<52){
         const feetNow = player.y-10, feetPrev = player.py-10;
-        if(player.vy>200 && feetPrev <= hd.y-38 && feetNow >= hd.y-38){
+        const backLine = hd.y-24; // hound's back: feet at/above this while falling = you're on top of it
+        if(player.vy>100 && (feetNow <= backLine || feetPrev <= backLine)){
           player.vy=-520; hd.dead=true; hd.alert=0; SFX.stomp();
           poofs.push({x:hd.x, y:hd.y-20, t:0.5});
-        } else if(Math.abs(hd.y-feetNow)<46 && player.safe<=0){
-          die(); // enemy contact = you lose a life
+        } else if(feetNow > backLine && Math.abs(hd.y-feetNow)<46 && player.safe<=0){
+          die(); // side/body contact = you lose a life
         }
       }
     }
@@ -560,7 +565,7 @@ function update(dt){
 
     // token gate
     if(player.x>8550 && player.x<8630 && tokens<GATE_NEED){
-      player.x=8545; mode="gate"; SFX.gate();
+      player.x=8545; gateMsg=2.4; SFX.gate(); // bounce back + notice — game keeps running
     }
     // flagpole!
     if(player.x+player.w*0.7 > poleX-8 && player.x < poleX+40 && player.y>poleTop){
@@ -1239,7 +1244,7 @@ function drawHUD(){
     ctx.globalAlpha=1;
   }
 
-  if(mode==="gate"){
+  if(gateMsg>0){
     ctx.textAlign="center"; ctx.fillStyle="#eaffd8";
     ctx.font="bold "+Math.round(26*ZOOM)+"px 'Space Grotesk','Arial Black'";
     ctx.globalAlpha=0.9;
