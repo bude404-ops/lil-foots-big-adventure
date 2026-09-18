@@ -136,6 +136,14 @@ namespace LilFoots.EditorTools
             public Vector2 ArtSize;
         }
 
+        static Bounds artBoundsOf(CharRig rig) {
+            // world-space bounds of the uncut art sprite as rendered (tight, since art files are bg-cut)
+            var sr = rig.Root.GetComponentInChildren<SpriteRenderer>();
+            var b = sr.bounds;
+            b.Expand(-0.06f); // 6% inset so edge joints (hands/head) must sit ON the silhouette, not in margin
+            return b;
+        }
+
         static CharRig BuildRig(string name, string artPath, float worldH, Vector3 pos, float artAlpha) {
             var rig = new CharRig { WorldH = worldH };
             var s = Art(artPath);
@@ -191,9 +199,9 @@ namespace LilFoots.EditorTools
             Directory.CreateDirectory(outDir);
 
             var chars = new (string name, string file, Color bone, Color joint)[] {
-                ("lily",  "lily-rig-ready-v1.png",  new Color(0.60f, 0.98f, 0.25f), new Color(1f, 1f, 1f)),
-                ("buddy", "buddy-rig-ready-v1.png", new Color(1.00f, 0.72f, 0.16f), new Color(1f, 1f, 1f)),
-                ("emma",  "emma-rig-ready-v1.png",  new Color(1.00f, 0.42f, 0.75f), new Color(1f, 1f, 1f)),
+                ("lily",  "lily-rig-ready-v1-cut.png",  new Color(0.60f, 0.98f, 0.25f), new Color(1f, 1f, 1f)),
+                ("buddy", "buddy-rig-ready-v1-cut.png", new Color(1.00f, 0.72f, 0.16f), new Color(1f, 1f, 1f)),
+                ("emma",  "emma-rig-ready-v1-cut.png",  new Color(1.00f, 0.42f, 0.75f), new Color(1f, 1f, 1f)),
             };
 
             var rigs = new Dictionary<string, CharRig>();
@@ -201,6 +209,14 @@ namespace LilFoots.EditorTools
             foreach (var c in chars) {
                 var rig = BuildRig(c.name, "Assets/Art/Characters/" + c.file, 5.2f, new Vector3(i * 12f, 2.6f, 0f), 0.85f);
                 rigs[c.name] = rig;
+                // FIT GUARD (Bude: "the skeleton rigging needs to be in the models frame"):
+                // every bone must land inside the character art bounds — hard error if not.
+                var artBounds = artBoundsOf(rig);
+                foreach (var bv in rig.Bones) {
+                    if (!artBounds.Contains(new Vector3(bv.Value.position.x, bv.Value.position.y, 0f)))
+                        Debug.LogError("[RigPass] BONE OUTSIDE ART: " + c.name + "/" + bv.Key +
+                            " at " + bv.Value.position + " art bounds " + artBounds);
+                }
                 // overlay: bone lines + joint dots on top of the art
                 foreach (var kv in Parent) {
                     Vector3 a = rig.Bones[kv.Key].position;
@@ -226,7 +242,7 @@ namespace LilFoots.EditorTools
             var walkRoot = new GameObject("WalkCycle");
             walkRoot.transform.position = new Vector3(0f, 2.6f, 0f);
             for (int k = 0; k < 4; k++) {
-                var ghostRig = BuildRig("walk" + k, "Assets/Art/Characters/lily-rig-ready-v1.png", 5.2f, new Vector3((k - 1.5f) * 6.5f, 2.6f, 0f), 0.30f);
+                var ghostRig = BuildRig("walk" + k, "Assets/Art/Characters/lily-rig-ready-v1-cut.png", 5.2f, new Vector3((k - 1.5f) * 6.5f, 2.6f, 0f), 0.30f);
                 // articulate: rotate bones per walk keyframe (Z euler), arms/legs swing
                 foreach (var w in Walk) {
                     if (ghostRig.Bones.TryGetValue(w.Key, out var bone)) {
