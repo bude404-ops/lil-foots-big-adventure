@@ -35,6 +35,30 @@ public static class LilFootsBuildRunner {
 
         EditorApplication.Exit(sum.result == BuildResult.Succeeded ? 0 : 1);
     }
+
+    [MenuItem("Tools/Lil Foots/Build Map 001 + WebGL (live web preview)")]
+    public static void BuildAndShipWebGl() {
+        // same doctrine: Unity builds the scene from data + art pass + QC, then BUILDS the game
+        LilFootsArtPass.BuildAndShootCore();
+
+        PlayerSettings.companyName = "Bigfoot404 LLC";
+        PlayerSettings.productName = "Lil Foots Big Adventure";
+        PlayerSettings.SetApplicationIdentifier("com.bigfoot404.lilfootsbigadventure");
+
+        var scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true) };
+        EditorBuildSettings.scenes = scenes;
+
+        var outDir = System.Environment.GetEnvironmentVariable("WEBGL_OUT");
+        if (string.IsNullOrEmpty(outDir)) outDir = "Builds/WebGL";
+        Directory.CreateDirectory(outDir);
+
+        Debug.Log("[BuildRunner] Unity building the game (WebGL): " + outDir);
+        var report = BuildPipeline.BuildPlayer(scenes, outDir, BuildTarget.WebGL, BuildOptions.None);
+        var sum = report.summary;
+        Debug.Log($"[BuildRunner] WEBGL BUILD RESULT={sum.result} size={sum.totalSize} errors={sum.totalErrors}");
+
+        EditorApplication.Exit(sum.result == BuildResult.Succeeded ? 0 : 1);
+    }
 }
 }
 #endif

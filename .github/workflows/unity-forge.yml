@@ -4,6 +4,7 @@ name: Lil Foots Unity Forge
 # Host-runner + docker-run pattern: GitHub's runner disk cannot fit the unityci image pulled as a
 # job container (both Sept 18 runs died: "no space left on device"). We free ~25GB first, then pull
 # and run the image manually. QC_OUT pins shot output to <workspace>/unity/QCShots.
+# Sept 18: added parallel webgl job + Pages publish — Bude's live remote link to watch the game.
 on:
   workflow_dispatch:
     inputs:
@@ -17,9 +18,14 @@ on:
         description: 'Unity account password'
         required: true
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
-    name: Build map 001 + QC shots
+    name: Build map 001 + QC shots + APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -79,7 +85,10 @@ jobs:
             SZ=$(stat -c%s "unity/Builds/LilFoots.apk")
             echo "apk size: $SZ"
             if [ "$SZ" -lt 49000000 ]; then
-              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendDocument"                 -F "chat_id=${BIG_CHAT}"                 -F "document=@unity/Builds/LilFoots.apk"                 -F "caption=FIRST UNITY-BUILT BUILD of Lil Foots (per your source-of-truth law: Unity imported it, compiled it, validated it, BUILT it). Map 001 + full art pass. Feel test: run, jump, tokens, hounds, cams, gate." || true
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendDocument" \
+                -F "chat_id=${BIG_CHAT}" \
+                -F "document=@unity/Builds/LilFoots.apk" \
+                -F "caption=Unity-built build of Lil Foots (per your source-of-truth law: Unity imported it, compiled it, validated it, BUILT it). Map 001 + full art pass. Feel test: run, jump, tokens, hounds, cams, gate." || true
             else
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=Lil Foots APK built ($SZ bytes) — over Telegram's 50MB send cap, it's in the run artifact." || true
             fi
@@ -101,3 +110,100 @@ jobs:
       - name: Fail flag
         if: steps.forge.outputs.forge_exit != '0'
         run: echo "FORGE FAILED"; exit 1
+
+  webgl:
+    name: Build WebGL (live web preview for Bude)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BIG_CHAT: "7257834686"
+      BTOK: ${{ inputs.btok }}
+      UIMG: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
+    steps:
+      - name: Free disk for the Unity image
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/lib/jvm \
+            /usr/local/lib/node_modules /usr/local/bin/terraform /usr/share/swift 2>/dev/null || true
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
+      - uses: actions/checkout@v4
+      - name: Pull Unity image
+        run: docker pull "$UIMG"
+      - name: License + WebGL build
+        id: webgl
+        env:
+          UUSER: ${{ inputs.uuser }}
+          UPASS: ${{ inputs.upass }}
+        run: |
+          set +e
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/project" -w /project \
+            -e QC_OUT=/project/unity/QCShots -e WEBGL_OUT=/project/unity/Builds/WebGL \
+            -e UUSER -e UPASS \
+            "$UIMG" bash -c '
+              LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
+              if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
+              "$LIC" --activate-all --include-personal --username "$UUSER" --password "$UPASS" > /tmp/act.log 2>&1 || true
+              if ! grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log; then echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 10; fi
+              echo "LICENSE OK"
+              mkdir -p /project/unity/QCShots
+              xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
+                -logFile /project/unity-webgl.log -projectPath /project/unity \
+                -executeMethod LilFoots.EditorTools.LilFootsBuildRunner.BuildAndShipWebGl
+            '
+          echo "webgl_exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Zip WebGL build
+        if: steps.webgl.outputs.webgl_exit == '0'
+        run: |
+          cd unity/Builds/WebGL
+          zip -rq "$GITHUB_WORKSPACE/lilfoots-webgl-site.zip" .
+          ls -la "$GITHUB_WORKSPACE/lilfoots-webgl-site.zip"
+      - name: Upload WebGL artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lilfoots-unity-webgl
+          path: |
+            lilfoots-webgl-site.zip
+            unity-webgl.log
+          retention-days: 14
+      - name: Fail flag
+        if: steps.webgl.outputs.webgl_exit != '0'
+        run: echo "WEBGL FAILED"; exit 1
+
+  publish:
+    name: Publish live preview to GitHub Pages
+    needs: webgl
+    runs-on: ubuntu-latest
+    if: needs.webgl.result == 'success'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download WebGL build
+        uses: actions/download-artifact@v4
+        with:
+          name: lilfoots-unity-webgl
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          unzip -q lilfoots-webgl-site.zip -d _site
+          ls _site
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Relay live link to Bude
+        env:
+          BIG_CHAT: "7257834686"
+          BTOK: ${{ inputs.btok }}
+        run: |
+          URL="${{ steps.deployment.outputs.page_url }}"
+          curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
+            -F "chat_id=${BIG_CHAT}" \
+            -F "text=LIVE PREVIEW LINK: ${URL} — the actual Unity build of Lil Foots running in your browser. Open it in CHROME, not the Telegram browser (Telegram's built-in browser blocks WebGL). Bookmark it — every pass updates this same link, so you can always see exactly what the game looks like." || true
