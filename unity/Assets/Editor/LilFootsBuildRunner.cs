@@ -53,11 +53,28 @@ public static class LilFootsBuildRunner {
         if (string.IsNullOrEmpty(outDir)) outDir = "Builds/WebGL";
         Directory.CreateDirectory(outDir);
 
-        // GitHub Pages serves raw files without Content-Encoding headers, so the gzip
+        // GitHub Pages serves raw files without Content-Encoding headers, so a gzip
         // build can't be parsed by the loader ("Unable to parse WebGL.framework.js.gz").
-        // Disabled compression = plain .data/.framework.js/.wasm that any static host serves.
-        EditorUserBuildSettings.webGLCompressionFormat = WebGLCompressionFormat.Disabled;
-        Debug.Log("[BuildRunner] WebGL compression DISABLED for static hosting (Pages-safe).");
+        // The exact API differs across 2022.3 point releases -> use reflection:
+        // prefer Disabled compression; fall back to gzip + decompressionFallback
+        // (loader inflates client-side, also Pages-safe).
+        {
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+            var prop = typeof(EditorUserBuildSettings).GetProperty("webGLCompressionFormat", F);
+            if (prop != null && prop.CanWrite) {
+                prop.SetValue(null, System.Enum.Parse(prop.PropertyType, "Disabled"), null);
+                Debug.Log("[BuildRunner] WebGL compression format -> Disabled (Pages-safe, raw files).");
+            } else {
+                var wgl = typeof(PlayerSettings).GetNestedType("WebGL", F);
+                var df = wgl != null ? wgl.GetProperty("decompressionFallback", F) : null;
+                if (df != null && df.CanWrite) {
+                    df.SetValue(null, true, null);
+                    Debug.Log("[BuildRunner] WebGL decompressionFallback -> true (loader inflates gzip client-side).");
+                } else {
+                    Debug.LogWarning("[BuildRunner] No WebGL compression API found via reflection; post-build gzip strip in CI covers Pages.");
+                }
+            }
+        }
         Debug.Log("[BuildRunner] Unity building the game (WebGL): " + outDir);
         var report = BuildPipeline.BuildPlayer(scenes, outDir, BuildTarget.WebGL, BuildOptions.None);
         var sum = report.summary;

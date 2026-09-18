@@ -155,7 +155,15 @@ jobs:
                 -logFile /project/unity-webgl.log -projectPath /project/unity \
                 -executeMethod LilFoots.EditorTools.LilFootsBuildRunner.BuildAndShipWebGl
             '
-          echo "webgl_exit=$?" >> "$GITHUB_OUTPUT"
+          docker_rc=$?
+          # Pages safety net: if Unity still emitted .gz files, strip them for raw static hosting
+          if [ -d unity/Builds/WebGL ] && ls unity/Builds/WebGL/*.gz >/dev/null 2>&1; then
+            echo "GZ files present — decompressing for static hosting"
+            for f in unity/Builds/WebGL/*.gz; do gunzip -f "$f"; done
+            sed -i 's/\.gz//g' unity/Builds/WebGL/index.html
+            ls -la unity/Builds/WebGL/
+          fi
+          echo "webgl_exit=$docker_rc" >> "$GITHUB_OUTPUT"
           exit 0
       - name: Zip WebGL build
         if: steps.webgl.outputs.webgl_exit == '0'
