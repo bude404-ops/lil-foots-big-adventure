@@ -273,21 +273,8 @@ namespace LilFoots.EditorTools
                 if (selArt != null) ChildSprite(lily, "PlayerArt", selArt, 0.82f, 10);
             }
 
-            // ---- HUD: hearts row + wooden panel token counter (camera-pinned) ----
-            if (cam != null && heartArt != null) {
-                for (int i = 0; i < 3; i++)
-                    SpriteGo("HUDHeart" + i, heartArt, Vector3.zero, 0.62f, 100, cam.transform)
-                        .transform.localPosition = new Vector3(-5.9f + i * 0.75f, 3.2f, 10f);
-                SpriteGo("HUDPanel", Art("art_panel.png"), Vector3.zero, 1.7f, 98, cam.transform)
-                    .transform.localPosition = new Vector3(-4.35f, 3.2f, 10f);
-                var tm = new GameObject("HUDCount").AddComponent<TextMesh>();
-                tm.transform.SetParent(cam.transform, false);
-                tm.transform.localPosition = new Vector3(-4.35f, 3.2f, 10f);
-                tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                tm.fontSize = 48; tm.characterSize = 0.16f; tm.anchor = TextAnchor.MiddleCenter;
-                tm.color = new Color(0.10f, 0.06f, 0.02f);
-                tm.text = "0 / 18";
-            }
+            // ---- HUD: hearts row + wooden panel token counter (shared builder) ----
+            BuildHud(cam);
 
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             Debug.Log("[ArtPass] Art pass complete: real art only, per the Unity Art Law.");
@@ -369,12 +356,8 @@ namespace LilFoots.EditorTools
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cam = UiCam();
 
-            var esGo = new GameObject("EventSystem");
-            esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-
             BuildHud(cam);
-            BuildTouchDeck();
+            BuildTouchDeck(); // also creates the EventSystem
             PinCanvasesToCam(cam);
             BuildCharacterMenu(cam);
 
@@ -501,6 +484,7 @@ namespace LilFoots.EditorTools
             LilFootsLevelBuilder.Build();
             BuildArt();
             BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
+            BuildCharacterMenu(GameObject.Find("MainCamera").GetComponent<UnityEngine.Camera>()); // UI PASS: character select at start
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/Map001.unity");
             var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");
@@ -514,6 +498,9 @@ namespace LilFoots.EditorTools
             var hound = GameObject.Find("Hound");
             var gate = GameObject.Find("Gate");
 
+            // gameplay QC shots: dismiss the character menu (it's reviewed in UI-pass builds)
+            var menu = GameObject.Find("CharMenuCanvas");
+            if (menu != null) Object.DestroyImmediate(menu);
             var rt = new RenderTexture(1334, 750, 24);
             cam.targetTexture = rt;
             // shot 1: start area, Lily on the grass
