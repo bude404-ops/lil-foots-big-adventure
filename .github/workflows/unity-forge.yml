@@ -24,6 +24,10 @@ on:
         description: 'Layer-by-layer review mode: build only the first N map layers (99 = full map)'
         required: false
         default: '99'
+      ui:
+        description: 'UI pass mode: build only character menu + controls + hearts (no world)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +45,7 @@ jobs:
       UIMG: unityci/editor:ubuntu-2022.3.50f1-android-3.2.2
       LAYERS: ${{ inputs.layers || '99' }}
       LILFOOTS_LAYERS: ${{ inputs.layers || '99' }}
+      LILFOOTS_UI: ${{ inputs.ui }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -62,7 +67,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS \
+            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -71,6 +76,9 @@ jobs:
               echo "LICENSE OK"
               mkdir -p /project/unity/QCShots
               METHOD="LilFoots.EditorTools.LilFootsBuildRunner.BuildAndShipApk"
+              if [ "$LILFOOTS_UI" = "1" ]; then
+                METHOD="LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot"
+              fi
               if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
                 METHOD="LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot"
               fi
@@ -87,11 +95,23 @@ jobs:
           FX="${{ steps.forge.outputs.forge_exit }}"
           PRE="LIL FOOTS UNITY PASS 1"
           if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 9 (layers above $LAYERS intentionally absent)"; fi
+          if [ "$LILFOOTS_UI" = "1" ]; then PRE="UI PASS - CHARACTER MENU / CONTROLS / HEARTS (HQ style, no world layers in this build)"; fi
           CAP1="$PRE — Map 001 start. FX=$FX"
           CAP2="$PRE — mid-map. FX=$FX"
           CAP3="$PRE — finish. FX=$FX"
           # Bude (Sept 18): "stop sending me 3 lol only need 1" -> layer reviews send ONE shot.
-          if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
+          if [ "$LILFOOTS_UI" = "1" ]; then
+            for i in 1 2; do
+              case $i in
+                1) F=ui_menu.png; C="$PRE — character menu, pick your Lil Foot. FX=$FX";;
+                2) F=ui_hud.png; C="$PRE — hearts, token counter, LEFT/RIGHT/JUMP buttons. FX=$FX";;
+              esac
+              P="unity/QCShots/$F"
+              if [ -f "$P" ]; then
+                curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
+              fi
+            done
+          elif [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
             P="unity/QCShots/unity_start.png"
             if [ -f "$P" ]; then
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${CAP1}" || true
@@ -117,7 +137,7 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=Lil Foots APK built ($SZ bytes) — over Telegram's 50MB send cap, it's in the run artifact." || true
             fi
           fi
-          if [ ! -f "unity/QCShots/unity_start.png" ]; then
+          if [ ! -f "unity/QCShots/unity_start.png" ] && [ ! -f "unity/QCShots/ui_menu.png" ]; then
             curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=LIL FOOTS UNITY FORGE: build failed (FX=$FX) — logs in artifact." || true
           fi
       - name: Upload artifact
