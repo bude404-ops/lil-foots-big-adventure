@@ -45,8 +45,20 @@ public static class LilFootsSmokeTest {
         C(mains.Count == 1 && mains[0].GetComponent<LilFoots.CameraFollow>() != null, "camera: CameraFollow attached");
 
         // 2) PLAYER + FEET (Sept 19: "the terrain hides the character")
-        var lily = GameObject.Find("Lily");
-        C(lily != null, "player: Lily exists");
+        // PLAYER RESOLUTION LAW (run 35469967904 red): the idle-rig stage builds clones that
+        // can share the name "Lily" - Find is ambiguous. The PLAYER is the "Lily"-named object
+        // carrying a PlayerController; every other Lily is a select-stage copy and must sit
+        // in the off-map band (y < -50) so it can never touch gameplay.
+        var lily = UnityEngine.Object.FindObjectsOfType<LilFoots.PlayerController>()
+            .Select(x => x.gameObject)
+            .FirstOrDefault(g => g.name == "Lily");
+        C(lily != null, "player: Lily exists (with PlayerController)");
+        var stageCopies = UnityEngine.Object.FindObjectsOfType<Transform>()
+            .Where(t => t.name == "Lily" && t != (lily != null ? lily.transform : null))
+            .ToList();
+        C(stageCopies.All(t => t.position.y < -50f),
+          "select: stage copies off-map (" + stageCopies.Count + " found" +
+          (stageCopies.Count > 0 ? ", worst y=" + stageCopies.Min(t => t.position.y).ToString("F1") : "") + ")");
         var pc = lily != null ? lily.GetComponent<LilFoots.PlayerController>() : null;
         C(pc != null && pc.rb != null, "player: Rigidbody2D wired");
         // NOTE: pc.feet is a vestigial field (ground detection is OnCollisionStay2D contact-normal based) —

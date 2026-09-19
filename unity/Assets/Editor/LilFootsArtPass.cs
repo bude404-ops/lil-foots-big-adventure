@@ -537,7 +537,10 @@ namespace LilFoots.EditorTools
         /// drives the idle clip and the camera re-renders every frame = animated select cards.</summary>
         static RenderTexture BuildIdleStage(out GameObject stageRoot) {
             stageRoot = null;
-            string[] names = { "Lily", "Buddy", "Emma" };
+            // STAGE NAMING LAW (run 35469967904 red): the stage clones must NOT share names with
+            // gameplay objects. GameObject.Find("Lily") is ambiguous with a stage copy present -
+            // the smoke gate grabbed the stage copy (no rb/capsule/PlayerController) and went red.
+            string[] names = { "LilyStage", "BuddyStage", "EmmaStage" };
             string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
             for (int i = 0; i < 3; i++)
                 if (!System.IO.File.Exists(System.IO.Path.Combine("Assets/Art", files[i])))
