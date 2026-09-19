@@ -36,6 +36,10 @@ on:
         description: 'Rig pass mode: rig Lily/Buddy/Emma with native Unity 2D Animation + idle/walk clips'
         required: false
         default: ''
+      ship:
+        description: 'New playable content ready for Bude (1 = DM the build link, 0 = silent internal pass)'
+        required: false
+        default: '0'
 
 permissions:
   contents: read
@@ -56,6 +60,7 @@ jobs:
       LILFOOTS_UI: ${{ inputs.ui }}
       RIG: ${{ inputs.rig }}
       IDLE: ${{ inputs.idle }}
+      SHIP: ${{ inputs.ship || '0' }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -109,6 +114,15 @@ jobs:
         if: always()
         run: |
           FX="${{ steps.forge.outputs.forge_exit }}"
+          # GATE 2 (LIL-FOOTS-2.0-PLAN.md): smoke RED (FX=2) = machine play-test failed = Bude never sees it.
+          if [ "$FX" = "2" ]; then echo "SMOKE RED - build withheld from Bude (see smoke-report.json artifact + unity-forge.log)"; exit 0; fi
+          # ART-FATIGUE RULE (Bude, Sept 19: "stop sending any more updates and art unless its the new stuff"):
+          # a standard pass DMs Bude ONLY when ship=1 (new playable content). Everything else is silent —
+          # shots, APK and live link land in the run artifact + Pages update, no Telegram noise.
+          if [ "$SHIP" != "1" ] && [ "$RIG" != "1" ] && [ "$IDLE" != "1" ] && [ "$LILFOOTS_UI" != "1" ]; then
+            echo "SILENT PASS - no DMs (ship=$SHIP). Artifacts + live link updated only."
+            exit 0
+          fi
           PRE="LIL FOOTS UNITY PASS 1"
           if [ "$LAYERS" = "3" ]; then PRE="MAP REBUILD - ALL 3 LAYERS (fix plan executed: organic seams, baked atmosphere, foreground props, HQ Lily)"; fi
           if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ] && [ "$LAYERS" != "3" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 3 (3-layer doctrine: 1=static vista, 2=gameplay plane, 3=foreground props; layers above $LAYERS intentionally absent)"; fi
@@ -164,13 +178,12 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${CAP1}" || true
             fi
           else
-          for i in 1 2 3; do
-            case $i in 1) F=unity_start.png; C="$CAP1";; 2) F=unity_mid.png; C="$CAP2";; 3) F=unity_gate.png; C="$CAP3";; esac
-            P="unity/QCShots/$F"
-            if [ -f "$P" ]; then
-              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
+            # NO QC SHOT DMs (art-fatigue rule). A shipped build DMs the playable link only.
+            if [ "$FX" = "0" ]; then
+              SMOKE=$(grep -o '"passed": [0-9]*' smoke-report.json 2>/dev/null | grep -o '[0-9]*' || true)
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" \
+                -F "text=New playable build is live: https://mcontwitter-glitch.github.io/lil-foots-live/ (Chrome on desktop/Android). Machine play-test green: ${SMOKE:-all} checks passed." || true
             fi
-          done
           fi
           if [ -f "unity/Builds/LilFoots.apk" ]; then
             SZ=$(stat -c%s "unity/Builds/LilFoots.apk")
@@ -196,6 +209,8 @@ jobs:
             unity/Assets/Scenes/**
             unity/QCShots/**
             unity/Builds/**
+            unity/smoke-report.json
+            smoke-report.json
             unity-forge.log
           retention-days: 14
       - name: Fail flag

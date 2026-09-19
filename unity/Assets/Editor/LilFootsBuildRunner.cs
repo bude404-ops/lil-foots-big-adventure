@@ -16,6 +16,11 @@ public static class LilFootsBuildRunner {
     public static void BuildAndShipApk() {
         // scene + art + saved Map001.unity + QC shots (no exit — we keep the session for the build)
         LilFootsArtPass.BuildAndShootCore();
+        // GATE 2: machine play-test on the EXACT saved scene that ships. Red = build withheld.
+        if (!LilFootsSmokeTest.Run("smoke-report.json")) {
+            Debug.Log("[BuildRunner] SMOKE RED - refusing to build or ship.");
+            EditorApplication.Exit(2); return;
+        }
 
         // player identity
         PlayerSettings.companyName = "Bigfoot404 LLC";
@@ -41,6 +46,11 @@ public static class LilFootsBuildRunner {
     public static void BuildAndShipWebGl() {
         // same doctrine: Unity builds the scene from data + art pass + QC, then BUILDS the game
         LilFootsArtPass.BuildAndShootCore();
+        // GATE 2: machine play-test on the EXACT saved scene that ships. Red = build withheld.
+        if (!LilFootsSmokeTest.Run("smoke-report.json")) {
+            Debug.Log("[BuildRunner] SMOKE RED - refusing to build or ship.");
+            EditorApplication.Exit(2); return;
+        }
 
         PlayerSettings.companyName = "Bigfoot404 LLC";
         PlayerSettings.productName = "Lil Foots Big Adventure";
