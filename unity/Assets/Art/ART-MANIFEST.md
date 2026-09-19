@@ -15,7 +15,7 @@ The Unity build uses ONLY real art asset files. Nothing that was code-drawn in t
 - `art_carl.png`, `art_hound.png` (lab v2, yellow/black/chocolate recolors via tint), `art_trailcam.png`, `art_drone.png`, `art_steve.png`
 
 ### Props
-- `art_flaggate.png`, `art_flagportal.png` — level-flow flagpole + portal gate
+- `art_flaggate.png`, `art_flagportal.png` — level-end flagpole + portal gate, HQ re-skin v2 (Sept 19): painterly cedar flagpole w/ gold footprint + BIG wordmark flag; mossy megalith archway w/ emerald veil — palette-matched to Bude's world-skin reference, per his order that flag + portal sit at level end and match the new art quality
 
 ### Collectibles / UI
 - `art_token.png` — Big Token, FOOTPRINT coin face (footprint symbol law; supersedes the old BIG-lettering version)
