@@ -27,7 +27,13 @@ public static class LilFootsBuildRunner {
         PlayerSettings.productName = "Lil Foots Big Adventure";
         PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.bigfoot404.lilfootsbigadventure");
 
-        var scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true) };
+        // STUDIO SPLASH LAW (Bude, Sept 19): Unity load screen -> BIG Entertainment -> Bude
+        // Vision -> game menu. Splash scene is scene 0; Map001 (menu + game) is scene 1.
+        LilFootsSplashPass.BuildSplashScene();
+        var scenes = new[] {
+            new EditorBuildSettingsScene(LilFootsSplashPass.ScenePath, true),
+            new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true)
+        };
         EditorBuildSettings.scenes = scenes;
 
         var apk = System.Environment.GetEnvironmentVariable("APK_OUT");
@@ -56,7 +62,13 @@ public static class LilFootsBuildRunner {
         PlayerSettings.productName = "Lil Foots Big Adventure";
         PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.WebGL, "com.bigfoot404.lilfootsbigadventure");
 
-        var scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true) };
+        // STUDIO SPLASH LAW (Bude, Sept 19): Unity load screen -> BIG Entertainment -> Bude
+        // Vision -> game menu. Splash scene is scene 0; Map001 (menu + game) is scene 1.
+        LilFootsSplashPass.BuildSplashScene();
+        var scenes = new[] {
+            new EditorBuildSettingsScene(LilFootsSplashPass.ScenePath, true),
+            new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true)
+        };
         EditorBuildSettings.scenes = scenes;
 
         var outDir = System.Environment.GetEnvironmentVariable("WEBGL_OUT");
