@@ -28,6 +28,10 @@ on:
         description: 'UI pass mode: build only character menu + controls + hearts (no world)'
         required: false
         default: ''
+      rig:
+        description: 'Rig pass mode: rig Lily/Buddy/Emma with native Unity 2D Animation + idle/walk clips'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -46,6 +50,7 @@ jobs:
       LAYERS: ${{ inputs.layers || '99' }}
       LILFOOTS_LAYERS: ${{ inputs.layers || '99' }}
       LILFOOTS_UI: ${{ inputs.ui }}
+      RIG: ${{ inputs.rig }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -67,7 +72,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI \
+            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -81,6 +86,9 @@ jobs:
               fi
               if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
                 METHOD="LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot"
+              fi
+              if [ "$RIG" = "1" ]; then
+                METHOD="LilFoots.EditorTools.RigPass.BuildAndShoot"
               fi
               echo "FORGE METHOD: $METHOD (LAYERS=$LAYERS)"
               xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
@@ -96,6 +104,7 @@ jobs:
           PRE="LIL FOOTS UNITY PASS 1"
           if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 3 (3-layer doctrine: 1=static vista, 2=gameplay plane, 3=foreground props; layers above $LAYERS intentionally absent)"; fi
           if [ "$LILFOOTS_UI" = "1" ]; then PRE="UI PASS - CHARACTER MENU / CONTROLS / HEARTS (HQ style, no world layers in this build)"; fi
+          if [ "$RIG" = "1" ]; then PRE="ANIMATION PASS"; fi
           CAP1="$PRE — Map 001 start. FX=$FX"
           CAP2="$PRE — mid-map. FX=$FX"
           CAP3="$PRE — finish. FX=$FX"
@@ -111,6 +120,28 @@ jobs:
                 curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
               fi
             done
+          elif [ "$RIG" = "1" ]; then
+            pip install --quiet pillow >/dev/null 2>&1 || pip3 install --quiet pillow >/dev/null 2>&1 || true
+            python3 - <<'PYEOF' || python3 -c "print('composite skipped')"
+from PIL import Image
+import os
+panels = ["rig_bindpose.png","rig_idle.png","rig_walk_native.png","rig_walk_bones.png"]
+imgs = [Image.open("unity/QCShots/"+f) for f in panels if os.path.exists("unity/QCShots/"+f)]
+h = min(i.height for i in imgs)
+imgs = [i.resize((int(i.width*h/i.height), h)) for i in imgs]
+W = sum(i.width for i in imgs)
+sheet = Image.new("RGB",(W,h),(10,12,16))
+x = 0
+for i in imgs:
+    sheet.paste(i,(x,0)); x += i.width
+sheet.save("unity/QCShots/rig_sheet.png")
+print("rig_sheet.png:", sheet.size)
+PYEOF
+            P="unity/QCShots/rig_sheet.png"
+            C="$PRE — RIG PASS 1: Lily/Buddy/Emma rigged with NATIVE Unity 2D Animation. Panels: bind pose / IDLE (character select) / walk clip / bone overlay. FX=$FX"
+            if [ -f "$P" ]; then
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
+            fi
           elif [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
             P="unity/QCShots/unity_start.png"
             if [ -f "$P" ]; then
@@ -160,7 +191,7 @@ jobs:
     # Bude (Sept 18 ~11:54 PM ET): "this link the game was still incorrect lets make sure its right
     # before you build" -> NO live-link publishes while a review is open (layer QC or UI QC).
     # The link only updates once the map layers are approved; reviews go shot-by-shot via DM.
-    if: ${{ (!inputs.layers || inputs.layers == '99') && inputs.ui != '1' }}
+    if: ${{ (!inputs.layers || inputs.layers == '99') && inputs.ui != '1' && inputs.rig != '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

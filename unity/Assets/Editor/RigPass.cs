@@ -65,6 +65,16 @@ namespace LilFoots.EditorTools
             {"legR", "hip"}, {"footR", "legR"},
         };
 
+        // IDLE (character select law, Bude Sept 18/19: cards use the idle pose once animated):
+        // gentle breathing bob — shoulders counter-sway 3°, neck 2°, head 1.5°, hip 1°. 2s loop.
+        static readonly Dictionary<string, float[]> Idle = new Dictionary<string, float[]> {
+            {"neck",      new float[]{ 2.0f,  0.0f, -2.0f,  0.0f}},
+            {"head",      new float[]{ 1.5f,  0.0f, -1.5f,  0.0f}},
+            {"shoulderL", new float[]{ 3.0f,  0.0f, -3.0f,  0.0f}},
+            {"shoulderR", new float[]{ -3.0f, 0.0f,  3.0f,  0.0f}},
+            {"hip",       new float[]{ 1.0f,  0.0f, -1.0f,  0.0f}},
+        };
+
         // walk cycle for the blue-line skeleton: swing at the hips, arms counter, slight torso/head bob
         static readonly Dictionary<string, float[]> Walk = new Dictionary<string, float[]> {
             {"legL",      new float[]{  30f,  14f,  -6f, -24f}},
@@ -134,26 +144,37 @@ namespace LilFoots.EditorTools
             for (int i = 0; i < bt.Count; i++) arrProp.GetArrayElementAtIndex(i).objectReferenceValue = bt[i];
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            // ---- Unity creates a native AnimatorController + walk AnimationClip ----
+            // ---- Unity creates native AnimationClips + AnimatorController ----
+            // IDLE = default state (character select law). WALK = second state (gameplay).
             Directory.CreateDirectory("Assets/Animation");
-            var ctrl = AnimatorController.CreateAnimatorControllerAtPath("Assets/Animation/" + name + "_WalkController.controller");
-            var walkState = ctrl.layers[0].stateMachine.AddState("walk");
+            var ctrl = AnimatorController.CreateAnimatorControllerAtPath("Assets/Animation/" + name + "_Controller.controller");
 
-            var clip = new AnimationClip { frameRate = 12f };
-            var settings = AnimationUtility.GetAnimationClipSettings(clip);
-            settings.loopTime = true;
-            AnimationUtility.SetAnimationClipSettings(clip, settings);
-            foreach (var kv in Walk) {
-                var eulers = kv.Value;
-                var keys = new Keyframe[5];
-                for (int i = 0; i < 4; i++) keys[i] = new Keyframe(i / 12f, eulers[i]);
-                keys[4] = new Keyframe(4 / 12f, eulers[0]); // loop wrap
-                var binding = EditorCurveBinding.FloatCurve(rig.AnimPaths[kv.Key], typeof(Transform), "localEulerAnglesRaw.z");
-                AnimationUtility.SetEditorCurve(clip, binding, new AnimationCurve(keys));
-            }
-            AssetDatabase.CreateAsset(clip, "Assets/Animation/" + name + "_Walk.anim");
-            var walkMotion = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animation/" + name + "_Walk.anim");
-            walkState.motion = walkMotion;
+            System.Func<Dictionary<string, float[]>, int, string, AnimationClip> bake =
+                (Dictionary<string, float[]> cycles, int fps, string suffix) => {
+                var c = new AnimationClip { frameRate = fps };
+                var st = AnimationUtility.GetAnimationClipSettings(c);
+                st.loopTime = true;
+                AnimationUtility.SetAnimationClipSettings(c, st);
+                foreach (var kv in cycles) {
+                    var eulers = kv.Value;
+                    var keys = new Keyframe[eulers.Length + 1];
+                    for (int i = 0; i < eulers.Length; i++) keys[i] = new Keyframe(i / (float)fps, eulers[i]);
+                    keys[eulers.Length] = new Keyframe(eulers.Length / (float)fps, eulers[0]); // loop wrap
+                    var binding = EditorCurveBinding.FloatCurve(rig.AnimPaths[kv.Key], typeof(Transform), "localEulerAnglesRaw.z");
+                    AnimationUtility.SetEditorCurve(c, binding, new AnimationCurve(keys));
+                }
+                AssetDatabase.CreateAsset(c, "Assets/Animation/" + name + "_" + suffix + ".anim");
+                return AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/Animation/" + name + "_" + suffix + ".anim");
+            };
+
+            var idleClip = bake(Idle, 6, "Idle");   // 4 keys @ 6fps = 2s breathing loop
+            var walkClip = bake(Walk, 12, "Walk");
+
+            var idleState = ctrl.layers[0].stateMachine.AddState("idle");
+            idleState.motion = idleClip;
+            ctrl.layers[0].stateMachine.defaultState = idleState;
+            var walkState = ctrl.layers[0].stateMachine.AddState("walk");
+            walkState.motion = walkClip;
 
             var animator = charGo.AddComponent<Animator>();
             animator.runtimeAnimatorController = ctrl;
@@ -228,6 +249,15 @@ namespace LilFoots.EditorTools
             // ---- QC 1: bind pose (native SpriteSkin, rest pose) ----
             cam.Render();
             Snap(cam, outDir + "/rig_bindpose.png");
+
+            // ---- QC 1b: native Animator plays the IDLE clip (character-select pose), mid-breath ----
+            foreach (var r in rigs) {
+                var anim = r.Root.GetComponent<Animator>();
+                anim.Play("idle", 0, 1f / 6f); // 1s in = deepest breath
+                anim.Update(0f);
+            }
+            cam.Render();
+            Snap(cam, outDir + "/rig_idle.png");
 
             // ---- QC 2: Unity's native Animator plays the walk clip, sampled mid-cycle ----
             foreach (var r in rigs) {
