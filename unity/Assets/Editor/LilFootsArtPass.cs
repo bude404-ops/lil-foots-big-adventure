@@ -360,7 +360,9 @@ namespace LilFoots.EditorTools
         /// <summary>Overlay canvases don't render into a camera texture — pin them to the cam.</summary>
         static void PinCanvasesToCam(UnityEngine.Camera cam) {
             foreach (var canvas in Object.FindObjectsOfType<UnityEngine.Canvas>()) {
-                if (canvas.name == "CharMenuCanvas") continue; // menu builds its own camera-space canvas
+                // QC-only pin: overlay canvases (menu included since the Sept 19 rewrite) don't
+                // render into a camera RT - pin them all for the UI-pass shots. Runtime builds
+                // (map pass) never call this: there the menu stays ScreenSpaceOverlay.
                 canvas.renderMode = UnityEngine.RenderMode.ScreenSpaceCamera;
                 canvas.worldCamera = cam;
                 canvas.planeDistance = 10f;
@@ -394,12 +396,31 @@ namespace LilFoots.EditorTools
             tm.GetComponent<MeshRenderer>().sortingOrder = 101;  // in front of the panel (98)
         }
 
-        /// <summary>Character select: native uGUI screen — three Lil Foot cards, tap to pick + start.</summary>
+        /// <summary>Character select (Bude, Sept 19: "It doesn't let me actually pick a character on the
+        /// select" + "I thought we were going to use their idle pose in the character select").
+        /// REWRITE - pick bug + idle law in one pass:
+        /// 1) EventSystem guaranteed BEFORE anything is clickable (uGUI is dead input without it).
+        /// 2) ScreenSpaceOverlay canvas at sortingOrder 100 - the menu is modal and renders above the
+        ///    touch deck; no camera-plane math (the old ScreenSpaceCamera canvas sat at the exact
+        ///    depth plane as the gameplay art - removed from the equation entirely).
+        /// 3) Cards pick on POINTER DOWN (CharacterCard) - instant response on touch AND mouse, no
+        ///    click-release dependency; Button kept with targetGraphic for visible tint feedback.
+        /// 4) Cards show the LIVE IDLE RIGS: each character fully rigged (SpriteSkin + Animator,
+        ///    idle clip default) on an off-map stage rendered into one shared RenderTexture - the
+        ///    select law is ANIMATED idle, not a static portrait. Static-sprite fallback if the
+        ///    rig stage can't build.</summary>
         static void BuildCharacterMenu(UnityEngine.Camera cam) {
+            // 1) EventSystem first - without it nothing in uGUI is clickable (the pick bug's #1 suspect).
+            if (UnityEngine.EventSystems.EventSystem.current == null) {
+                var esGo = new GameObject("CharMenuEventSystem");
+                esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            }
+
             var go = new GameObject("CharMenuCanvas");
             var canvas = go.AddComponent<UnityEngine.Canvas>();
-            canvas.renderMode = UnityEngine.RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = cam; canvas.planeDistance = 10f;
+            canvas.renderMode = UnityEngine.RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 100; // modal: above the touch deck, above everything
             var scaler = go.AddComponent<UnityEngine.UI.CanvasScaler>();
             scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1334f, 750f);
@@ -423,19 +444,55 @@ namespace LilFoots.EditorTools
             tt.fontSize = 64; tt.alignment = TextAnchor.MiddleCenter; tt.color = new Color(1f, 0.92f, 0.55f);
             tt.text = "CHOOSE YOUR LIL FOOT";
 
+            // ---- IDLE RIG STAGE (select law): 3 rigged characters on an off-map stage,
+            // one shared RenderTexture; each card shows its third. Fails soft to static art. ----
+            RenderTexture idleRt = null;
+            try { idleRt = BuildIdleStage(go.transform); }
+            catch (System.Exception e) { Debug.LogWarning("[ArtPass] Idle rig stage failed, static cards: " + e.Message); }
+            ctl.idleStageTexture = idleRt;
+
             // three cards
             string[] names = { "LILY", "BUDDY", "EMMA" };
             string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
+            var panelArt = Art("art_panel.png");
             for (int i = 0; i < 3; i++) {
                 float x = (i - 1) * 360f;
                 var card = MakeUi(go.transform, "Card" + names[i]);
                 card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
                 card.anchoredPosition = new Vector2(x, 10f);
                 card.sizeDelta = new Vector2(320f, 320f);
-                var img = card.gameObject.AddComponent<UnityEngine.UI.Image>();
-                var sprite = Art(files[i]);
-                img.sprite = sprite; img.preserveAspect = true;
+
+                // cedar card backing (visual frame only, raycast-passthrough)
+                if (panelArt != null) {
+                    var back = MakeUi(card, "Backing");
+                    back.anchorMin = Vector2.zero; back.anchorMax = Vector2.one;
+                    back.offsetMin = back.offsetMax = Vector2.zero;
+                    var bImg = back.gameObject.AddComponent<UnityEngine.UI.Image>();
+                    bImg.sprite = panelArt; bImg.preserveAspect = true;
+                    bImg.raycastTarget = false;
+                }
+
+                // portrait: live idle rig (RenderTexture third) or static art fallback
+                var portrait = MakeUi(card, "Portrait");
+                portrait.anchorMin = portrait.anchorMax = new Vector2(0.5f, 0.5f);
+                portrait.sizeDelta = new Vector2(280f, 280f);
+                UnityEngine.UI.Graphic face;
+                if (idleRt != null) {
+                    var raw = portrait.gameObject.AddComponent<UnityEngine.UI.RawImage>();
+                    raw.texture = idleRt;
+                    raw.uvRect = new UnityEngine.Rect(i / 3f, 0f, 1f / 3f, 1f);
+                    face = raw;
+                } else {
+                    var img = portrait.gameObject.AddComponent<UnityEngine.UI.Image>();
+                    img.sprite = Art(files[i]); img.preserveAspect = true;
+                    face = img;
+                }
+
+                // pick: POINTER DOWN for instant touch/mouse response + Button for visible feedback
+                var cc = card.gameObject.AddComponent<LilFoots.CharacterCard>();
+                cc.menu = ctl; cc.character = names[i].ToLower();
                 var btn = card.gameObject.AddComponent<UnityEngine.UI.Button>();
+                btn.targetGraphic = face;
                 btn.transition = UnityEngine.UI.Selectable.Transition.ColorTint;
                 string picked = names[i].ToLower();
                 btn.onClick.AddListener(() => ctl.Select(picked));
@@ -449,7 +506,45 @@ namespace LilFoots.EditorTools
                 lt.fontSize = 44; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
                 lt.text = names[i];
             }
-            Debug.Log("[ArtPass] Character menu built: LILY / BUDDY / EMMA, tap to select.");
+            Debug.Log("[ArtPass] Character menu built: LILY/BUDDY/EMMA as live idle rigs ("
+                + (idleRt != null ? "RenderTexture stage" : "STATIC FALLBACK")
+                + "), overlay canvas order 100, pick on pointer-down.");
+        }
+
+        /// <summary>Off-map stage holding the three fully-rigged characters (idle default state)
+        /// plus one ortho camera rendering them into a shared 1536x512 RenderTexture (transparent
+        /// background). Parented under the menu so it dies with the menu. Renders once immediately
+        /// so the cards have content on frame one (and in editor QC); at runtime the Animator
+        /// drives the idle clip and the camera re-renders every frame = animated select cards.</summary>
+        static RenderTexture BuildIdleStage(Transform menuRoot) {
+            string[] names = { "Lily", "Buddy", "Emma" };
+            string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
+            for (int i = 0; i < 3; i++)
+                if (!System.IO.File.Exists(System.IO.Path.Combine("Assets/Art", files[i])))
+                    return null; // art missing -> caller falls back to static cards
+
+            var stage = new GameObject("IdleStage");
+            stage.transform.SetParent(menuRoot, false); // destroyed with the menu
+
+            for (int i = 0; i < 3; i++) {
+                var root = RigPass.BuildStageRig(names[i], "Assets/Art/" + files[i],
+                    new Vector3((i - 1) * 3f, -60f, 0f)); // off-map band, far below any gameplay
+                root.transform.SetParent(stage.transform, true);
+            }
+
+            var rt = new RenderTexture(1536, 512, 24, RenderTextureFormat.ARGB32);
+            var camGo = new GameObject("IdleStageCam");
+            camGo.transform.SetParent(stage.transform, false);
+            var cam = camGo.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 1.6f; // stage band -61.6..-58.4; rigs 2.4 tall centered at -60
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0f, 0f, 0f, 0f); // transparent over the dim
+            cam.transform.position = new Vector3(0f, -60f, -10f);
+            cam.targetTexture = rt;
+            cam.Render(); // immediate content for frame one + editor QC
+            Debug.Log("[ArtPass] Idle rig stage built: 3 rigged characters -> shared RenderTexture.");
+            return rt;
         }
 
         static UnityEngine.RectTransform MakeUi(Transform parent, string name) {

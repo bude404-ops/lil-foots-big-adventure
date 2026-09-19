@@ -89,6 +89,40 @@ namespace LilFoots.EditorTools
             {"neck",      new float[]{   4f,   2f, -2f,  -4f}},
         };
 
+        // natural standing stance measured off the whole_lily art (arms angled down, feet splayed) -
+        // THE character-select idle stance (Bude's approved idle look, Sept 19).
+        static readonly Dictionary<string, Vector2> SelectStance = new Dictionary<string, Vector2> {
+            {"hip",       new Vector2(0.50f, 0.55f)},
+            {"neck",      new Vector2(0.50f, 0.76f)},
+            {"head",      new Vector2(0.50f, 0.94f)},
+            {"shoulderL", new Vector2(0.32f, 0.68f)},
+            {"handL",     new Vector2(0.10f, 0.38f)},
+            {"shoulderR", new Vector2(0.68f, 0.68f)},
+            {"handR",     new Vector2(0.90f, 0.38f)},
+            {"legL",      new Vector2(0.42f, 0.55f)},
+            {"footL",     new Vector2(0.28f, 0.08f)},
+            {"legR",      new Vector2(0.58f, 0.55f)},
+            {"footR",     new Vector2(0.72f, 0.08f)},
+        };
+
+        /// <summary>Character-select stage rig (Bude, Sept 19: "I thought we were going to use
+        /// their idle pose in the character select"). Builds one fully rigged character -
+        /// SpriteSkin + Animator with the IDLE clip as default state (the select law) - posed in
+        /// the natural select stance. Returns the root GameObject; parent/cleanup is the caller's.
+        /// World height 2.4 so three of them fit one shared stage camera.</summary>
+        public static GameObject BuildStageRig(string name, string artPath, Vector3 pos) {
+            var root = BuildRig(name, artPath, 2.4f, pos, SelectStance).Root;
+            var anim = root.GetComponent<Animator>();
+            if (anim != null) {
+                // the select menu pauses the game (timeScale 0) - unscaled time keeps the idle
+                // breathing on the cards; always-animate because they render via the stage RT
+                // camera, not the gameplay camera.
+                anim.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                anim.updateMode = AnimatorUpdateMode.UnscaledTime;
+            }
+            return root;
+        }
+
         class CharRig {
             public string Name;
             public GameObject Root;
@@ -345,21 +379,7 @@ namespace LilFoots.EditorTools
             if (string.IsNullOrEmpty(outDir)) outDir = "QCShots";
             Directory.CreateDirectory(outDir);
 
-            // natural standing stance measured off the whole_lily art (arms angled down, feet splayed)
-            var stance = new Dictionary<string, Vector2> {
-                {"hip",       new Vector2(0.50f, 0.55f)},
-                {"neck",      new Vector2(0.50f, 0.76f)},
-                {"head",      new Vector2(0.50f, 0.94f)},
-                {"shoulderL", new Vector2(0.32f, 0.68f)},
-                {"handL",     new Vector2(0.10f, 0.38f)},
-                {"shoulderR", new Vector2(0.68f, 0.68f)},
-                {"handR",     new Vector2(0.90f, 0.38f)},
-                {"legL",      new Vector2(0.42f, 0.55f)},
-                {"footL",     new Vector2(0.28f, 0.08f)},
-                {"legR",      new Vector2(0.58f, 0.55f)},
-                {"footR",     new Vector2(0.72f, 0.08f)},
-            };
-            var rig = BuildRig("Lily", "Assets/Art/whole_lily.png", 3.6f, new Vector3(0f, 2.0f, 0f), stance);
+            var rig = BuildRig("Lily", "Assets/Art/whole_lily.png", 3.6f, new Vector3(0f, 2.0f, 0f), SelectStance);
 
             ApplyPoseFromClip(rig, rig.IdleClip, 1f / 6f); // idle, deepest-breath key
             OverlayBones(rig);
