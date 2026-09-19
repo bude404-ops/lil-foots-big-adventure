@@ -123,20 +123,20 @@ jobs:
           elif [ "$RIG" = "1" ]; then
             pip install --quiet pillow >/dev/null 2>&1 || pip3 install --quiet pillow >/dev/null 2>&1 || true
             python3 - <<'PYEOF' || python3 -c "print('composite skipped')"
-from PIL import Image
-import os
-panels = ["rig_bindpose.png","rig_idle.png","rig_walk_native.png","rig_walk_bones.png"]
-imgs = [Image.open("unity/QCShots/"+f) for f in panels if os.path.exists("unity/QCShots/"+f)]
-h = min(i.height for i in imgs)
-imgs = [i.resize((int(i.width*h/i.height), h)) for i in imgs]
-W = sum(i.width for i in imgs)
-sheet = Image.new("RGB",(W,h),(10,12,16))
-x = 0
-for i in imgs:
-    sheet.paste(i,(x,0)); x += i.width
-sheet.save("unity/QCShots/rig_sheet.png")
-print("rig_sheet.png:", sheet.size)
-PYEOF
+            from PIL import Image
+            import os
+            panels = ["rig_bindpose.png","rig_idle.png","rig_walk_native.png","rig_walk_bones.png"]
+            imgs = [Image.open("unity/QCShots/"+f) for f in panels if os.path.exists("unity/QCShots/"+f)]
+            h = min(i.height for i in imgs)
+            imgs = [i.resize((int(i.width*h/i.height), h)) for i in imgs]
+            W = sum(i.width for i in imgs)
+            sheet = Image.new("RGB",(W,h),(10,12,16))
+            x = 0
+            for i in imgs:
+                sheet.paste(i,(x,0)); x += i.width
+            sheet.save("unity/QCShots/rig_sheet.png")
+            print("rig_sheet.png:", sheet.size)
+            PYEOF
             P="unity/QCShots/rig_sheet.png"
             C="$PRE — RIG PASS 1: Lily/Buddy/Emma rigged with NATIVE Unity 2D Animation. Panels: bind pose / IDLE (character select) / walk clip / bone overlay. FX=$FX"
             if [ -f "$P" ]; then
