@@ -86,11 +86,21 @@ namespace LilFoots.EditorTools
                 // The approved plate has NO sun disc (its sun is the horizon glow) - no sun sprite
                 // until Bude approves one.
                 var skySpr = Art("art_sky_pnw.png");
-                float skyW = 16.2f;
-                float skyH = skyW * (skySpr.bounds.size.y / skySpr.bounds.size.x);
-                // pin so the slice's top edge sits at the top of the 7.5u view
-                SpriteGo("SkyPlate", skySpr, Vector3.zero, skyW, -100, cam.transform)
-                    .transform.localPosition = new Vector3(0f, (7.5f - skyH) / 2f, 10f);
+                // SKY SCALE FIX (Bude: 'is the layer showing under the layer 1 as a reel?'):
+                // the old uniform aspect sizing made the sky 4.86u tall (2.16x the plate-true
+                // 2.25u), so its dissolved bottom 60 rows draped down OVER the ridge band -
+                // that read as layer 2 tucked under layer 1 like a reel. Plate frame mapping
+                // is NON-UNIFORM: x = 16.2u/1024px, y = 7.5u/1024px. Sky = plate rows 0-307
+                // -> 2.25u tall, top edge at plate row 0 = view top (local 3.75).
+                float skyPx2u = 7.5f / 1024f;                    // plate vertical scale
+                float skyH = 307f * skyPx2u;                     // 2.25u, composition-true
+                float skyW = 16.2f;                               // spans the view width
+                var skyGo = SpriteGo("SkyPlate", skySpr, Vector3.zero, skyW, -100, cam.transform);
+                var skySr = skyGo.GetComponent<SpriteRenderer>();
+                skyGo.transform.localScale = new Vector3(
+                    skyGo.transform.localScale.x,                 // width already set by SpriteGo
+                    skyH / skySr.bounds.size.y, 1f);              // plate-true height, not aspect
+                skyGo.transform.localPosition = new Vector3(0f, 3.75f - (skyH / 2f), 10f);
             }
             // Cascade ridges + snow-capped volcano = plate band (rows 200-480 of the approved
             // plate, dissolved edges). Frame mapping: plate x-scale 16.2u/1024px, y 7.5u/1024px.
