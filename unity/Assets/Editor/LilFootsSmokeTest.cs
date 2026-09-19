@@ -31,9 +31,11 @@ public static class LilFootsSmokeTest {
         };
 
         // 0) test the EXACT scene that ships — reload from disk (the QC pass mutates the session scene)
-        EditorSceneManager.OpenScene("Assets/Scenes/Map001.unity", OpenSceneMode.Single);
-        C(SceneManager.GetActiveScene().IsValid() && SceneManager.GetActiveScene().name == "Map001",
-          "scene: Map001.unity loads");
+        // MULTI-MAP LAW: gate the scene this run is actually shipping (MAP_SCENE, default Map001).
+        var sceneName = System.Environment.GetEnvironmentVariable("MAP_SCENE") ?? "Map001";
+        EditorSceneManager.OpenScene("Assets/Scenes/" + sceneName + ".unity", OpenSceneMode.Single);
+        C(SceneManager.GetActiveScene().IsValid() && SceneManager.GetActiveScene().name == sceneName,
+          "scene: " + sceneName + ".unity loads");
 
         // 1) INPUT SPINE — the Sept 19 dead-jump root cause was a DUPLICATE EventSystem
         var es = UnityEngine.Object.FindObjectsOfType<EventSystem>();

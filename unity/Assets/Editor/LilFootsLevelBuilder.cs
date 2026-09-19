@@ -12,11 +12,15 @@ namespace LilFoots {
 /// level is data-identical to the playtested one. One click = full scene.
 /// </summary>
 public static class LilFootsLevelBuilder {
-    const string DataPath = "Assets/LevelData/map001.json";
+    // MULTI-MAP LAW (Lil Foots 2.0): the pipeline is level-agnostic - MAP_DATA picks the
+    // level json (default map001), MAP_SCENE names the scene to build (default Map001).
+    static string DataPath {
+        get { return System.Environment.GetEnvironmentVariable("MAP_DATA") ?? "Assets/LevelData/map001.json"; }
+    }
 
     [MenuItem("Tools/Lil Foots/Build Map 001")]
     public static void Build() {
-        if (!File.Exists(DataPath)) { Debug.LogError("map001.json not found at " + DataPath); return; }
+        if (!File.Exists(DataPath)) { Debug.LogError("map data not found at " + DataPath); return; }
         var json = File.ReadAllText(DataPath);
         // simple manual parse (no external deps)
         var data = MiniJson.Deserialize(json) as System.Collections.Generic.Dictionary<string, object>;

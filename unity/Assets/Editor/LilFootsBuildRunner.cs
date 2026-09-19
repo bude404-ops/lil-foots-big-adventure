@@ -32,7 +32,7 @@ public static class LilFootsBuildRunner {
         LilFootsSplashPass.BuildSplashScene();
         var scenes = new[] {
             new EditorBuildSettingsScene(LilFootsSplashPass.ScenePath, true),
-            new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true)
+            new EditorBuildSettingsScene("Assets/Scenes/" + (System.Environment.GetEnvironmentVariable("MAP_SCENE") ?? "Map001") + ".unity", true)
         };
         EditorBuildSettings.scenes = scenes;
 
@@ -67,7 +67,7 @@ public static class LilFootsBuildRunner {
         LilFootsSplashPass.BuildSplashScene();
         var scenes = new[] {
             new EditorBuildSettingsScene(LilFootsSplashPass.ScenePath, true),
-            new EditorBuildSettingsScene("Assets/Scenes/Map001.unity", true)
+            new EditorBuildSettingsScene("Assets/Scenes/" + (System.Environment.GetEnvironmentVariable("MAP_SCENE") ?? "Map001") + ".unity", true)
         };
         EditorBuildSettings.scenes = scenes;
 

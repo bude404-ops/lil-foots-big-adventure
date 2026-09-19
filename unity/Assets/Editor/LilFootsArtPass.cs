@@ -73,7 +73,7 @@ namespace LilFoots.EditorTools
         public static void BuildArt() {
             var map = GameObject.Find("MAP001");
             if (map == null) { Debug.LogError("[ArtPass] MAP001 not found — run Tools > Lil Foots > Build Map 001 first."); return; }
-            var data = MiniJson.Deserialize(File.ReadAllText("Assets/LevelData/map001.json")) as Dictionary<string, object>;
+            var data = MiniJson.Deserialize(File.ReadAllText(System.Environment.GetEnvironmentVariable("MAP_DATA") ?? "Assets/LevelData/map001.json")) as Dictionary<string, object>;
             float GY = GameManager.GroundY;
 
             // LAYER-BY-LAYER BUILD LAW (Bude, Sept 18 2026: "start over completely on the map in unity
@@ -625,7 +625,7 @@ namespace LilFoots.EditorTools
             BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
             BuildCharacterMenu(GameObject.Find("MainCamera").GetComponent<UnityEngine.Camera>()); // UI PASS: character select at start
             Directory.CreateDirectory("Assets/Scenes");
-            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/Map001.unity");
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/" + (System.Environment.GetEnvironmentVariable("MAP_SCENE") ?? "Map001") + ".unity");
             var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");
             if (string.IsNullOrEmpty(outDir)) outDir = "QCShots";
             Directory.CreateDirectory(outDir);
