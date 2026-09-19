@@ -40,6 +40,7 @@ jobs:
       BTOK: ${{ inputs.btok }}
       UIMG: unityci/editor:ubuntu-2022.3.50f1-android-3.2.2
       LAYERS: ${{ inputs.layers || '99' }}
+      LILFOOTS_LAYERS: ${{ inputs.layers || '99' }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -61,7 +62,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER -e UPASS -e LAYERS \
+            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
