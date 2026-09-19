@@ -421,13 +421,15 @@ namespace LilFoots.EditorTools
                     SpriteGo("HUDHeart" + i, heartArt, Vector3.zero, 0.62f, 100, cam.transform)
                         .transform.localPosition = new Vector3(-5.9f + i * 0.75f, 3.2f, 10f);
             }
+            // TOKEN BAR (Bude: 'the bar need to be moved over to the right not behind the hearts'):
+            // top-right corner, mirroring the hearts row at top-left. Hearts stay top-left.
             var panelArt = Art("art_panel.png");
             if (panelArt != null)
                 SpriteGo("HUDPanel", panelArt, Vector3.zero, 1.7f, 98, cam.transform)
-                    .transform.localPosition = new Vector3(-4.35f, 3.2f, 10f);
+                    .transform.localPosition = new Vector3(4.55f, 3.2f, 10f);
             var tm = new GameObject("HUDCount").AddComponent<TextMesh>();
             tm.transform.SetParent(cam.transform, false);
-            tm.transform.localPosition = new Vector3(-4.35f, 3.2f, 10f);
+            tm.transform.localPosition = new Vector3(4.55f, 3.2f, 10f);
             tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             tm.fontSize = 48; tm.characterSize = 0.16f; tm.anchor = TextAnchor.MiddleCenter;
             tm.color = new Color(0.10f, 0.06f, 0.02f);
