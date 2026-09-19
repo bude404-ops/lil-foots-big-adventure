@@ -262,10 +262,16 @@ namespace LilFoots.EditorTools
                 if (portal != null) SpriteGo("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0), 3.2f, 3, map.transform);
             }
 
-            // ---- PLAYER: Lily, real art on a child sprite (capsule collider untouched) ----
+            // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----
             var lily = GameObject.Find("Lily");
-            if (lily != null && L(8) && Art("whole_lily.png") != null)
-                ChildSprite(lily, "LilyArt", Art("whole_lily.png"), 0.82f, 10);
+            if (lily != null && L(8)) {
+                string selChar = LilFoots.CharacterMenuController.Current();
+                string selFile = selChar == "buddy" ? "whole_buddy.png"
+                               : selChar == "emma" ? "whole_emma.png"
+                               : "whole_lily.png";
+                var selArt = Art(selFile);
+                if (selArt != null) ChildSprite(lily, "PlayerArt", selArt, 0.82f, 10);
+            }
 
             // ---- HUD: hearts row + wooden panel token counter (camera-pinned) ----
             if (cam != null && heartArt != null) {
@@ -347,8 +353,150 @@ namespace LilFoots.EditorTools
             EditorApplication.Exit(0);
         }
 
+        // ==================== UI PASS (character menu / controls / hearts) ====================
+        static UnityEngine.Camera UiCam() {
+            var go = new GameObject("MainCamera");
+            var cam = go.AddComponent<UnityEngine.Camera>();
+            cam.orthographic = true; cam.orthographicSize = 3.75f; cam.farClipPlane = 60f;
+            go.AddComponent<AudioListener>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.13f, 0.18f, 0.14f); // deep PNW forest tone so UI pops
+            cam.transform.position = new Vector3(0f, 3.75f, -10f);
+            return cam;
+        }
+
+        static void BuildUiOnly() {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cam = UiCam();
+
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+
+            BuildHud(cam);
+            BuildTouchDeck();
+            PinCanvasesToCam(cam);
+            BuildCharacterMenu(cam);
+
+            var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");
+            if (string.IsNullOrEmpty(outDir)) outDir = "QCShots";
+            Directory.CreateDirectory(outDir);
+
+            var rt = new RenderTexture(1334, 750, 24);
+            cam.targetTexture = rt;
+            // shot 1: character menu
+            Snap(rt, System.IO.Path.Combine(outDir, "ui_menu.png"));
+            // shot 2: HUD + control deck (menu dismissed)
+            var menu = GameObject.Find("CharMenuCanvas");
+            if (menu != null) Object.DestroyImmediate(menu);
+            Snap(rt, System.IO.Path.Combine(outDir, "ui_hud.png"));
+            Debug.Log("[ArtPass] UI pass QC shots done.");
+        }
+
+        /// <summary>Overlay canvases don't render into a camera texture — pin them to the cam.</summary>
+        static void PinCanvasesToCam(UnityEngine.Camera cam) {
+            foreach (var canvas in Object.FindObjectsOfType<UnityEngine.Canvas>()) {
+                if (canvas.name == "CharMenuCanvas") continue; // menu builds its own camera-space canvas
+                canvas.renderMode = UnityEngine.RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = cam;
+                canvas.planeDistance = 10f;
+            }
+        }
+
+        /// <summary>HUD: hearts row + wooden panel token counter, camera-pinned (world + UI paths share it).</summary>
+        static void BuildHud(UnityEngine.Camera cam) {
+            var heartArt = Art("art_heart.png");
+            if (heartArt != null) {
+                for (int i = 0; i < 3; i++)
+                    SpriteGo("HUDHeart" + i, heartArt, Vector3.zero, 0.62f, 100, cam.transform)
+                        .transform.localPosition = new Vector3(-5.9f + i * 0.75f, 3.2f, 10f);
+            }
+            var panelArt = Art("art_panel.png");
+            if (panelArt != null)
+                SpriteGo("HUDPanel", panelArt, Vector3.zero, 1.7f, 98, cam.transform)
+                    .transform.localPosition = new Vector3(-4.35f, 3.2f, 10f);
+            var tm = new GameObject("HUDCount").AddComponent<TextMesh>();
+            tm.transform.SetParent(cam.transform, false);
+            tm.transform.localPosition = new Vector3(-4.35f, 3.2f, 10f);
+            tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            tm.fontSize = 48; tm.characterSize = 0.16f; tm.anchor = TextAnchor.MiddleCenter;
+            tm.color = new Color(0.10f, 0.06f, 0.02f);
+            tm.text = "0 / 18";
+        }
+
+        /// <summary>Character select: native uGUI screen — three Lil Foot cards, tap to pick + start.</summary>
+        static void BuildCharacterMenu(UnityEngine.Camera cam) {
+            var go = new GameObject("CharMenuCanvas");
+            var canvas = go.AddComponent<UnityEngine.Canvas>();
+            canvas.renderMode = UnityEngine.RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = cam; canvas.planeDistance = 10f;
+            var scaler = go.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1334f, 750f);
+            go.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            var ctl = go.AddComponent<LilFoots.CharacterMenuController>();
+
+            // dim backdrop
+            var dim = MakeUi(go.transform, "Dim");
+            dim.anchorMin = Vector2.zero; dim.anchorMax = Vector2.one;
+            dim.sizeDelta = Vector2.zero;
+            var dimImg = dim.gameObject.AddComponent<UnityEngine.UI.Image>();
+            dimImg.color = new Color(0f, 0f, 0f, 0.55f);
+
+            // title
+            var title = MakeUi(go.transform, "Title");
+            title.anchorMin = title.anchorMax = new Vector2(0.5f, 1f);
+            title.pivot = new Vector2(0.5f, 1f); title.anchoredPosition = new Vector2(0f, -60f);
+            title.sizeDelta = new Vector2(700f, 90f);
+            var tt = title.gameObject.AddComponent<UnityEngine.UI.Text>();
+            tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            tt.fontSize = 64; tt.alignment = TextAnchor.MiddleCenter; tt.color = new Color(1f, 0.92f, 0.55f);
+            tt.text = "CHOOSE YOUR LIL FOOT";
+
+            // three cards
+            string[] names = { "LILY", "BUDDY", "EMMA" };
+            string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
+            for (int i = 0; i < 3; i++) {
+                float x = (i - 1) * 360f;
+                var card = MakeUi(go.transform, "Card" + names[i]);
+                card.anchorMin = card.anchorMax = new Vector2(0.5f, 0.5f);
+                card.anchoredPosition = new Vector2(x, 10f);
+                card.sizeDelta = new Vector2(320f, 320f);
+                var img = card.gameObject.AddComponent<UnityEngine.UI.Image>();
+                var sprite = Art(files[i]);
+                img.sprite = sprite; img.preserveAspect = true;
+                var btn = card.gameObject.AddComponent<UnityEngine.UI.Button>();
+                btn.transition = UnityEngine.UI.Selectable.Transition.Scale;
+                string picked = names[i].ToLower();
+                btn.onClick.AddListener(() => ctl.Select(picked));
+
+                var label = MakeUi(go.transform, "Label" + names[i]);
+                label.anchorMin = label.anchorMax = new Vector2(0.5f, 0.5f);
+                label.anchoredPosition = new Vector2(x, -170f);
+                label.sizeDelta = new Vector2(200f, 50f);
+                var lt = label.gameObject.AddComponent<UnityEngine.UI.Text>();
+                lt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                lt.fontSize = 44; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
+                lt.text = names[i];
+            }
+            Debug.Log("[ArtPass] Character menu built: LILY / BUDDY / EMMA, tap to select.");
+        }
+
+        static UnityEngine.RectTransform MakeUi(Transform parent, string name) {
+            var go = new GameObject(name, typeof(UnityEngine.RectTransform));
+            var rt = (UnityEngine.RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            return rt;
+        }
+
         /// <summary>Full scene pipeline without exiting — also used by the APK build runner.</summary>
         public static void BuildAndShootCore() {
+            // UI PASS MODE (Bude: character menu + control buttons + hearts must match the HQ art):
+            // builds ONLY the UI over a neutral backdrop — no world layers, so it never collides
+            // with the layer-by-layer map review.
+            if (System.Environment.GetEnvironmentVariable("LILFOOTS_UI") == "1") { BuildUiOnly(); return; }
+
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             LilFootsLevelBuilder.Build();
             BuildArt();
