@@ -24,6 +24,7 @@ public static class LilFootsSplashPass
         // Black stage camera (the scene behind the overlay canvas)
         var camGo = new GameObject("SplashCamera");
         var cam = camGo.AddComponent<Camera>();
+        camGo.AddComponent<AudioListener>(); // splash stings need a listener (Unity doctrine: AudioSource)
         cam.orthographic = true;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Color.black;
@@ -33,6 +34,7 @@ public static class LilFootsSplashPass
         var ctl = go.AddComponent<LilFoots.SplashController>();
         ctl.logos = new[] { Art("art_splash_big.png"), Art("art_splash_bude.png") };
         ctl.labels = new[] { "BIG ENTERTAINMENT", "BUDE VISION" };
+        ctl.stings = new[] { Sting("splash_sting_big.wav"), Sting("splash_sting_bude.wav") };
 
         // the sequence needs an EventSystem-free path (raw Input), but if Map001's EventSystem
         // is loaded later it stays owned by the menu - nothing to dedupe here.
@@ -41,6 +43,16 @@ public static class LilFootsSplashPass
         Debug.Log("[SplashPass] Splash scene built -> " + ScenePath +
                   " (big: " + (ctl.logos[0] != null ? "art" : "typographic fallback") +
                   ", bude: " + (ctl.logos[1] != null ? "art" : "typographic fallback") + ")");
+    }
+
+    // Per-logo cinematic sting (Bude, Sept 19). WAVs live in Assets/Audio and import as AudioClips.
+    static AudioClip Sting(string file)
+    {
+        var path = Path.Combine("Assets/Audio", file);
+        if (!File.Exists(path)) { Debug.LogWarning("[SplashPass] sting missing: " + path); return null; }
+        var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+        if (clip == null) { AssetDatabase.ImportAsset(path); clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path); }
+        return clip;
     }
 
     static Sprite Art(string file)

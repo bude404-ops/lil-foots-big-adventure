@@ -16,6 +16,9 @@ namespace LilFoots
         public Sprite[] logos = new Sprite[0];
         public string[] labels = new string[0];
 
+        [Header("Per-logo cinematic sting (Bude, Sept 19: 'a cool cinematic sound like other games have'). Null -> silent.")]
+        public AudioClip[] stings = new AudioClip[0];
+
         [Header("Timing per logo (seconds)")]
         public float fadeIn = 0.5f;
         public float hold = 1.6f;
@@ -24,11 +27,14 @@ namespace LilFoots
 
         Image img;
         Text txt;
+        AudioSource stingSrc;
         bool skip;
 
         void Start()
         {
             Application.targetFrameRate = 60;
+            stingSrc = gameObject.AddComponent<AudioSource>();
+            stingSrc.playOnAwake = false;
             // Full-screen overlay canvas, black stage
             var canvasGo = new GameObject("SplashCanvas", typeof(Canvas), typeof(CanvasScaler));
             var canvas = canvasGo.GetComponent<Canvas>();
@@ -84,6 +90,8 @@ namespace LilFoots
                 else txt.text = label;
 
                 var graphic = sprite != null ? (Graphic)img : txt;
+                var sting = i < stings.Length ? stings[i] : null;
+                if (sting != null) stingSrc.PlayOneShot(sting);
                 yield return Fade(graphic, 0f, 1f, fadeIn);
                 yield return Wait(hold);
                 yield return Fade(graphic, 1f, 0f, fadeOut);
