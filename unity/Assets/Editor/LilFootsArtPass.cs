@@ -85,11 +85,11 @@ namespace LilFoots.EditorTools
                 // The approved plate has NO sun disc (its sun is the horizon glow) - no sun sprite
                 // until Bude approves one.
                 var skySpr = Art("art_sky_pnw.png");
-                float sw = 16.2f;
-                float sh = sw * (skySpr.bounds.size.y / skySpr.bounds.size.x);
+                float skyW = 16.2f;
+                float skyH = skyW * (skySpr.bounds.size.y / skySpr.bounds.size.x);
                 // pin so the slice's top edge sits at the top of the 7.5u view
-                SpriteGo("SkyPlate", skySpr, Vector3.zero, sw, -100, cam.transform)
-                    .transform.localPosition = new Vector3(0f, (7.5f - sh) / 2f, 10f);
+                SpriteGo("SkyPlate", skySpr, Vector3.zero, skyW, -100, cam.transform)
+                    .transform.localPosition = new Vector3(0f, (7.5f - skyH) / 2f, 10f);
             }
             // Cascade ridges + snow-capped volcano — HORIZON BAND ~0.85u tall (demo proportion:
             // camera sees 7.5u tall; the old 19u-wide strip was ~5.6u tall and buried the sky)
