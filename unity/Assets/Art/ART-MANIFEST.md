@@ -30,7 +30,8 @@ The Unity build uses ONLY real art asset files. Nothing that was code-drawn in t
 - `art_firwall.png` — dense fir midground strip
 - `art_fgl.png` / `art_fgr.png` — foreground cartoon trunks (left/right tiles)
 - `art_camtree.png` — the tree the trail cams mount on
-- `art_mist.png` — PNW mist bank sprite (was code ellipses; Unity uses this as a drifting VFX sprite)
+- `art_mist.png` — PNW mist bank sprite (legacy strip; superseded for banks/wash by art_mist_hq)
+- `art_mist_hq.png` — HQ painterly fog bank (Sept 19 mist v2 rework, Bude: 'mist and clouds are overloading the other stuff') - luminance-keyed alpha from a single generated plate, used for the 3 low mist banks + the teal depth wash
 - `art_water.png` — stream surface strip (was code gradient)
 - `art_ground_strip.png` — platform top strip (grass lip + dirt band + stones)
 - `art_earth.png` — platform body earth fill tile (was code fill + code stones)

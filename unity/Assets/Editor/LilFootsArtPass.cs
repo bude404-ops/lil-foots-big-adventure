@@ -105,29 +105,37 @@ namespace LilFoots.EditorTools
                     vSy, 1f);                                    // plate-true height, not aspect
                 vgo.transform.localPosition = new Vector3(0f, 3.75f - (vH / 2f), 10f);
             }
-            var mist = Art("art_mist.png");   // declared here: the vista merge folded the old
-                                             // firwall block away, which used to declare this
+            // MIST v2 (Bude, Sept 19 2026: 'the mist and clouds are overloading the other stuff
+            // and arent properly placed'): HQ painterly fog plate + only 3 LOW banks, sized by
+            // height so they read as ground-hugging PNW valley fog in the depth gaps - never
+            // stacked white sky walls. Staggered x so no two banks overlap.
+            // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
+            var mist = Art("art_mist_hq.png");
+            if (mist == null) mist = Art("art_mist.png"); // legacy fallback
             if (mist != null && L(2)) {
-                // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
-                // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
-                float mh = 1.0f; // L4 mist strip ~6.9:1 -> banks ~6.9u wide
-                float mw = mh * (mist.bounds.size.x / mist.bounds.size.y);
-                float[] lx = { -5.2f, -1.6f, 2.2f, 5.4f };
-                float[] ly = { (GY + 0.75f) - 4.5f, (GY + 1.35f) - 4.5f, (GY + 1.0f) - 4.5f, (GY + 1.5f) - 4.5f };
-                for (int i = 0; i < 4; i++) {
+                float mh = 0.75f;                              // low bank, not a wall
+                float mw = mh * (mist.bounds.size.x / mist.bounds.size.y); // ~2.6u wide
+                float[] lx = { -5.5f, -1.6f, 2.6f };
+                float[] ly = { GY - 2.25f, GY - 2.85f, GY - 2.05f };
+                float[] la = { 0.80f, 0.68f, 0.74f };
+                for (int i = 0; i < lx.Length; i++) {
                     var mb = SpriteGo("MistBank", mist, Vector3.zero, mw, -70, cam != null ? cam.transform : map.transform);
                     mb.transform.localPosition = new Vector3(lx[i], ly[i], 10f);
+                    var mbr = mb.GetComponent<SpriteRenderer>();
+                    if (mbr != null) mbr.color = new Color(1f, 1f, 1f, la[i]);
                 }
             }
 
             // ---- BELOW-GROUND DEPTH WASH (approved plate lower third): tinted mist banks
             // filling the zone under the ground line so it reads as teal mist-washed depth,
             // never raw sky. World-space: scrolls with the gameplay plane. ----
+            // WASH v2 (Bude, Sept 19 'overloading'): 2 rows only, subtle near the ground line
+            // (gameplay must read through it) and more solid only at the chasm floor.
             if (mist != null && L(2)) {
                 float wh = 2.2f;
                 float ww = wh * (mist.bounds.size.x / mist.bounds.size.y);
-                float[] wy = { GY - 1.4f, GY - 3.2f, GY - 4.9f };
-                float[] wa = { 0.88f, 0.92f, 0.96f };
+                float[] wy = { GY - 1.9f, GY - 4.0f };
+                float[] wa = { 0.50f, 0.72f };
                 for (int r = 0; r < wy.Length; r++) {
                     for (float x = -6f; x < 104f; x += ww * 0.92f) {
                         var wsh = SpriteGo("DepthWash", mist, new Vector3(x, wy[r], 0), ww, -58 + r, map.transform);
@@ -182,7 +190,9 @@ namespace LilFoots.EditorTools
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("TrailCam")) continue;
                 if (camTree != null && L(2)) {
-                    float cth = 3.1f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
+                    // TREE HEIGHT (Bude, Sept 19 'layer 2 is too high'): 3.1u trees poked above
+                    // the vista treeline; 2.3u keeps the canopy under the L1 backdrop line.
+                    float cth = 2.3f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
                     SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
                 }
                 if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
@@ -227,10 +237,15 @@ namespace LilFoots.EditorTools
             }
 
             // ---- TOKENS (footprint Big Token) + secret heart ----
+            // COINS OFF (Bude, Sept 19 2026: 'remove the coins from it because they dont make
+            // sense in their positions'): token art stays OUT until the trail is re-placed
+            // along the actual platform path (proper curve arcs over jumps, no floaters over
+            // gaps). Token_ logic objects remain so collection still works when art returns.
             var token = Art("art_token.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Token_")) continue;
-                if (token != null && L(2)) ChildSprite(child.gameObject, "TokenArt", token, 0.66f, 5);
+                var oldTa = child.transform.Find("TokenArt");
+                if (oldTa != null) Object.DestroyImmediate(oldTa.gameObject); // no stale floaters
             }
             var heartArt = Art("art_heart.png");
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
