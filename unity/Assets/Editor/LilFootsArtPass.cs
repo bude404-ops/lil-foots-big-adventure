@@ -92,10 +92,12 @@ namespace LilFoots.EditorTools
             if (ridges != null && cam != null && L(2)) {
                 // STATIC VISTA LAW (Bude): ridges ride with the camera - only the gameplay plane scrolls.
                 // Camera is locked at y=4.5 by CameraFollow; ridge band world-Y = GY+1.05+rh/2 -> local y = that - 4.5.
-                float rh = 0.85f;
-                float rw = 14.5f; // wider than the ~13.35u view so edges never show
-                SpriteGo("Ridges", ridges, Vector3.zero, rw, -90, cam.transform)
-                    .transform.localPosition = new Vector3(0f, (GY + 1.05f + rh / 2f) - 4.5f, 10f);
+                float rh = 0.8f;
+                float rw = rh * (ridges.bounds.size.x / ridges.bounds.size.y); // L2 strip ~5.99:1
+                for (int k = -3; k <= 3; k++) {
+                    var rg = SpriteGo("Ridges", ridges, Vector3.zero, rw - 0.02f, -90, cam.transform);
+                    rg.transform.localPosition = new Vector3(k * (rw - 0.02f), (GY + 1.05f + rh / 2f) - 4.5f, 10f);
+                }
             }
             // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
             // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
@@ -103,21 +105,42 @@ namespace LilFoots.EditorTools
             if (firs != null && cam != null && L(3)) {
                 // STATIC VISTA LAW (Bude): fir wall rides with the camera too.
                 float fh = 1.5f;
-                float fw = 14.5f;
-                SpriteGo("FirWall", firs, Vector3.zero, fw, -80, cam.transform)
-                    .transform.localPosition = new Vector3(0f, (GY - 0.25f + fh / 2f) - 4.5f, 10f);
+                float fw = fh * (firs.bounds.size.x / firs.bounds.size.y); // L3 treeline ~1.64:1
+                for (int k = -4; k <= 4; k++) {
+                    var fwg = SpriteGo("FirWall", firs, Vector3.zero, fw - 0.02f, -80, cam.transform);
+                    fwg.transform.localPosition = new Vector3(k * (fw - 0.02f), (GY - 0.25f + fh / 2f) - 4.5f, 10f);
+                }
             }
             // drifting PNW mist banks (soft sprites, ~1.4u tall, upper sky band)
             var mist = Art("art_mist.png");
             if (mist != null && L(4)) {
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
                 // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
-                float mw = 1.3f * (mist.bounds.size.x / mist.bounds.size.y);
+                float mh = 1.0f; // L4 mist strip ~6.9:1 -> banks ~6.9u wide
+                float mw = mh * (mist.bounds.size.x / mist.bounds.size.y);
                 float[] lx = { -5.2f, -1.6f, 2.2f, 5.4f };
                 float[] ly = { (GY + 0.75f) - 4.5f, (GY + 1.35f) - 4.5f, (GY + 1.0f) - 4.5f, (GY + 1.5f) - 4.5f };
-                for (int i = 0; i < 4; i++)
-                    SpriteGo("MistBank", mist, Vector3.zero, mw, -70, cam != null ? cam.transform : map.transform)
-                        .transform.localPosition = new Vector3(lx[i], ly[i], 10f);
+                for (int i = 0; i < 4; i++) {
+                    var mb = SpriteGo("MistBank", mist, Vector3.zero, mw, -70, cam != null ? cam.transform : map.transform);
+                    mb.transform.localPosition = new Vector3(lx[i], ly[i], 10f);
+                }
+            }
+
+            // ---- BELOW-GROUND DEPTH WASH (approved plate lower third): tinted mist banks
+            // filling the zone under the ground line so it reads as teal mist-washed depth,
+            // never raw sky. World-space: scrolls with the gameplay plane. ----
+            if (mist != null && L(4)) {
+                float wh = 2.2f;
+                float ww = wh * (mist.bounds.size.x / mist.bounds.size.y);
+                float[] wy = { GY - 1.4f, GY - 3.2f, GY - 4.9f };
+                float[] wa = { 0.88f, 0.92f, 0.96f };
+                for (int r = 0; r < wy.Length; r++) {
+                    for (float x = -6f; x < 104f; x += ww * 0.92f) {
+                        var wsh = SpriteGo("DepthWash", mist, new Vector3(x, wy[r], 0), ww, -58 + r, map.transform);
+                        var wsr = wsh.GetComponent<SpriteRenderer>();
+                        wsr.color = new Color(0.32f, 0.52f, 0.45f, wa[r]); // teal wash per plate bands
+                    }
+                }
             }
 
             // ---- STREAM WATER in the gaps ----
@@ -183,6 +206,17 @@ namespace LilFoots.EditorTools
                     var fsr = fg.GetComponent<SpriteRenderer>();
                     if (fi % 2 == 1) fsr.flipX = true;   // alternate so the row doesn't visibly repeat
                     fx += fw2 * 0.62f; fi++;
+                }
+                // dark near-field silhouette base across the bottom of the frame (plate band 9)
+                float bh = 2.0f;
+                float bw = bh * (fore.bounds.size.x / fore.bounds.size.y);
+                float bx = -8f; int bi = 0;
+                while (bx < 106f) {
+                    var bg2 = SpriteGo("ForeBase", fore, new Vector3(bx, bh / 2f - 0.2f, 0), bw, 40, map.transform);
+                    var bsr = bg2.GetComponent<SpriteRenderer>();
+                    if (bi % 2 == 1) bsr.flipX = true;
+                    bsr.color = new Color(0.30f, 0.36f, 0.28f, 0.97f); // near-black silhouettes per plate
+                    bx += bw * 0.58f; bi++;
                 }
             }
 
