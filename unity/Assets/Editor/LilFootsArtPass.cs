@@ -91,18 +91,16 @@ namespace LilFoots.EditorTools
                 SpriteGo("SkyPlate", skySpr, Vector3.zero, skyW, -100, cam.transform)
                     .transform.localPosition = new Vector3(0f, (7.5f - skyH) / 2f, 10f);
             }
-            // Cascade ridges + snow-capped volcano — HORIZON BAND ~0.85u tall (demo proportion:
-            // camera sees 7.5u tall; the old 19u-wide strip was ~5.6u tall and buried the sky)
+            // Cascade ridges + snow-capped volcano = plate band (rows 200-480 of the approved
+            // plate, dissolved edges). Frame mapping: plate x-scale 16.2u/1024px, y 7.5u/1024px.
+            // Band top row 200 -> world y 6.78; center row 340 -> world 5.76 -> local 1.26.
             var ridges = Art("art_ridges.png");
             if (ridges != null && cam != null && L(2)) {
                 // STATIC VISTA LAW (Bude): ridges ride with the camera - only the gameplay plane scrolls.
-                // Camera is locked at y=4.5 by CameraFollow; ridge band world-Y = GY+1.05+rh/2 -> local y = that - 4.5.
-                float rh = 0.8f;
-                float rw = rh * (ridges.bounds.size.x / ridges.bounds.size.y); // L2 strip ~5.99:1
-                for (int k = -3; k <= 3; k++) {
-                    var rg = SpriteGo("Ridges", ridges, Vector3.zero, rw - 0.02f, -90, cam.transform);
-                    rg.transform.localPosition = new Vector3(k * (rw - 0.02f), (GY + 1.05f + rh / 2f) - 4.5f, 10f);
-                }
+                float ridgeW = 16.2f;
+                float ridgeH = ridgeW * (ridges.bounds.size.y / ridges.bounds.size.x);
+                SpriteGo("Ridges", ridges, Vector3.zero, ridgeW, -90, cam.transform)
+                    .transform.localPosition = new Vector3(0f, 1.26f, 10f);
             }
             // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
             // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)

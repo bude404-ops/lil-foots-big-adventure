@@ -90,6 +90,13 @@ jobs:
           CAP1="$PRE — Map 001 start. FX=$FX"
           CAP2="$PRE — mid-map. FX=$FX"
           CAP3="$PRE — finish. FX=$FX"
+          # Bude (Sept 18): "stop sending me 3 lol only need 1" -> layer reviews send ONE shot.
+          if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
+            P="unity/QCShots/unity_start.png"
+            if [ -f "$P" ]; then
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${CAP1}" || true
+            fi
+          else
           for i in 1 2 3; do
             case $i in 1) F=unity_start.png; C="$CAP1";; 2) F=unity_mid.png; C="$CAP2";; 3) F=unity_gate.png; C="$CAP3";; esac
             P="unity/QCShots/$F"
@@ -97,6 +104,7 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
             fi
           done
+          fi
           if [ -f "unity/Builds/LilFoots.apk" ]; then
             SZ=$(stat -c%s "unity/Builds/LilFoots.apk")
             echo "apk size: $SZ"
