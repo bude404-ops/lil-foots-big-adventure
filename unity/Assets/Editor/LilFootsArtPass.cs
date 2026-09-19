@@ -101,6 +101,8 @@ namespace LilFoots.EditorTools
                     vH / vsr.bounds.size.y, 1f);                 // plate-true height, not aspect
                 vgo.transform.localPosition = new Vector3(0f, 3.75f - (vH / 2f), 10f);
             }
+            var mist = Art("art_mist.png");   // declared here: the vista merge folded the old
+                                             // firwall block away, which used to declare this
             if (mist != null && L(4)) {
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
                 // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
