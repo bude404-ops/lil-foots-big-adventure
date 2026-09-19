@@ -77,50 +77,30 @@ namespace LilFoots.EditorTools
             bool L(int n) => LN >= n;
             Debug.Log("[ArtPass] LILFOOTS_LAYERS=" + LN + " (layer-by-layer review mode)");
 
-            // ---- WORLD BACKDROP (Region 1: PNW) ----
+            // ---- WORLD BACKDROP = BUDE'S EXACT REFERENCE ART (Sept 19 2026, imgur JAnDjxQ:
+            // "I'll send a file that is suppose to be the reference art for the world skin").
+            // THE REFERENCE IS THE WORLD SKIN: his 1024x1024 painting (pale sage sky wash ->
+            // deepening forest -> near-black floor edge, one continuous gradient, no hard seams)
+            // is used AS the backdrop, pixel for pixel - the map looks like the reference by
+            // construction. Coverage: two mirrored tiles, each 8.1u wide x 7.5u tall (frame
+            // height), seamless by mirror construction, <10% stretch. Camera-pinned (static
+            // vista law). Mid band + foreground depth come from the painting itself. ----
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
-            // pinned sky + THE one sun ride with the camera (never scroll, never duplicate)
             if (cam != null && L(1)) {
-                // LAYER 1 OF 3 (Bude confirmed the 3-layer doctrine: "Yes show me"):
-                // ONE static HQ vista = sky + Cascade ridges + snow-capped volcano + fir wall
-                // as a SINGLE seamless slice of the approved plate (rows 0-660, fully opaque,
-                // no internal dissolves - the old sliced sky/ridge bands draped and read as a
-                // "reel" under each other). Plate frame mapping: x 16.2u/1024px, y 7.5u/1024px.
-                // STATIC VISTA LAW: pinned to the camera - only the gameplay plane scrolls.
-                // Treeline (plate rows 440-520) lands at shot y ~322-381 = the frame middle.
-                var vistaSpr = Art("art_vista.png");
-                float vPx2u = 7.5f / 1024f;
-                float vRows = 660f;
-                float vH = vRows * vPx2u;                       // 4.83u tall, composition-true
-                float vW = 16.2f;                                // spans the view width
-                var vgo = SpriteGo("Vista", vistaSpr, Vector3.zero, vW, -100, cam.transform);
-                // GREY-BOX BUG (Bude: 'remove the dark grey box up top'): the y override divided
-                // by the RENDERER's world bounds (which already include the x width-scale),
-                // rendering the vista 3.06u tall instead of 4.83u -> a 0.85u band of camera-clear
-                // grey above it. Divide by the SPRITE's own bounds instead.
-                float vSy = (vistaSpr != null) ? vH / vistaSpr.bounds.size.y : 1f;
-                vgo.transform.localScale = new Vector3(
-                    vgo.transform.localScale.x,                  // width already set by SpriteGo
-                    vSy, 1f);                                    // plate-true height, not aspect
-                vgo.transform.localPosition = new Vector3(0f, 3.75f - (vH / 2f), 10f);
-            }
-
-            // ---- VISTA DEPTH BASE (Bude Depth Doctrine): the approved vista plate ends at its
-            // fir-wall bottom; this band continues the forest downward so the frame below the
-            // vista reads as deep dark forest behind the gameplay plane - never raw camera clear.
-            // Top edge palette-matched to the vista's bottom row (seam continues the fir wall).
-            // STATIC VISTA LAW: camera-pinned, never scrolls. ----
-            if (cam != null && L(1)) {
-                var vb = Art("art_vista_base.png");
-                if (vb != null) {
-                    float bh = 3.3f;                       // vista bottom down past frame bottom
-                    float bw = bh * (vb.bounds.size.x / vb.bounds.size.y);
+                var skinSpr = Art("art_worldskin_ref.png");
+                if (skinSpr != null) {
+                    float skinH = 7.5f;   // exactly the ortho frame height
+                    float skinW = 8.1f;   // two mirrored tiles cover the 16.2u view width
                     for (int i = 0; i < 2; i++) {
-                        var bg2 = SpriteGo("VistaBase", vb, Vector3.zero, bw, -99, cam.transform);
-                        bg2.transform.localPosition = new Vector3(-bw / 2f + i * bw, 3.75f - 4.83f - bh / 2f + 0.05f, 10f);
-                        if (i == 1) bg2.GetComponent<SpriteRenderer>().flipX = true;
+                        var sk = SpriteGo("WorldSkin", skinSpr, Vector3.zero, skinW, -100, cam.transform);
+                        float sy = skinH / skinSpr.bounds.size.y;
+                        sk.transform.localScale = new Vector3(sk.transform.localScale.x, sy, 1f);
+                        sk.transform.localPosition = new Vector3(-skinW / 2f + i * skinW, 0f, 10f);
+                        if (i == 1) sk.GetComponent<SpriteRenderer>().flipX = true;
                     }
+                } else {
+                    Debug.LogError("[ArtPass] art_worldskin_ref.png missing - copy Bude's reference into Assets/Art");
                 }
             }
 
@@ -213,43 +193,10 @@ namespace LilFoots.EditorTools
                 if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
             }
 
-            // ---- LAYER 3: FOREGROUND PARALLAX PROPS (Bude Depth Doctrine - 3 layers exactly).
-            // Sept 19 rework per the concept-plate read: individual organic props IN FRONT of
-            // the gameplay plane - ferns, mossy logs on the ground line, fir boughs hanging in
-            // from the top - so the layers OVERLAP instead of sitting as flat panels. The old
-            // solid dark ForeBase band is gone (a flat band was the problem, not the fix).
-            // Props ride ParallaxProp (factor > 1) so they sweep past like near-field foliage. ----
-            if (L(3)) {
-                var fernArt = Art("art_fore_fern.png");
-                var logArt = Art("art_fore_log.png");
-                var boughArt = Art("art_fore_bough.png");
-                var rng = new System.Random(404);
-                for (float x = 1.5f; x < 98f; x += 5.5f + (float)rng.NextDouble() * 6.5f) {
-                    var pick = rng.NextDouble() < 0.6 ? fernArt : logArt;
-                    if (pick == null) continue;
-                    float ph = pick == fernArt ? 1.5f + 0.6f * (float)rng.NextDouble()
-                                                : 1.0f + 0.4f * (float)rng.NextDouble();
-                    float pw = ph * (pick.bounds.size.x / pick.bounds.size.y);
-                    var pp = SpriteGo("ForeProp", pick, new Vector3(x + 3f * (float)rng.NextDouble(), GY - 0.42f + ph / 2f, 0), pw, 60, map.transform);
-                    var psr = pp.GetComponent<SpriteRenderer>();
-                    psr.flipX = rng.NextDouble() < 0.5f;
-                    psr.color = new Color(0.80f, 0.82f, 0.78f, 1f);  // darker near-field value = depth cue
-                    var para = pp.AddComponent<ParallaxProp>();
-                    para.factor = 1.28f;
-                }
-                if (boughArt != null) {
-                    for (float x = -2f; x < 100f; x += 13f + 8f * (float)rng.NextDouble()) {
-                        float bh3 = 2.2f + 1.2f * (float)rng.NextDouble();
-                        float bw3 = bh3 * (boughArt.bounds.size.x / boughArt.bounds.size.y);
-                        var bp = SpriteGo("ForeBough", boughArt, new Vector3(x, 10.9f - bh3 / 2f, 0), bw3, 62, map.transform);
-                        var bsr = bp.GetComponent<SpriteRenderer>();
-                        bsr.flipX = rng.NextDouble() < 0.5f;
-                        bsr.color = new Color(0.72f, 0.75f, 0.70f, 1f);
-                        var bp2 = bp.AddComponent<ParallaxProp>();
-                        bp2.factor = 1.45f;
-                    }
-                }
-            }
+            // ---- LAYER 3 FOREGROUND PROPS REMOVED (Sept 19: Bude's world-skin reference
+            // carries the near-field treatment itself - a continuous near-black forest floor
+            // at the bottom edge, not discrete prop blobs. Fore props stay out until Bude
+            // asks for garnish; the painting's own bottom band is the foreground depth). ----
 
             // ---- ENEMY ART (child sprites — hitboxes untouched) ----
             var hound = Art("art_hound.png");
