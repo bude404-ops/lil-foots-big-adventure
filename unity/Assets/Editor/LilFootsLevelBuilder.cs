@@ -116,6 +116,15 @@ public static class LilFootsLevelBuilder {
         var gc = gate.AddComponent<BoxCollider2D>(); gc.isTrigger = true; gc.size = new Vector2(0.8f, 3f);
         gate.AddComponent<GateController>();
 
+        // ---- FINISH PROPS (terminus law): flag + portal exist even in greybox as placeholder
+        // geometry (the course must visibly terminate); ArtPass re-skins them with the HQ art at L(2).
+        var flag = new GameObject("FlagGateArt"); flag.transform.SetParent(root.transform);
+        flag.transform.position = new Vector3(gate.transform.position.x, GY + 1.2f, 0);
+        var fsr = flag.AddComponent<SpriteRenderer>(); fsr.sprite = SlabSprite(1.1f, 2.2f); fsr.color = new Color(0.20f, 0.45f, 0.25f); fsr.sortingOrder = 4;
+        var portal = new GameObject("PortalArt"); portal.transform.SetParent(root.transform);
+        portal.transform.position = new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0);
+        var psr = portal.AddComponent<SpriteRenderer>(); psr.sprite = SlabSprite(3.2f, 3.2f); psr.color = new Color(0.28f, 0.50f, 0.42f); psr.sortingOrder = 3;
+
         // ---- player ----
         var player = new GameObject("Lily");
         player.transform.SetParent(root.transform);

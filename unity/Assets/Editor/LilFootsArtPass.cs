@@ -37,6 +37,14 @@ namespace LilFoots.EditorTools
             return s;
         }
 
+        /// <summary>Re-skin a builder placeholder: swap in the real art, keep the name so the smoke
+        /// gate finds the same object in greybox AND art builds.</summary>
+        static void Reskin(string name, Sprite s, Vector3 pos, float width, int order, Transform parent) {
+            var existing = GameObject.Find(name);
+            if (existing != null) UnityEngine.Object.DestroyImmediate(existing);
+            SpriteGo(name, s, pos, width, order, parent);
+        }
+
         static GameObject SpriteGo(string name, Sprite s, Vector3 pos, float width, int order, Transform parent = null) {
             var go = new GameObject(name);
             if (parent != null) go.transform.SetParent(parent, false);
@@ -244,9 +252,9 @@ namespace LilFoots.EditorTools
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2)) {
                 var fgArt = Art("art_flaggate.png");
-                if (fgArt != null) SpriteGo("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform);
+                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform);
                 var portal = Art("art_flagportal.png");
-                if (portal != null) SpriteGo("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0), 3.2f, 3, map.transform);
+                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0), 3.2f, 3, map.transform);
             }
 
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----
