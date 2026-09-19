@@ -359,6 +359,7 @@ namespace LilFoots.EditorTools
         // ==================== UI PASS (character menu / controls / hearts) ====================
         static UnityEngine.Camera UiCam() {
             var go = new GameObject("MainCamera");
+            go.tag = "MainCamera"; // Snap() renders via Camera.main - without the tag it's null (UI-pass NRE fix)
             var cam = go.AddComponent<UnityEngine.Camera>();
             cam.orthographic = true; cam.orthographicSize = 3.75f; cam.farClipPlane = 60f;
             go.AddComponent<AudioListener>();
@@ -537,7 +538,9 @@ namespace LilFoots.EditorTools
         static void Snap(RenderTexture rt, string path) {
             var prev = RenderTexture.active;
             RenderTexture.active = rt;
-            Camera.main.Render();
+            var c = Camera.main != null ? Camera.main : UnityEngine.Object.FindObjectOfType<UnityEngine.Camera>();
+            if (c == null) { Debug.LogError("[ArtPass] No camera to render QC shot - skipping " + path); return; }
+            c.Render();
             var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
             tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
             tex.Apply();
