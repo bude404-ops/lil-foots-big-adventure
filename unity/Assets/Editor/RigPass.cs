@@ -100,9 +100,11 @@ namespace LilFoots.EditorTools
         }
 
         // Build the NATIVE rig: SpriteRenderer + Unity bone hierarchy + SpriteSkin + Animator + walk clip.
-        static CharRig BuildRig(string name, string artPath, float worldH, Vector3 pos) {
+        static CharRig BuildRig(string name, string artPath, float worldH, Vector3 pos,
+                                  Dictionary<string, Vector2> poseOverride = null) {
             var rig = new CharRig { WorldH = worldH };
             var s = Art(artPath);
+            var PoseMap = poseOverride != null ? poseOverride : Pose;
 
             var charGo = new GameObject(name);
             charGo.transform.position = pos;
@@ -120,7 +122,7 @@ namespace LilFoots.EditorTools
             // ---- Unity creates the native bone hierarchy ----
             var boneRootGo = new GameObject("root");
             boneRootGo.transform.SetParent(charGo.transform, false);
-            foreach (var kv in Pose) {
+            foreach (var kv in PoseMap) {
                 var bone = new GameObject(kv.Key);
                 bone.transform.SetParent(boneRootGo.transform, false);
                 // bone positions in art-fraction space, scaled by art rect, centered on the character
@@ -321,6 +323,52 @@ namespace LilFoots.EditorTools
 
             Debug.Log("[RigPass] NATIVE rig pass complete: Unity created bone hierarchies, SpriteSkin components, "
                       + "AnimatorControllers + walk clips. QC: bindpose / walk_native / walk_bones. Unity owns the rig.");
+        }
+
+        /// <summary>Bude's ask (Sept 19): "Show me one image of lily in a idle pose".
+        /// Renders Lily in her natural character-select stance (the approved whole_lily art) on the
+        /// light studio bg, rigged with her native bone skeleton posed at the idle clip's deepest
+        /// breath. One clean image - the select card will animate from exactly this pose.</summary>
+        public static void IdleShoot() {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            var camGo = new GameObject("IdleCam");
+            var cam = camGo.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 2.2f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.92f, 0.92f, 0.90f, 1f);
+            cam.transform.position = new Vector3(0f, 2.1f, -10f);
+            cam.tag = "MainCamera";
+
+            var outDir = System.Environment.GetEnvironmentVariable("QC_OUT");
+            if (string.IsNullOrEmpty(outDir)) outDir = "QCShots";
+            Directory.CreateDirectory(outDir);
+
+            // natural standing stance measured off the whole_lily art (arms angled down, feet splayed)
+            var stance = new Dictionary<string, Vector2> {
+                {"hip",       new Vector2(0.50f, 0.55f)},
+                {"neck",      new Vector2(0.50f, 0.76f)},
+                {"head",      new Vector2(0.50f, 0.94f)},
+                {"shoulderL", new Vector2(0.32f, 0.68f)},
+                {"handL",     new Vector2(0.10f, 0.38f)},
+                {"shoulderR", new Vector2(0.68f, 0.68f)},
+                {"handR",     new Vector2(0.90f, 0.38f)},
+                {"legL",      new Vector2(0.42f, 0.55f)},
+                {"footL",     new Vector2(0.28f, 0.08f)},
+                {"legR",      new Vector2(0.58f, 0.55f)},
+                {"footR",     new Vector2(0.72f, 0.08f)},
+            };
+            var rig = BuildRig("Lily", "Assets/Art/whole_lily.png", 3.6f, new Vector3(0f, 2.0f, 0f), stance);
+
+            ApplyPoseFromClip(rig, rig.IdleClip, 1f / 6f); // idle, deepest-breath key
+            OverlayBones(rig);
+            Snap(cam, outDir + "/idle_lily.png");
+
+            Directory.CreateDirectory("Assets/Scenes");
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/IdleLily.unity");
+            AssetDatabase.SaveAssets();
+            Debug.Log("[RigPass] IDLE SHOT: Lily in her natural select-card stance, skeleton posed mid-breath. QC: idle_lily.png");
         }
 
         static void Snap(Camera cam, string path) {

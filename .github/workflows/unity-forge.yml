@@ -28,6 +28,10 @@ on:
         description: 'UI pass mode: build only character menu + controls + hearts (no world)'
         required: false
         default: ''
+      idle:
+        description: 'Idle pose shot: Lily in her natural select-card stance with the native skeleton'
+        required: false
+        default: ''
       rig:
         description: 'Rig pass mode: rig Lily/Buddy/Emma with native Unity 2D Animation + idle/walk clips'
         required: false
@@ -51,6 +55,7 @@ jobs:
       LILFOOTS_LAYERS: ${{ inputs.layers || '99' }}
       LILFOOTS_UI: ${{ inputs.ui }}
       RIG: ${{ inputs.rig }}
+      IDLE: ${{ inputs.idle }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -90,6 +95,9 @@ jobs:
               if [ "$RIG" = "1" ]; then
                 METHOD="LilFoots.EditorTools.RigPass.BuildAndShoot"
               fi
+              if [ "$IDLE" = "1" ]; then
+                METHOD="LilFoots.EditorTools.RigPass.IdleShoot"
+              fi
               echo "FORGE METHOD: $METHOD (LAYERS=$LAYERS)"
               xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
                 -logFile /project/unity-forge.log -projectPath /project/unity \
@@ -106,6 +114,7 @@ jobs:
           if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ] && [ "$LAYERS" != "3" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 3 (3-layer doctrine: 1=static vista, 2=gameplay plane, 3=foreground props; layers above $LAYERS intentionally absent)"; fi
           if [ "$LILFOOTS_UI" = "1" ]; then PRE="UI PASS - CHARACTER MENU / CONTROLS / HEARTS (HQ style, no world layers in this build)"; fi
           if [ "$RIG" = "1" ]; then PRE="ANIMATION PASS"; fi
+          if [ "$IDLE" = "1" ]; then PRE="LILY IDLE POSE"; fi
           CAP1="$PRE — Map 001 start. FX=$FX"
           CAP2="$PRE — mid-map. FX=$FX"
           CAP3="$PRE — finish. FX=$FX"
@@ -121,6 +130,12 @@ jobs:
                 curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
               fi
             done
+          elif [ "$IDLE" = "1" ]; then
+            P="unity/QCShots/idle_lily.png"
+            C="$PRE - Lily in her character-select idle stance, native Unity skeleton posed mid-breath. FX=$FX"
+            if [ -f "$P" ]; then
+              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendPhoto" -F "chat_id=${BIG_CHAT}" -F "photo=@$P" -F "caption=${C}" || true
+            fi
           elif [ "$RIG" = "1" ]; then
             pip install --quiet pillow >/dev/null 2>&1 || pip3 install --quiet pillow >/dev/null 2>&1 || true
             python3 - <<'PYEOF' || python3 -c "print('composite skipped')"
