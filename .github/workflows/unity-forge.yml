@@ -20,6 +20,10 @@ on:
       gtok:
         description: 'Token to push the WebGL build to the live repo (mcontwitter-glitch/lil-foots-live)'
         required: true
+      layers:
+        description: 'Layer-by-layer review mode: build only the first N map layers (99 = full map)'
+        required: false
+        default: '99'
 
 permissions:
   contents: read
@@ -35,6 +39,7 @@ jobs:
       BIG_CHAT: "7257834686"
       BTOK: ${{ inputs.btok }}
       UIMG: unityci/editor:ubuntu-2022.3.50f1-android-3.2.2
+      LAYERS: ${{ inputs.layers || '99' }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -56,7 +61,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER -e UPASS \
+            -e UUSER -e UPASS -e LAYERS \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -64,9 +69,14 @@ jobs:
               if ! grep -qiE "ASSIGN_SEAT|successfully" /tmp/act.log; then echo "LICENSE FAILED"; head -20 /tmp/act.log; exit 10; fi
               echo "LICENSE OK"
               mkdir -p /project/unity/QCShots
+              METHOD="LilFoots.EditorTools.LilFootsBuildRunner.BuildAndShipApk"
+              if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then
+                METHOD="LilFoots.EditorTools.LilFootsArtPass.BuildAndShoot"
+              fi
+              echo "FORGE METHOD: $METHOD (LAYERS=$LAYERS)"
               xvfb-run -a /opt/unity/Editor/Unity -batchmode -quit \
                 -logFile /project/unity-forge.log -projectPath /project/unity \
-                -executeMethod LilFoots.EditorTools.LilFootsBuildRunner.BuildAndShipApk
+                -executeMethod "$METHOD"
             '
           echo "forge_exit=$?" >> "$GITHUB_OUTPUT"
           exit 0
@@ -74,9 +84,11 @@ jobs:
         if: always()
         run: |
           FX="${{ steps.forge.outputs.forge_exit }}"
-          CAP1="LIL FOOTS UNITY PASS 1 — real art in-engine. Map 001 start: Lily on the grass strip, PNW sky + the one sun, fir wall, mist. FX=$FX"
-          CAP2="LIL FOOTS UNITY PASS 1 — mid-map: hound + cam tree on the stream level. FX=$FX"
-          CAP3="LIL FOOTS UNITY PASS 1 — finish: flagpole gate + portal. FX=$FX"
+          PRE="LIL FOOTS UNITY PASS 1"
+          if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 9 (layers above $LAYERS intentionally absent)"; fi
+          CAP1="$PRE — Map 001 start. FX=$FX"
+          CAP2="$PRE — mid-map. FX=$FX"
+          CAP3="$PRE — finish. FX=$FX"
           for i in 1 2 3; do
             case $i in 1) F=unity_start.png; C="$CAP1";; 2) F=unity_mid.png; C="$CAP2";; 3) F=unity_gate.png; C="$CAP3";; esac
             P="unity/QCShots/$F"
@@ -116,6 +128,7 @@ jobs:
 
   webgl:
     name: Build WebGL (live web preview for Bude)
+    if: ${{ !inputs.layers || inputs.layers == '99' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:

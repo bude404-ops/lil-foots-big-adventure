@@ -69,10 +69,18 @@ namespace LilFoots.EditorTools
             var data = MiniJson.Deserialize(File.ReadAllText("Assets/LevelData/map001.json")) as Dictionary<string, object>;
             float GY = GameManager.GroundY;
 
+            // LAYER-BY-LAYER BUILD LAW (Bude, Sept 18 2026: "start over completely on the map in unity
+            // and add one layer at a time... send me a image with one layer at a time as well and wait
+            // for approved"): LILFOOTS_LAYERS=N builds only the first N layers; default 99 = all layers.
+            int LN = 99;
+            try { LN = System.Convert.ToInt32(System.Environment.GetEnvironmentVariable("LILFOOTS_LAYERS") ?? "99"); } catch { }
+            bool L(int n) => LN >= n;
+            Debug.Log("[ArtPass] LILFOOTS_LAYERS=" + LN + " (layer-by-layer review mode)");
+
             // ---- WORLD BACKDROP (Region 1: PNW) ----
             var cam = GameObject.Find("MainCamera");
             // pinned sky + THE one sun ride with the camera (never scroll, never duplicate)
-            if (cam != null) {
+            if (cam != null && L(1)) {
                 SpriteGo("SkyPlate", Art("art_sky_pnw.png"), Vector3.zero, 16.2f, -100, cam.transform)
                     .transform.localPosition = new Vector3(0f, 0f, 10f);
                 SpriteGo("TheSun", Art("art_sun.png"), Vector3.zero, 1.7f, -95, cam.transform)
@@ -81,7 +89,7 @@ namespace LilFoots.EditorTools
             // Cascade ridges + snow-capped volcano — HORIZON BAND ~0.85u tall (demo proportion:
             // camera sees 7.5u tall; the old 19u-wide strip was ~5.6u tall and buried the sky)
             var ridges = Art("art_ridges.png");
-            if (ridges != null && cam != null) {
+            if (ridges != null && cam != null && L(2)) {
                 // STATIC VISTA LAW (Bude): ridges ride with the camera - only the gameplay plane scrolls.
                 // Camera is locked at y=4.5 by CameraFollow; ridge band world-Y = GY+1.05+rh/2 -> local y = that - 4.5.
                 float rh = 0.85f;
@@ -92,7 +100,7 @@ namespace LilFoots.EditorTools
             // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
             // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
             var firs = Art("art_firwall.png");
-            if (firs != null && cam != null) {
+            if (firs != null && cam != null && L(3)) {
                 // STATIC VISTA LAW (Bude): fir wall rides with the camera too.
                 float fh = 1.5f;
                 float fw = 14.5f;
@@ -101,7 +109,7 @@ namespace LilFoots.EditorTools
             }
             // drifting PNW mist banks (soft sprites, ~1.4u tall, upper sky band)
             var mist = Art("art_mist.png");
-            if (mist != null) {
+            if (mist != null && L(4)) {
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
                 // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
                 float mw = 1.3f * (mist.bounds.size.x / mist.bounds.size.y);
@@ -118,7 +126,7 @@ namespace LilFoots.EditorTools
             var sorted = plats.Cast<List<object>>()
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
                 .OrderBy(a => a[0]).ToList();
-            if (water != null) {
+            if (water != null && L(6)) {
                 for (int i = 0; i < sorted.Count - 1; i++) {
                     var a = sorted[i]; var b = sorted[i + 1];
                     float gapL = (a[0] + a[2] / 2f) / 100f, gapR = (b[0] - b[2] / 2f) / 100f;
@@ -139,12 +147,12 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
-                if (earth != null) {
+                if (earth != null && L(5)) {
                     float ew = h * 0.94f * (earth.bounds.size.x / earth.bounds.size.y);
                     for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += ew)
                         SpriteGo("Earth", earth, new Vector3(x, top - h / 2f, 0), ew, -2, child);
                 }
-                if (strip != null) {
+                if (strip != null && L(5)) {
                     float sw = strip.bounds.size.x * (0.62f / strip.bounds.size.y);
                     for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f - 0.05f; x += sw)
                         SpriteGo("GrassTop", strip, new Vector3(x, top - 0.28f, 0), sw, -1, child);
@@ -156,17 +164,17 @@ namespace LilFoots.EditorTools
             var trailcamArt = Art("art_trailcam.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("TrailCam")) continue;
-                if (camTree != null) {
+                if (camTree != null && L(7)) {
                     float cth = 3.1f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
                     SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
                 }
-                if (trailcamArt != null) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
+                if (trailcamArt != null && L(8)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
             }
 
             // ---- FOREGROUND DEPTH PROPS (Bude Depth Doctrine): small dark fern/grass
             // silhouettes passing IN FRONT of the play plane, movie-like depth ----
             var fore = Art("art_fore_props.png");
-            if (fore != null) {
+            if (fore != null && L(9)) {
                 float fh2 = 1.15f;
                 float fw2 = fh2 * (fore.bounds.size.x / fore.bounds.size.y);
                 float fx = -6f; int fi = 0;
@@ -182,11 +190,11 @@ namespace LilFoots.EditorTools
             var hound = Art("art_hound.png");
             var drone = Art("art_drone.png");
             foreach (Transform child in map.transform) {
-                if (child.name.StartsWith("Hound") && hound != null) {
+                if (child.name.StartsWith("Hound") && hound != null && L(8)) {
                     bool flip = child.GetComponent<HoundController>().dir < 0;
                     ChildSprite(child.gameObject, "HoundArt", hound, 0.62f, 6, flip);
                 }
-                if (child.name.StartsWith("Drone") && drone != null)
+                if (child.name.StartsWith("Drone") && drone != null && L(8))
                     ChildSprite(child.gameObject, "DroneArt", drone, 0.55f, 6);
             }
 
@@ -194,11 +202,11 @@ namespace LilFoots.EditorTools
             var token = Art("art_token.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Token_")) continue;
-                if (token != null) ChildSprite(child.gameObject, "TokenArt", token, 0.66f, 5);
+                if (token != null && L(8)) ChildSprite(child.gameObject, "TokenArt", token, 0.66f, 5);
             }
             var heartArt = Art("art_heart.png");
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
-            if (sh != null && heartArt != null) {
+            if (sh != null && heartArt != null && L(8)) {
                 var hb = new GameObject("SecretHeart");
                 hb.transform.SetParent(map.transform);
                 hb.transform.position = new Vector3(F(sh["x"]) / 100f, F(sh["y"]) / 100f, 0);
@@ -210,7 +218,7 @@ namespace LilFoots.EditorTools
 
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
-            if (gate != null) {
+            if (gate != null && L(8)) {
                 var fgArt = Art("art_flaggate.png");
                 if (fgArt != null) SpriteGo("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform);
                 var portal = Art("art_flagportal.png");
@@ -219,7 +227,7 @@ namespace LilFoots.EditorTools
 
             // ---- PLAYER: Lily, real art on a child sprite (capsule collider untouched) ----
             var lily = GameObject.Find("Lily");
-            if (lily != null && Art("whole_lily.png") != null)
+            if (lily != null && L(8) && Art("whole_lily.png") != null)
                 ChildSprite(lily, "LilyArt", Art("whole_lily.png"), 0.82f, 10);
 
             // ---- HUD: hearts row + wooden panel token counter (camera-pinned) ----
