@@ -43,3 +43,8 @@ The Unity build uses ONLY real art asset files. Nothing that was code-drawn in t
 
 ## Demo-vs-Unity rule
 If a new visual is ever drawn in code for the test demo (a quick mock), it ships to Unity ONLY after it becomes a real art asset through the standard pipeline: generate -> ink (thick outlines) -> palette remap -> transparent background. No exceptions.
+- `art_tufts.png` — organic grass-tuft/fern edge breakers along platform tops (Sept 19: break the ruler-straight ground line per the concept-plate diagnosis), mirror-tiled
+- `art_fringe.png` — hanging moss/root fringe under platform lips (Sept 19 edge breakers), mirror-tiled
+- `art_fore_fern.png` — Layer 3 foreground sword fern (Sept 19 L3: individual parallax props, not the old dark band)
+- `art_fore_log.png` — Layer 3 foreground mossy log (Sept 19 L3)
+- `art_fore_bough.png` — Layer 3 hanging fir bough sweeping in from the frame top (Sept 19 L3)

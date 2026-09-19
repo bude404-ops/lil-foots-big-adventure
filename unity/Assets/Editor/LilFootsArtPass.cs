@@ -173,6 +173,30 @@ namespace LilFoots.EditorTools
                         si++;
                     }
                 }
+
+                // ---- EDGE BREAKERS (Bude Sept 19 diagnosis: no ruler-straight layer seams).
+                // Tufts rise through the grass line and moss fringe hangs under the lip so
+                // the ground-to-forest seam goes organic, like the approved concept plate. ----
+                var tufts = Art("art_tufts.png");
+                if (tufts != null && L(2)) {
+                    float tw2 = tufts.bounds.size.x * (0.30f / tufts.bounds.size.y);
+                    int ti = 0;
+                    for (float x = child.position.x - w / 2f + 0.4f; x < child.position.x + w / 2f; x += tw2 * 0.78f) {
+                        var tt = SpriteGo("Tuft", tufts, new Vector3(x, top + 0.17f, 0), tw2, 3, child);
+                        if (ti % 2 == 1) tt.GetComponent<SpriteRenderer>().flipX = true;
+                        ti++;
+                    }
+                }
+                var fringe = Art("art_fringe.png");
+                if (fringe != null && L(2)) {
+                    float fw3 = fringe.bounds.size.x * (0.42f / fringe.bounds.size.y);
+                    int fi2 = 0;
+                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += fw3 * 0.82f) {
+                        var ft = SpriteGo("LipFringe", fringe, new Vector3(x, top - 0.73f, 0), fw3, 4, child);
+                        if (fi2 % 2 == 1) ft.GetComponent<SpriteRenderer>().flipX = true;
+                        fi2++;
+                    }
+                }
             }
 
             // ---- CAM TREES + trail cam art ----
@@ -189,29 +213,41 @@ namespace LilFoots.EditorTools
                 if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
             }
 
-            // ---- FOREGROUND DEPTH PROPS (Bude Depth Doctrine): small dark fern/grass
-            // silhouettes passing IN FRONT of the play plane, movie-like depth ----
-            var fore = Art("art_fore_props.png");
-            if (fore != null && L(3)) {
-                float fh2 = 1.15f;
-                float fw2 = fh2 * (fore.bounds.size.x / fore.bounds.size.y);
-                float fx = -6f; int fi = 0;
-                while (fx < 104f) {
-                    var fg = SpriteGo("ForeProp", fore, new Vector3(fx, GY - 0.1f + fh2 / 2f, 0), fw2, 30, map.transform);
-                    var fsr = fg.GetComponent<SpriteRenderer>();
-                    if (fi % 2 == 1) fsr.flipX = true;   // alternate so the row doesn't visibly repeat
-                    fx += fw2 * 0.62f; fi++;
+            // ---- LAYER 3: FOREGROUND PARALLAX PROPS (Bude Depth Doctrine - 3 layers exactly).
+            // Sept 19 rework per the concept-plate read: individual organic props IN FRONT of
+            // the gameplay plane - ferns, mossy logs on the ground line, fir boughs hanging in
+            // from the top - so the layers OVERLAP instead of sitting as flat panels. The old
+            // solid dark ForeBase band is gone (a flat band was the problem, not the fix).
+            // Props ride ParallaxProp (factor > 1) so they sweep past like near-field foliage. ----
+            if (L(3)) {
+                var fernArt = Art("art_fore_fern.png");
+                var logArt = Art("art_fore_log.png");
+                var boughArt = Art("art_fore_bough.png");
+                var rng = new System.Random(404);
+                for (float x = 1.5f; x < 98f; x += 5.5f + (float)rng.NextDouble() * 6.5f) {
+                    var pick = rng.NextDouble() < 0.6 ? fernArt : logArt;
+                    if (pick == null) continue;
+                    float ph = pick == fernArt ? 1.5f + 0.6f * (float)rng.NextDouble()
+                                                : 1.0f + 0.4f * (float)rng.NextDouble();
+                    float pw = ph * (pick.bounds.size.x / pick.bounds.size.y);
+                    var pp = SpriteGo("ForeProp", pick, new Vector3(x + 3f * (float)rng.NextDouble(), GY - 0.42f + ph / 2f, 0), pw, 60, map.transform);
+                    var psr = pp.GetComponent<SpriteRenderer>();
+                    psr.flipX = rng.NextDouble() < 0.5f;
+                    psr.color = new Color(0.80f, 0.82f, 0.78f, 1f);  // darker near-field value = depth cue
+                    var para = pp.AddComponent<ParallaxProp>();
+                    para.factor = 1.28f;
                 }
-                // dark near-field silhouette base across the bottom of the frame (plate band 9)
-                float bh = 2.0f;
-                float bw = bh * (fore.bounds.size.x / fore.bounds.size.y);
-                float bx = -8f; int bi = 0;
-                while (bx < 106f) {
-                    var bg2 = SpriteGo("ForeBase", fore, new Vector3(bx, bh / 2f - 0.2f, 0), bw, 40, map.transform);
-                    var bsr = bg2.GetComponent<SpriteRenderer>();
-                    if (bi % 2 == 1) bsr.flipX = true;
-                    bsr.color = new Color(0.30f, 0.36f, 0.28f, 0.97f); // near-black silhouettes per plate
-                    bx += bw * 0.58f; bi++;
+                if (boughArt != null) {
+                    for (float x = -2f; x < 100f; x += 13f + 8f * (float)rng.NextDouble()) {
+                        float bh3 = 2.2f + 1.2f * (float)rng.NextDouble();
+                        float bw3 = bh3 * (boughArt.bounds.size.x / boughArt.bounds.size.y);
+                        var bp = SpriteGo("ForeBough", boughArt, new Vector3(x, 10.9f - bh3 / 2f, 0), bw3, 62, map.transform);
+                        var bsr = bp.GetComponent<SpriteRenderer>();
+                        bsr.flipX = rng.NextDouble() < 0.5f;
+                        bsr.color = new Color(0.72f, 0.75f, 0.70f, 1f);
+                        var bp2 = bp.AddComponent<ParallaxProp>();
+                        bp2.factor = 1.45f;
+                    }
                 }
             }
 
