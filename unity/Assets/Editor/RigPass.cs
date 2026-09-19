@@ -185,6 +185,20 @@ namespace LilFoots.EditorTools
             return rig;
         }
 
+        /// <summary>QC-only: apply the clip's pose at time t straight onto the bones
+        /// (deterministic in headless editor mode). Clip data is the source of truth.</summary>
+        static void ApplyPoseFromClip(CharRig rig, AnimationClip clip, float t) {
+            foreach (var kv in rig.Bones) {
+                float z = 0f;
+                if (clip != null) {
+                    var b = EditorCurveBinding.FloatCurve(rig.AnimPaths[kv.Key], typeof(Transform), "localEulerAnglesRaw.z");
+                    var curve = AnimationUtility.GetEditorCurve(clip, b);
+                    if (curve != null) z = curve.Evaluate(t);
+                }
+                kv.Value.localEulerAngles = new Vector3(0f, 0f, z);
+            }
+        }
+
         static Texture2D _dot;
         static Texture2D Dot() {
             if (_dot != null) return _dot;
@@ -254,27 +268,24 @@ namespace LilFoots.EditorTools
             cam.Render();
             Snap(cam, outDir + "/rig_bindpose.png");
 
-            // ---- QC 1b: IDLE clip sampled mid-breath. EDITOR-MODE FIX (Sept 19): Animator.Play
-            // does NOT evaluate in batch editor mode, so the first rig sheet rendered the bind pose
-            // four times. AnimationMode.SampleAnimationClip poses the hierarchy directly in edit
-            // mode; the pose reverts when animation mode stops, so snap BETWEEN start and stop. ----
-            AnimationMode.StartAnimationMode();
-            foreach (var r in rigs) {
-                if (r.IdleClip != null) AnimationMode.SampleAnimationClip(r.Root, r.IdleClip, 1f / 6f); // deepest breath key
-            }
+            // ---- QC 1b: IDLE clip sampled mid-breath. EDITOR-MODE CAPTURE v3 (Sept 19): neither
+            // Animator.Play nor AnimationMode.SampleAnimationClip evaluates reliably in headless
+            // batch mode (both sheets rendered pixel-identical bind poses, verified diff 0.0).
+            // QC path now evaluates the clip's own curves (AnimationUtility.GetEditorCurve) and
+            // applies the pose to the bones directly - the CLIP data drives the shot, deterministically.
+            // The native Animator still drives these clips in play mode; this is review capture only. ----
+            foreach (var r in rigs) ApplyPoseFromClip(r, r.IdleClip, 1f / 6f); // deepest-breath key
             Snap(cam, outDir + "/rig_idle.png");
 
             // ---- QC 2: walk clip sampled mid-stride (the "pass" keyframe) ----
-            foreach (var r in rigs) {
-                if (r.WalkClip != null) AnimationMode.SampleAnimationClip(r.Root, r.WalkClip, 2f / 12f);
-            }
+            foreach (var r in rigs) ApplyPoseFromClip(r, r.WalkClip, 2f / 12f);
             Snap(cam, outDir + "/rig_walk_native.png");
 
             // ---- QC 3: bone overlay on the posed frame (review visual) ----
             foreach (var r in rigs) OverlayBones(r);
             Snap(cam, outDir + "/rig_walk_bones.png");
             foreach (var r in rigs) ClearOverlay(r);
-            AnimationMode.StopAnimationMode(); // reverts sampled poses back to bind
+            foreach (var r in rigs) ApplyPoseFromClip(r, null, 0f); // back to bind for the saved scene
 
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/RigSheet.unity");
