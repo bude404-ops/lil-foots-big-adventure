@@ -94,7 +94,7 @@ jobs:
         run: |
           FX="${{ steps.forge.outputs.forge_exit }}"
           PRE="LIL FOOTS UNITY PASS 1"
-          if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 9 (layers above $LAYERS intentionally absent)"; fi
+          if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 3 (3-layer doctrine: 1=static vista, 2=gameplay plane, 3=foreground props; layers above $LAYERS intentionally absent)"; fi
           if [ "$LILFOOTS_UI" = "1" ]; then PRE="UI PASS - CHARACTER MENU / CONTROLS / HEARTS (HQ style, no world layers in this build)"; fi
           CAP1="$PRE — Map 001 start. FX=$FX"
           CAP2="$PRE — mid-map. FX=$FX"

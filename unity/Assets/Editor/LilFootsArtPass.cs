@@ -82,66 +82,25 @@ namespace LilFoots.EditorTools
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
             // pinned sky + THE one sun ride with the camera (never scroll, never duplicate)
             if (cam != null && L(1)) {
-                // SKY = pixel-faithful slice of Bude's approved plate (map-pure-locked).
-                // The approved plate has NO sun disc (its sun is the horizon glow) - no sun sprite
-                // until Bude approves one.
-                var skySpr = Art("art_sky_pnw.png");
-                // SKY SCALE FIX (Bude: 'is the layer showing under the layer 1 as a reel?'):
-                // the old uniform aspect sizing made the sky 4.86u tall (2.16x the plate-true
-                // 2.25u), so its dissolved bottom 60 rows draped down OVER the ridge band -
-                // that read as layer 2 tucked under layer 1 like a reel. Plate frame mapping
-                // is NON-UNIFORM: x = 16.2u/1024px, y = 7.5u/1024px. Sky = plate rows 0-307
-                // -> 2.25u tall, top edge at plate row 0 = view top (local 3.75).
-                float skyPx2u = 7.5f / 1024f;                    // plate vertical scale
-                float skyH = 307f * skyPx2u;                     // 2.25u, composition-true
-                float skyW = 16.2f;                               // spans the view width
-                var skyGo = SpriteGo("SkyPlate", skySpr, Vector3.zero, skyW, -100, cam.transform);
-                var skySr = skyGo.GetComponent<SpriteRenderer>();
-                skyGo.transform.localScale = new Vector3(
-                    skyGo.transform.localScale.x,                 // width already set by SpriteGo
-                    skyH / skySr.bounds.size.y, 1f);              // plate-true height, not aspect
-                skyGo.transform.localPosition = new Vector3(0f, 3.75f - (skyH / 2f), 10f);
+                // LAYER 1 OF 3 (Bude confirmed the 3-layer doctrine: "Yes show me"):
+                // ONE static HQ vista = sky + Cascade ridges + snow-capped volcano + fir wall
+                // as a SINGLE seamless slice of the approved plate (rows 0-660, fully opaque,
+                // no internal dissolves - the old sliced sky/ridge bands draped and read as a
+                // "reel" under each other). Plate frame mapping: x 16.2u/1024px, y 7.5u/1024px.
+                // STATIC VISTA LAW: pinned to the camera - only the gameplay plane scrolls.
+                // Treeline (plate rows 440-520) lands at shot y ~322-381 = the frame middle.
+                var vistaSpr = Art("art_vista.png");
+                float vPx2u = 7.5f / 1024f;
+                float vRows = 660f;
+                float vH = vRows * vPx2u;                       // 4.83u tall, composition-true
+                float vW = 16.2f;                                // spans the view width
+                var vgo = SpriteGo("Vista", vistaSpr, Vector3.zero, vW, -100, cam.transform);
+                var vsr = vgo.GetComponent<SpriteRenderer>();
+                vgo.transform.localScale = new Vector3(
+                    vgo.transform.localScale.x,                  // width already set by SpriteGo
+                    vH / vsr.bounds.size.y, 1f);                 // plate-true height, not aspect
+                vgo.transform.localPosition = new Vector3(0f, 3.75f - (vH / 2f), 10f);
             }
-            // Cascade ridges + snow-capped volcano = plate band (rows 200-480 of the approved
-            // plate, dissolved edges). Frame mapping: plate x-scale 16.2u/1024px, y 7.5u/1024px.
-            // Band top row 200 -> world y 6.78; center row 340 -> world 5.76 -> local 1.26.
-            var ridges = Art("art_ridges.png");
-            if (ridges != null && cam != null && L(2)) {
-                // LAYER 2 v2 (Bude: 'The line at the middle should be there'): ridge band runs from
-                // the haze tops down THROUGH the fir treeline, so the plate's mid line lands at the
-                // frame middle. Plate frame mapping is non-uniform on purpose (wide engine view):
-                // x = 16.2u/1024px, y = 7.5u/1024px. Slice = plate rows 200-520 (320px) -> 2.34u tall,
-                // top edge at plate row 200 -> view-top minus 200*7.5/1024 -> local 2.29.
-                // STATIC VISTA LAW (Bude): pinned to the camera - only the gameplay plane scrolls.
-                float px2uY = 7.5f / 1024f;          // plate vertical scale (composition-true)
-                float bandPx = 320f;                 // slice height in plate rows
-                float ridgeW = 16.2f;                // spans the view like the sky
-                float ridgeH = bandPx * px2uY;       // 2.34u - NOT aspect-derived (uniform sizing made
-                                                      // the band 2.16x too tall and pushed the treeline
-                                                      // off-frame; that was the missing mid-line bug)
-                float topLocal = 3.75f - (200f * px2uY); // plate row 200 -> world 6.79
-                var rgo = SpriteGo("Ridges", ridges, Vector3.zero, ridgeW, -90, cam.transform);
-                var rsr = rgo.GetComponent<SpriteRenderer>();
-                // explicit non-uniform scale: full width, plate-true height
-                rgo.transform.localScale = new Vector3(
-                    rgo.transform.localScale.x,               // width already set by SpriteGo
-                    ridgeH / rsr.bounds.size.y, 1f);
-                rgo.transform.localPosition = new Vector3(0f, topLocal - (ridgeH / 2f), 10f);
-            }
-            // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
-            // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
-            var firs = Art("art_firwall.png");
-            if (firs != null && cam != null && L(3)) {
-                // STATIC VISTA LAW (Bude): fir wall rides with the camera too.
-                float fh = 1.5f;
-                float fw = fh * (firs.bounds.size.x / firs.bounds.size.y); // L3 treeline ~1.64:1
-                for (int k = -4; k <= 4; k++) {
-                    var fwg = SpriteGo("FirWall", firs, Vector3.zero, fw - 0.02f, -80, cam.transform);
-                    fwg.transform.localPosition = new Vector3(k * (fw - 0.02f), (GY - 0.25f + fh / 2f) - 4.5f, 10f);
-                }
-            }
-            // drifting PNW mist banks (soft sprites, ~1.4u tall, upper sky band)
-            var mist = Art("art_mist.png");
             if (mist != null && L(4)) {
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
                 // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
