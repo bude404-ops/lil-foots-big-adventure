@@ -85,10 +85,13 @@ namespace LilFoots.EditorTools
         };
 
         class CharRig {
+            public string Name;
             public GameObject Root;
             public Dictionary<string, Transform> Bones = new Dictionary<string, Transform>();
             public Dictionary<string, string> AnimPaths = new Dictionary<string, string>();
             public float WorldH;
+            public AnimationClip IdleClip;   // for edit-mode QC sampling (AnimationMode)
+            public AnimationClip WalkClip;
         }
 
         // Build the NATIVE rig: SpriteRenderer + Unity bone hierarchy + SpriteSkin + Animator + walk clip.
@@ -169,6 +172,7 @@ namespace LilFoots.EditorTools
 
             var idleClip = bake(Idle, 6, "Idle");   // 4 keys @ 6fps = 2s breathing loop
             var walkClip = bake(Walk, 12, "Walk");
+            rig.Name = name; rig.IdleClip = idleClip; rig.WalkClip = walkClip;
 
             var idleState = ctrl.layers[0].stateMachine.AddState("idle");
             idleState.motion = idleClip;
@@ -228,7 +232,7 @@ namespace LilFoots.EditorTools
             cam.orthographic = true;
             cam.orthographicSize = 3.2f;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.08f, 0.10f, 0.13f, 1f);
+            cam.backgroundColor = new Color(0.92f, 0.92f, 0.90f, 1f); // light studio bg: poses read like the approved white-bg T-poses
             cam.transform.position = new Vector3(0f, 2.3f, -10f);
             cam.tag = "MainCamera";
 
@@ -250,29 +254,27 @@ namespace LilFoots.EditorTools
             cam.Render();
             Snap(cam, outDir + "/rig_bindpose.png");
 
-            // ---- QC 1b: native Animator plays the IDLE clip (character-select pose), mid-breath ----
+            // ---- QC 1b: IDLE clip sampled mid-breath. EDITOR-MODE FIX (Sept 19): Animator.Play
+            // does NOT evaluate in batch editor mode, so the first rig sheet rendered the bind pose
+            // four times. AnimationMode.SampleAnimationClip poses the hierarchy directly in edit
+            // mode; the pose reverts when animation mode stops, so snap BETWEEN start and stop. ----
+            AnimationMode.StartAnimationMode();
             foreach (var r in rigs) {
-                var anim = r.Root.GetComponent<Animator>();
-                anim.Play("idle", 0, 1f / 6f); // 1s in = deepest breath
-                anim.Update(0f);
+                if (r.IdleClip != null) AnimationMode.SampleAnimationClip(r.Root, r.IdleClip, 1f / 6f); // deepest breath key
             }
-            cam.Render();
             Snap(cam, outDir + "/rig_idle.png");
 
-            // ---- QC 2: Unity's native Animator plays the walk clip, sampled mid-cycle ----
+            // ---- QC 2: walk clip sampled mid-stride (the "pass" keyframe) ----
             foreach (var r in rigs) {
-                var anim = r.Root.GetComponent<Animator>();
-                anim.Play("walk", 0, 2f / 12f); // "pass" keyframe, mid-stride
-                anim.Update(0f);
+                if (r.WalkClip != null) AnimationMode.SampleAnimationClip(r.Root, r.WalkClip, 2f / 12f);
             }
-            cam.Render();
             Snap(cam, outDir + "/rig_walk_native.png");
 
             // ---- QC 3: bone overlay on the posed frame (review visual) ----
             foreach (var r in rigs) OverlayBones(r);
-            cam.Render();
             Snap(cam, outDir + "/rig_walk_bones.png");
             foreach (var r in rigs) ClearOverlay(r);
+            AnimationMode.StopAnimationMode(); // reverts sampled poses back to bind
 
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/RigSheet.unity");
