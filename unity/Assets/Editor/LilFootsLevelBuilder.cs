@@ -123,7 +123,7 @@ public static class LilFootsLevelBuilder {
         // ---- camera ----
         var cam = new GameObject("MainCamera");
         cam.transform.SetParent(root.transform);
-        cam.transform.position = new Vector3(6.7f, 4.5f, -10f); // up 0.5u: vista band + mist fit the frame (approved flowing composition)
+        cam.transform.position = new Vector3(6.7f, 7.0f, -10f); // DEPTH DOCTRINE FRAMING (Bude, Sept 19 'layer 2 is too high on screen'): vista owns the top ~60% (treeline mid-frame), gameplay strip in the lower ~40%
         var camc = cam.AddComponent<Camera>(); camc.orthographic = true; camc.orthographicSize = 3.75f;
         camc.backgroundColor = new Color(0.10f, 0.20f, 0.14f);
         var cf = cam.AddComponent<CameraFollow>(); cf.target = player.transform;

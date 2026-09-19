@@ -31,10 +31,11 @@ The Unity build uses ONLY real art asset files. Nothing that was code-drawn in t
 - `art_fgl.png` / `art_fgr.png` — foreground cartoon trunks (left/right tiles)
 - `art_camtree.png` — the tree the trail cams mount on
 - `art_mist.png` — PNW mist bank sprite (legacy strip; superseded for banks/wash by art_mist_hq)
-- `art_mist_hq.png` — HQ painterly fog bank (Sept 19 mist v2 rework, Bude: 'mist and clouds are overloading the other stuff') - luminance-keyed alpha from a single generated plate, used for the 3 low mist banks + the teal depth wash
-- `art_water.png` — stream surface strip (was code gradient)
-- `art_ground_strip.png` — platform top strip (grass lip + dirt band + stones)
-- `art_earth.png` — platform body earth fill tile (was code fill + code stones)
+- `art_mist_hq.png` — HQ painterly fog bank (generated Sept 19). UNUSED since Bude ordered 'remove the clouds and mist that layer 2 adds' - kept as an asset for a future approved use
+- `art_water.png` — HQ stream surface strip (Sept 19 terrain re-skin v2, mirror-tiled for seamless left/right repetition)
+- `art_ground_strip.png` — HQ mossy platform top strip (Sept 19 terrain re-skin v2, mirror-tiled)
+- `art_earth.png` — HQ platform body earth tile (Sept 19 terrain re-skin v2, mirror-tiled; flip-alternated in-world to break repetition)
+- `art_vista_base.png` — vista depth base band: continues the approved vista's fir wall downward (palette-matched top edge) so the frame below the vista reads as deep forest; replaces the removed below-ground mist wash
 - `art_bgplate.jpg`, `art_cedar.png`, `art_fg.png`, `art_leaf.png`, `art_plat.png`, `art_puff.png`, `art_spark.png` — earlier real-art set (retained; superseded plates kept for reference)
 
 ### Animation

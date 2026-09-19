@@ -105,45 +105,28 @@ namespace LilFoots.EditorTools
                     vSy, 1f);                                    // plate-true height, not aspect
                 vgo.transform.localPosition = new Vector3(0f, 3.75f - (vH / 2f), 10f);
             }
-            // MIST v2 (Bude, Sept 19 2026: 'the mist and clouds are overloading the other stuff
-            // and arent properly placed'): HQ painterly fog plate + only 3 LOW banks, sized by
-            // height so they read as ground-hugging PNW valley fog in the depth gaps - never
-            // stacked white sky walls. Staggered x so no two banks overlap.
-            // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
-            var mist = Art("art_mist_hq.png");
-            if (mist == null) mist = Art("art_mist.png"); // legacy fallback
-            if (mist != null && L(2)) {
-                float mh = 0.75f;                              // low bank, not a wall
-                float mw = mh * (mist.bounds.size.x / mist.bounds.size.y); // ~2.6u wide
-                float[] lx = { -5.5f, -1.6f, 2.6f };
-                float[] ly = { GY - 2.25f, GY - 2.85f, GY - 2.05f };
-                float[] la = { 0.80f, 0.68f, 0.74f };
-                for (int i = 0; i < lx.Length; i++) {
-                    var mb = SpriteGo("MistBank", mist, Vector3.zero, mw, -70, cam != null ? cam.transform : map.transform);
-                    mb.transform.localPosition = new Vector3(lx[i], ly[i], 10f);
-                    var mbr = mb.GetComponent<SpriteRenderer>();
-                    if (mbr != null) mbr.color = new Color(1f, 1f, 1f, la[i]);
-                }
-            }
 
-            // ---- BELOW-GROUND DEPTH WASH (approved plate lower third): tinted mist banks
-            // filling the zone under the ground line so it reads as teal mist-washed depth,
-            // never raw sky. World-space: scrolls with the gameplay plane. ----
-            // WASH v2 (Bude, Sept 19 'overloading'): 2 rows only, subtle near the ground line
-            // (gameplay must read through it) and more solid only at the chasm floor.
-            if (mist != null && L(2)) {
-                float wh = 2.2f;
-                float ww = wh * (mist.bounds.size.x / mist.bounds.size.y);
-                float[] wy = { GY - 1.9f, GY - 4.0f };
-                float[] wa = { 0.50f, 0.72f };
-                for (int r = 0; r < wy.Length; r++) {
-                    for (float x = -6f; x < 104f; x += ww * 0.92f) {
-                        var wsh = SpriteGo("DepthWash", mist, new Vector3(x, wy[r], 0), ww, -58 + r, map.transform);
-                        var wsr = wsh.GetComponent<SpriteRenderer>();
-                        wsr.color = new Color(0.32f, 0.52f, 0.45f, wa[r]); // teal wash per plate bands
+            // ---- VISTA DEPTH BASE (Bude Depth Doctrine): the approved vista plate ends at its
+            // fir-wall bottom; this band continues the forest downward so the frame below the
+            // vista reads as deep dark forest behind the gameplay plane - never raw camera clear.
+            // Top edge palette-matched to the vista's bottom row (seam continues the fir wall).
+            // STATIC VISTA LAW: camera-pinned, never scrolls. ----
+            if (cam != null && L(1)) {
+                var vb = Art("art_vista_base.png");
+                if (vb != null) {
+                    float bh = 3.3f;                       // vista bottom down past frame bottom
+                    float bw = bh * (vb.bounds.size.x / vb.bounds.size.y);
+                    for (int i = 0; i < 2; i++) {
+                        var bg2 = SpriteGo("VistaBase", vb, Vector3.zero, bw, -99, cam.transform);
+                        bg2.transform.localPosition = new Vector3(-bw / 2f + i * bw, 3.75f - 4.83f - bh / 2f + 0.05f, 10f);
+                        if (i == 1) bg2.GetComponent<SpriteRenderer>().flipX = true;
                     }
                 }
             }
+
+            // MIST + WASH REMOVED (Bude, Sept 19 2026: 'remove the clouds and mist that layer 2
+            // adds'). Layer 2 no longer spawns mist banks or the below-ground teal wash - the
+            // vista depth base carries the below-ground atmosphere instead.
 
             // ---- STREAM WATER in the gaps ----
             var water = Art("art_water.png");
@@ -174,13 +157,21 @@ namespace LilFoots.EditorTools
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
                 if (earth != null && L(2)) {
                     float ew = h * 0.94f * (earth.bounds.size.x / earth.bounds.size.y);
-                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += ew)
-                        SpriteGo("Earth", earth, new Vector3(x, top - h / 2f, 0), ew, -2, child);
+                    int ei = 0;
+                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += ew) {
+                        var et = SpriteGo("Earth", earth, new Vector3(x, top - h / 2f, 0), ew, -2, child);
+                        if (ei % 2 == 1) et.GetComponent<SpriteRenderer>().flipX = true; // break the repeat
+                        ei++;
+                    }
                 }
                 if (strip != null && L(2)) {
                     float sw = strip.bounds.size.x * (0.62f / strip.bounds.size.y);
-                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f - 0.05f; x += sw)
-                        SpriteGo("GrassTop", strip, new Vector3(x, top - 0.28f, 0), sw, -1, child);
+                    int si = 0;
+                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f - 0.05f; x += sw) {
+                        var st = SpriteGo("GrassTop", strip, new Vector3(x, top - 0.28f, 0), sw, -1, child);
+                        if (si % 2 == 1) st.GetComponent<SpriteRenderer>().flipX = true;
+                        si++;
+                    }
                 }
             }
 
@@ -517,15 +508,19 @@ namespace LilFoots.EditorTools
             var rt = new RenderTexture(1334, 750, 24);
             cam.targetTexture = rt;
             // shot 1: start area, Lily on the grass
-            cam.transform.position = new Vector3(lily.transform.position.x + 2.5f, 4.2f, -10f);
+            // DEPTH DOCTRINE FRAMING (Bude, Sept 19 'layer 2 is still too high on screen'):
+            // camera rides 7.0 so the vista (sky/ridges/treeline/fir wall) owns the top ~60%
+            // of the frame with the treeline at the middle, and the gameplay strip reads as
+            // a crisp band in the lower ~40% - matching the game camera y (builder: 7.0).
+            cam.transform.position = new Vector3(lily.transform.position.x + 2.5f, 7.0f, -10f);
             Snap(rt, System.IO.Path.Combine(outDir, "unity_start.png"));
             // shot 2: mid-map, hound + cam tree
             float hx = hound != null ? hound.transform.position.x : 45f;
-            cam.transform.position = new Vector3(hx + 2.2f, 4.2f, -10f);
+            cam.transform.position = new Vector3(hx + 2.2f, 7.0f, -10f);
             Snap(rt, System.IO.Path.Combine(outDir, "unity_mid.png"));
             // shot 3: finish gate + flag + portal
             float gx = gate != null ? gate.transform.position.x : 86f;
-            cam.transform.position = new Vector3(gx - 2.5f, 4.2f, -10f);
+            cam.transform.position = new Vector3(gx - 2.5f, 7.0f, -10f);
             Snap(rt, System.IO.Path.Combine(outDir, "unity_gate.png"));
 
             Debug.Log("[ArtPass] QC shots done.");
