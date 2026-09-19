@@ -81,29 +81,35 @@ namespace LilFoots.EditorTools
             // Cascade ridges + snow-capped volcano — HORIZON BAND ~0.85u tall (demo proportion:
             // camera sees 7.5u tall; the old 19u-wide strip was ~5.6u tall and buried the sky)
             var ridges = Art("art_ridges.png");
-            if (ridges != null) {
+            if (ridges != null && cam != null) {
+                // STATIC VISTA LAW (Bude): ridges ride with the camera - only the gameplay plane scrolls.
+                // Camera is locked at y=4.5 by CameraFollow; ridge band world-Y = GY+1.05+rh/2 -> local y = that - 4.5.
                 float rh = 0.85f;
-                float rw = rh * (ridges.bounds.size.x / ridges.bounds.size.y);
-                for (float x = -8f; x < 98f; x += rw - 0.03f)
-                    SpriteGo("Ridges", ridges, new Vector3(x, GY + 1.05f + rh / 2f, 0), rw, -90, map.transform); // in-view: band 7.25-8.1 vs view top 8.25
+                float rw = 14.5f; // wider than the ~13.35u view so edges never show
+                SpriteGo("Ridges", ridges, Vector3.zero, rw, -90, cam.transform)
+                    .transform.localPosition = new Vector3(0f, (GY + 1.05f + rh / 2f) - 4.5f, 10f);
             }
             // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
             // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
             var firs = Art("art_firwall.png");
-            if (firs != null) {
+            if (firs != null && cam != null) {
+                // STATIC VISTA LAW (Bude): fir wall rides with the camera too.
                 float fh = 1.5f;
-                float fw = fh * (firs.bounds.size.x / firs.bounds.size.y);
-                for (float x = -8f; x < 100f; x += fw - 0.03f)
-                    SpriteGo("FirWall", firs, new Vector3(x, GY - 0.25f + fh / 2f, 0), fw, -80, map.transform);
+                float fw = 14.5f;
+                SpriteGo("FirWall", firs, Vector3.zero, fw, -80, cam.transform)
+                    .transform.localPosition = new Vector3(0f, (GY - 0.25f + fh / 2f) - 4.5f, 10f);
             }
             // drifting PNW mist banks (soft sprites, ~1.4u tall, upper sky band)
             var mist = Art("art_mist.png");
             if (mist != null) {
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
+                // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
                 float mw = 1.3f * (mist.bounds.size.x / mist.bounds.size.y);
-                float[] mx = { 6f, 30f, 62f, 88f };
-                float[] my = { GY + 0.75f, GY + 1.35f, GY + 1.0f, GY + 1.5f }; // in-view: banks drift between fir-wall tops and the ridge band
-                for (int i = 0; i < 4; i++) SpriteGo("MistBank", mist, new Vector3(mx[i], my[i], 0), mw, -70, map.transform);
+                float[] lx = { -5.2f, -1.6f, 2.2f, 5.4f };
+                float[] ly = { (GY + 0.75f) - 4.5f, (GY + 1.35f) - 4.5f, (GY + 1.0f) - 4.5f, (GY + 1.5f) - 4.5f };
+                for (int i = 0; i < 4; i++)
+                    SpriteGo("MistBank", mist, Vector3.zero, mw, -70, cam != null ? cam.transform : map.transform)
+                        .transform.localPosition = new Vector3(lx[i], ly[i], 10f);
             }
 
             // ---- STREAM WATER in the gaps ----
