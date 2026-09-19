@@ -15,7 +15,13 @@ public static class LilFootsLevelBuilder {
     // MULTI-MAP LAW (Lil Foots 2.0): the pipeline is level-agnostic - MAP_DATA picks the
     // level json (default map001), MAP_SCENE names the scene to build (default Map001).
     static string DataPath {
-        get { return System.Environment.GetEnvironmentVariable("MAP_DATA") ?? "Assets/LevelData/map001.json"; }
+        get {
+            // MAP_DATA accepts a bare filename (map011.json) or a full path (Assets/LevelData/map011.json).
+            var v = System.Environment.GetEnvironmentVariable("MAP_DATA");
+            if (string.IsNullOrEmpty(v)) v = "map001.json";
+            if (!v.Contains("/")) v = "Assets/LevelData/" + v;
+            return v;
+        }
     }
 
     [MenuItem("Tools/Lil Foots/Build Map 001")]

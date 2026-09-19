@@ -73,7 +73,7 @@ namespace LilFoots.EditorTools
         public static void BuildArt() {
             var map = GameObject.Find("MAP001");
             if (map == null) { Debug.LogError("[ArtPass] MAP001 not found — run Tools > Lil Foots > Build Map 001 first."); return; }
-            var data = MiniJson.Deserialize(File.ReadAllText(System.Environment.GetEnvironmentVariable("MAP_DATA") ?? "Assets/LevelData/map001.json")) as Dictionary<string, object>;
+            var data = MiniJson.Deserialize(File.ReadAllText(MapDataPath())) as Dictionary<string, object>;
             float GY = GameManager.GroundY;
 
             // LAYER-BY-LAYER BUILD LAW (Bude, Sept 18 2026: "start over completely on the map in unity
@@ -619,6 +619,14 @@ namespace LilFoots.EditorTools
         }
 
         /// <summary>Full scene pipeline without exiting — also used by the APK build runner.</summary>
+        // MAP_DATA accepts a bare filename or a full path - same law as LevelBuilder.DataPath.
+        static string MapDataPath() {
+            var v = System.Environment.GetEnvironmentVariable("MAP_DATA");
+            if (string.IsNullOrEmpty(v)) v = "map001.json";
+            if (!v.Contains("/")) v = "Assets/LevelData/" + v;
+            return v;
+        }
+
         public static void BuildAndShootCore() {
             // UI PASS MODE (Bude: character menu + control buttons + hearts must match the HQ art):
             // builds ONLY the UI over a neutral backdrop — no world layers, so it never collides
