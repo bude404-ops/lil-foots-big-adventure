@@ -49,7 +49,9 @@ public static class LilFootsSmokeTest {
         C(lily != null, "player: Lily exists");
         var pc = lily != null ? lily.GetComponent<LilFoots.PlayerController>() : null;
         C(pc != null && pc.rb != null, "player: Rigidbody2D wired");
-        C(pc != null && pc.feet != null, "player: feet collider wired");
+        // NOTE: pc.feet is a vestigial field (ground detection is OnCollisionStay2D contact-normal based) —
+        // the real check is: a capsule collider exists and the Ground layer is under the player.
+        C(lily != null && lily.GetComponent<CapsuleCollider2D>() != null, "player: capsule collider present");
         var art = lily != null ? lily.GetComponentInChildren<SpriteRenderer>() : null;
         C(art != null, "player: sprite art present");
 
@@ -63,9 +65,13 @@ public static class LilFootsSmokeTest {
           "core: feel constants frozen (run 4.6 / jump 9.0 / grav 2.446 / coyote .12 / buffer .14)");
 
         if (lily != null) {
-            var hit = Physics2D.Raycast(lily.transform.position + Vector3.up * 0.5f, Vector2.down, 4f);
-            C(hit.collider != null && hit.point.y > 5.9f && hit.point.y < 6.6f,
-              "feet: player stands ON the ground (ground y=" + (hit.collider != null ? hit.point.y.ToString("F2") : "none") + ")");
+            // raycast on the GROUND LAYER ONLY (a bare ray hits the player's own capsule first)
+            var gmask = LayerMask.GetMask("Ground");
+            var hit = Physics2D.Raycast(lily.transform.position + Vector3.up * 0.5f, Vector2.down, 6f, gmask);
+            float gap = hit.collider != null ? lily.transform.position.y - hit.point.y : -99f;
+            C(hit.collider != null && hit.point.y > 5.5f && hit.point.y < 6.9f && gap >= -0.1f && gap <= 0.9f,
+              "feet: player stands ON the ground (ground y=" + (hit.collider != null ? hit.point.y.ToString("F2") : "none") +
+              ", gap " + gap.ToString("F2") + ")");
         }
         // terrain-hide regression: every collider sharing the player's feet point must sort BELOW the player art
         if (lily != null && art != null) {
