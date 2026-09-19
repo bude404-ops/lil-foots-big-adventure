@@ -95,15 +95,19 @@ namespace LilFoots.EditorTools
                 float vH = vRows * vPx2u;                       // 4.83u tall, composition-true
                 float vW = 16.2f;                                // spans the view width
                 var vgo = SpriteGo("Vista", vistaSpr, Vector3.zero, vW, -100, cam.transform);
-                var vsr = vgo.GetComponent<SpriteRenderer>();
+                // GREY-BOX BUG (Bude: 'remove the dark grey box up top'): the y override divided
+                // by the RENDERER's world bounds (which already include the x width-scale),
+                // rendering the vista 3.06u tall instead of 4.83u -> a 0.85u band of camera-clear
+                // grey above it. Divide by the SPRITE's own bounds instead.
+                float vSy = (vistaSpr != null) ? vH / vistaSpr.bounds.size.y : 1f;
                 vgo.transform.localScale = new Vector3(
                     vgo.transform.localScale.x,                  // width already set by SpriteGo
-                    vH / vsr.bounds.size.y, 1f);                 // plate-true height, not aspect
+                    vSy, 1f);                                    // plate-true height, not aspect
                 vgo.transform.localPosition = new Vector3(0f, 3.75f - (vH / 2f), 10f);
             }
             var mist = Art("art_mist.png");   // declared here: the vista merge folded the old
                                              // firwall block away, which used to declare this
-            if (mist != null && L(4)) {
+            if (mist != null && L(2)) {
                 // size by HEIGHT so the HQ mist plate (~square) reads as a 1.3u bank, never a sky wall
                 // STATIC VISTA LAW (Bude): mist banks ride with the camera, spread across the view.
                 float mh = 1.0f; // L4 mist strip ~6.9:1 -> banks ~6.9u wide
@@ -119,7 +123,7 @@ namespace LilFoots.EditorTools
             // ---- BELOW-GROUND DEPTH WASH (approved plate lower third): tinted mist banks
             // filling the zone under the ground line so it reads as teal mist-washed depth,
             // never raw sky. World-space: scrolls with the gameplay plane. ----
-            if (mist != null && L(4)) {
+            if (mist != null && L(2)) {
                 float wh = 2.2f;
                 float ww = wh * (mist.bounds.size.x / mist.bounds.size.y);
                 float[] wy = { GY - 1.4f, GY - 3.2f, GY - 4.9f };
@@ -139,7 +143,7 @@ namespace LilFoots.EditorTools
             var sorted = plats.Cast<List<object>>()
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
                 .OrderBy(a => a[0]).ToList();
-            if (water != null && L(6)) {
+            if (water != null && L(2)) {
                 for (int i = 0; i < sorted.Count - 1; i++) {
                     var a = sorted[i]; var b = sorted[i + 1];
                     float gapL = (a[0] + a[2] / 2f) / 100f, gapR = (b[0] - b[2] / 2f) / 100f;
@@ -160,12 +164,12 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
-                if (earth != null && L(5)) {
+                if (earth != null && L(2)) {
                     float ew = h * 0.94f * (earth.bounds.size.x / earth.bounds.size.y);
                     for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += ew)
                         SpriteGo("Earth", earth, new Vector3(x, top - h / 2f, 0), ew, -2, child);
                 }
-                if (strip != null && L(5)) {
+                if (strip != null && L(2)) {
                     float sw = strip.bounds.size.x * (0.62f / strip.bounds.size.y);
                     for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f - 0.05f; x += sw)
                         SpriteGo("GrassTop", strip, new Vector3(x, top - 0.28f, 0), sw, -1, child);
@@ -177,17 +181,17 @@ namespace LilFoots.EditorTools
             var trailcamArt = Art("art_trailcam.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("TrailCam")) continue;
-                if (camTree != null && L(7)) {
+                if (camTree != null && L(2)) {
                     float cth = 3.1f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
                     SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
                 }
-                if (trailcamArt != null && L(8)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
+                if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
             }
 
             // ---- FOREGROUND DEPTH PROPS (Bude Depth Doctrine): small dark fern/grass
             // silhouettes passing IN FRONT of the play plane, movie-like depth ----
             var fore = Art("art_fore_props.png");
-            if (fore != null && L(9)) {
+            if (fore != null && L(3)) {
                 float fh2 = 1.15f;
                 float fw2 = fh2 * (fore.bounds.size.x / fore.bounds.size.y);
                 float fx = -6f; int fi = 0;
@@ -214,11 +218,11 @@ namespace LilFoots.EditorTools
             var hound = Art("art_hound.png");
             var drone = Art("art_drone.png");
             foreach (Transform child in map.transform) {
-                if (child.name.StartsWith("Hound") && hound != null && L(8)) {
+                if (child.name.StartsWith("Hound") && hound != null && L(2)) {
                     bool flip = child.GetComponent<HoundController>().dir < 0;
                     ChildSprite(child.gameObject, "HoundArt", hound, 0.62f, 6, flip);
                 }
-                if (child.name.StartsWith("Drone") && drone != null && L(8))
+                if (child.name.StartsWith("Drone") && drone != null && L(2))
                     ChildSprite(child.gameObject, "DroneArt", drone, 0.55f, 6);
             }
 
@@ -226,11 +230,11 @@ namespace LilFoots.EditorTools
             var token = Art("art_token.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Token_")) continue;
-                if (token != null && L(8)) ChildSprite(child.gameObject, "TokenArt", token, 0.66f, 5);
+                if (token != null && L(2)) ChildSprite(child.gameObject, "TokenArt", token, 0.66f, 5);
             }
             var heartArt = Art("art_heart.png");
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
-            if (sh != null && heartArt != null && L(8)) {
+            if (sh != null && heartArt != null && L(2)) {
                 var hb = new GameObject("SecretHeart");
                 hb.transform.SetParent(map.transform);
                 hb.transform.position = new Vector3(F(sh["x"]) / 100f, F(sh["y"]) / 100f, 0);
@@ -242,7 +246,7 @@ namespace LilFoots.EditorTools
 
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
-            if (gate != null && L(8)) {
+            if (gate != null && L(2)) {
                 var fgArt = Art("art_flaggate.png");
                 if (fgArt != null) SpriteGo("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform);
                 var portal = Art("art_flagportal.png");
@@ -251,7 +255,7 @@ namespace LilFoots.EditorTools
 
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----
             var lily = GameObject.Find("Lily");
-            if (lily != null && L(8)) {
+            if (lily != null && L(2)) {
                 string selChar = LilFoots.CharacterMenuController.Current();
                 string selFile = selChar == "buddy" ? "whole_buddy.png"
                                : selChar == "emma" ? "whole_emma.png"
@@ -392,9 +396,13 @@ namespace LilFoots.EditorTools
             tm.transform.SetParent(cam.transform, false);
             tm.transform.localPosition = new Vector3(4.55f, 3.2f, 10f);
             tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            tm.fontSize = 48; tm.characterSize = 0.16f; tm.anchor = TextAnchor.MiddleCenter;
+            // Bude verdicts: 'the numbers are behind the wood panel and too large' ->
+            // MeshRenderer sorts 0 by default (panel = 98) so the count rendered BEHIND the
+            // cedar panel; characterSize 0.16 made it ~0.77u tall on a ~0.5u panel.
+            tm.fontSize = 48; tm.characterSize = 0.06f; tm.anchor = TextAnchor.MiddleCenter;
             tm.color = new Color(0.10f, 0.06f, 0.02f);
             tm.text = "0 / 18";
+            tm.GetComponent<MeshRenderer>().sortingOrder = 101;  // in front of the panel (98)
         }
 
         /// <summary>Character select: native uGUI screen — three Lil Foot cards, tap to pick + start.</summary>
