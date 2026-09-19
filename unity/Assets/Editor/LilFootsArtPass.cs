@@ -81,10 +81,15 @@ namespace LilFoots.EditorTools
             var cam = GameObject.Find("MainCamera");
             // pinned sky + THE one sun ride with the camera (never scroll, never duplicate)
             if (cam != null && L(1)) {
-                SpriteGo("SkyPlate", Art("art_sky_pnw.png"), Vector3.zero, 16.2f, -100, cam.transform)
-                    .transform.localPosition = new Vector3(0f, 0f, 10f);
-                SpriteGo("TheSun", Art("art_sun.png"), Vector3.zero, 1.7f, -95, cam.transform)
-                    .transform.localPosition = new Vector3(4.4f, 2.2f, 10f);
+                // SKY = pixel-faithful slice of Bude's approved plate (map-pure-locked).
+                // The approved plate has NO sun disc (its sun is the horizon glow) - no sun sprite
+                // until Bude approves one.
+                var skySpr = Art("art_sky_pnw.png");
+                float sw = 16.2f;
+                float sh = sw * (skySpr.bounds.size.y / skySpr.bounds.size.x);
+                // pin so the slice's top edge sits at the top of the 7.5u view
+                SpriteGo("SkyPlate", skySpr, Vector3.zero, sw, -100, cam.transform)
+                    .transform.localPosition = new Vector3(0f, (7.5f - sh) / 2f, 10f);
             }
             // Cascade ridges + snow-capped volcano — HORIZON BAND ~0.85u tall (demo proportion:
             // camera sees 7.5u tall; the old 19u-wide strip was ~5.6u tall and buried the sky)
