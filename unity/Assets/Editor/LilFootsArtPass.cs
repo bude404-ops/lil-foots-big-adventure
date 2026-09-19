@@ -329,6 +329,12 @@ namespace LilFoots.EditorTools
         /// <summary>CI entry: build map 001, dress with art, save scene, render QC shots, exit.</summary>
         public static void BuildAndShoot() {
             BuildAndShootCore();
+            // 2.0 DOCTRINE: every forge pass play-tests the scene it just saved. Red = Exit(2)
+            // (the runners already gate their own builds; this covers QC/layer passes).
+            if (!LilFootsSmokeTest.Run("smoke-report.json")) {
+                Debug.Log("[ArtPass] SMOKE RED - pass fails, scene withheld.");
+                EditorApplication.Exit(2); return;
+            }
             EditorApplication.Exit(0);
         }
 
