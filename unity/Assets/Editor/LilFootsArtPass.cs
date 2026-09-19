@@ -96,11 +96,26 @@ namespace LilFoots.EditorTools
             // Band top row 200 -> world y 6.78; center row 340 -> world 5.76 -> local 1.26.
             var ridges = Art("art_ridges.png");
             if (ridges != null && cam != null && L(2)) {
-                // STATIC VISTA LAW (Bude): ridges ride with the camera - only the gameplay plane scrolls.
-                float ridgeW = 16.2f;
-                float ridgeH = ridgeW * (ridges.bounds.size.y / ridges.bounds.size.x);
-                SpriteGo("Ridges", ridges, Vector3.zero, ridgeW, -90, cam.transform)
-                    .transform.localPosition = new Vector3(0f, 1.26f, 10f);
+                // LAYER 2 v2 (Bude: 'The line at the middle should be there'): ridge band runs from
+                // the haze tops down THROUGH the fir treeline, so the plate's mid line lands at the
+                // frame middle. Plate frame mapping is non-uniform on purpose (wide engine view):
+                // x = 16.2u/1024px, y = 7.5u/1024px. Slice = plate rows 200-520 (320px) -> 2.34u tall,
+                // top edge at plate row 200 -> view-top minus 200*7.5/1024 -> local 2.29.
+                // STATIC VISTA LAW (Bude): pinned to the camera - only the gameplay plane scrolls.
+                float px2uY = 7.5f / 1024f;          // plate vertical scale (composition-true)
+                float bandPx = 320f;                 // slice height in plate rows
+                float ridgeW = 16.2f;                // spans the view like the sky
+                float ridgeH = bandPx * px2uY;       // 2.34u - NOT aspect-derived (uniform sizing made
+                                                      // the band 2.16x too tall and pushed the treeline
+                                                      // off-frame; that was the missing mid-line bug)
+                float topLocal = 3.75f - (200f * px2uY); // plate row 200 -> world 6.79
+                var rgo = SpriteGo("Ridges", ridges, Vector3.zero, ridgeW, -90, cam.transform);
+                var rsr = rgo.GetComponent<SpriteRenderer>();
+                // explicit non-uniform scale: full width, plate-true height
+                rgo.transform.localScale = new Vector3(
+                    rgo.transform.localScale.x,               // width already set by SpriteGo
+                    ridgeH / rsr.bounds.size.y, 1f);
+                rgo.transform.localPosition = new Vector3(0f, topLocal - (ridgeH / 2f), 10f);
             }
             // dense fir wall — BAND ~1.5u tall at the ground line (old 12u-wide tile was 10.4u
             // tall — 1.4x the whole screen height; the map read as one zoomed wall texture)
