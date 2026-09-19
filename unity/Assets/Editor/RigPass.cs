@@ -67,11 +67,16 @@ namespace LilFoots.EditorTools
 
         // IDLE (character select law, Bude Sept 18/19: cards use the idle pose once animated):
         // gentle breathing bob — shoulders counter-sway 3°, neck 2°, head 1.5°, hip 1°. 2s loop.
+        // IDLE REST POSE v2 (Bude, Sept 19: 'Show me one image of lily in an idle pose'): an idle
+        // pose is a RELAXED STANCE, not a T-pose with 3 degrees of breathing - the arms must come
+        // DOWN from the T-pose (~66° shoulder swing, straight single-bone arms) with the breathing
+        // sway on top. Sign: shoulderL sits left of center in local space; +z rotates its hand
+        // offset down; shoulderR mirrors with -z.
         static readonly Dictionary<string, float[]> Idle = new Dictionary<string, float[]> {
+            {"shoulderL", new float[]{ 69f,  66f,  63f,  66f}},
+            {"shoulderR", new float[]{ -69f, -66f, -63f, -66f}},
             {"neck",      new float[]{ 2.0f,  0.0f, -2.0f,  0.0f}},
             {"head",      new float[]{ 1.5f,  0.0f, -1.5f,  0.0f}},
-            {"shoulderL", new float[]{ 3.0f,  0.0f, -3.0f,  0.0f}},
-            {"shoulderR", new float[]{ -3.0f, 0.0f,  3.0f,  0.0f}},
             {"hip",       new float[]{ 1.0f,  0.0f, -1.0f,  0.0f}},
         };
 
@@ -79,8 +84,8 @@ namespace LilFoots.EditorTools
         static readonly Dictionary<string, float[]> Walk = new Dictionary<string, float[]> {
             {"legL",      new float[]{  30f,  14f,  -6f, -24f}},
             {"legR",      new float[]{ -24f,  -6f,  14f,  30f}},
-            {"shoulderL", new float[]{ -26f, -12f, 10f, 22f}},
-            {"shoulderR", new float[]{  22f,  10f, -12f, -26f}},
+            {"shoulderL", new float[]{  87f,  66f,  45f,  66f}},  // counter-swing around the arms-down rest pose
+            {"shoulderR", new float[]{  45f,  66f,  87f,  66f}},
             {"neck",      new float[]{   4f,   2f, -2f,  -4f}},
         };
 
@@ -187,6 +192,15 @@ namespace LilFoots.EditorTools
 
         /// <summary>QC-only: apply the clip's pose at time t straight onto the bones
         /// (deterministic in headless editor mode). Clip data is the source of truth.</summary>
+        /// <summary>Pump one editor frame (EditorApplication.Step) so Unity's native SpriteSkin
+        /// editor-side update computes the deformation after a manual pose write. Guarded - Step
+        /// can throw in some batch contexts, in which case we log and render as-is.</summary>
+        static void PumpSkin() {
+            try { EditorApplication.Step(); } catch (System.Exception e) {
+                Debug.LogWarning("[RigPass] EditorApplication.Step failed (sprite may render undeformed): " + e.Message);
+            }
+        }
+
         static void ApplyPoseFromClip(CharRig rig, AnimationClip clip, float t) {
             foreach (var kv in rig.Bones) {
                 float z = 0f;
@@ -274,11 +288,25 @@ namespace LilFoots.EditorTools
             // QC path now evaluates the clip's own curves (AnimationUtility.GetEditorCurve) and
             // applies the pose to the bones directly - the CLIP data drives the shot, deterministically.
             // The native Animator still drives these clips in play mode; this is review capture only. ----
+            var lilySr = rigs[0].Root.GetComponent<SpriteRenderer>();
+            var bBefore = lilySr != null ? lilySr.bounds.size : Vector3.zero;
             foreach (var r in rigs) ApplyPoseFromClip(r, r.IdleClip, 1f / 6f); // deepest-breath key
+            PumpSkin();
+            var bAfter = lilySr != null ? lilySr.bounds.size : Vector3.zero;
+            Debug.Log("[RigPass] SKIN DEFORM CHECK (idle vs bind bounds): " + bBefore + " -> " + bAfter
+                      + (bBefore != bAfter ? " DEFORMED" : " NOT DEFORMED (SpriteSkin editor update did not run in batch)"));
             Snap(cam, outDir + "/rig_idle.png");
+
+            // ---- QC 1c: LILY-ONLY idle closeup (Bude, Sept 19: 'Show me one image of lily in an idle pose') ----
+            cam.orthographicSize = 1.9f;
+            cam.transform.position = new Vector3(-3.2f, 2.0f, -10f);
+            Snap(cam, outDir + "/rig_lily_idle.png");
+            cam.orthographicSize = 3.2f;
+            cam.transform.position = new Vector3(0f, 2.3f, -10f);
 
             // ---- QC 2: walk clip sampled mid-stride (the "pass" keyframe) ----
             foreach (var r in rigs) ApplyPoseFromClip(r, r.WalkClip, 2f / 12f);
+            PumpSkin();
             Snap(cam, outDir + "/rig_walk_native.png");
 
             // ---- QC 3: bone overlay on the posed frame (review visual) ----
