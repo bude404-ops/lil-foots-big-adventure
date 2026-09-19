@@ -49,7 +49,8 @@ namespace LilFoots.EditorTools
         }
 
         /// <summary>Art child on a gameplay object — parent's colliders/rigidbody stay unscaled.</summary>
-        static GameObject ChildSprite(GameObject parent, string name, Sprite s, float height, int order, bool flipX = false) {
+        static GameObject ChildSprite(GameObject parent, string name, Sprite s, float height, int order,
+                                      bool flipX = false, float feetFrac = 0.5f) {
             var old = parent.GetComponent<SpriteRenderer>();
             if (old != null) Object.DestroyImmediate(old); // drop any placeholder renderer on the body
             var go = new GameObject(name);
@@ -59,6 +60,12 @@ namespace LilFoots.EditorTools
             if (s != null) {
                 float f = height / s.bounds.size.y;
                 go.transform.localScale = new Vector3(f, f, 1f);
+                // FEET-ANCHOR (Bude, Sept 19: "the terrain hides the character when actually running"):
+                // the art's content is NOT centered in its frame - the character's feet sit
+                // feetFrac above the sprite's bottom edge. Anchor the FEET to the parent origin
+                // (the ground line) instead of the sprite center, so the character stands ON the
+                // terrain instead of sinking into it behind the grass strip.
+                go.transform.localPosition = new Vector3(0f, (0.5f - feetFrac) * s.bounds.size.y * f, 0f);
             }
             return go;
         }
@@ -190,7 +197,7 @@ namespace LilFoots.EditorTools
                     float cth = 2.3f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
                     SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
                 }
-                if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6);
+                if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6, false, 0.181f);
             }
 
             // ---- LAYER 3 FOREGROUND PROPS REMOVED (Sept 19: Bude's world-skin reference
@@ -204,10 +211,10 @@ namespace LilFoots.EditorTools
             foreach (Transform child in map.transform) {
                 if (child.name.StartsWith("Hound") && hound != null && L(2)) {
                     bool flip = child.GetComponent<HoundController>().dir < 0;
-                    ChildSprite(child.gameObject, "HoundArt", hound, 0.62f, 6, flip);
+                    ChildSprite(child.gameObject, "HoundArt", hound, 0.62f, 6, flip, 0.213f);
                 }
                 if (child.name.StartsWith("Drone") && drone != null && L(2))
-                    ChildSprite(child.gameObject, "DroneArt", drone, 0.55f, 6);
+                    ChildSprite(child.gameObject, "DroneArt", drone, 0.55f, 6, false, 0.307f);
             }
 
             // ---- TOKENS (footprint Big Token) + secret heart ----
@@ -250,7 +257,10 @@ namespace LilFoots.EditorTools
                                : selChar == "emma" ? "whole_emma.png"
                                : "whole_lily.png";
                 var selArt = Art(selFile);
-                if (selArt != null) ChildSprite(lily, "PlayerArt", selArt, 0.82f, 10);
+                // feetFrac measured off each art's alpha content so the picked Lil Foot STANDS
+                // on the ground line - no more half-buried behind the grass strip.
+                float feetFrac = selChar == "buddy" ? 0.165f : selChar == "emma" ? 0.079f : 0.071f;
+                if (selArt != null) ChildSprite(lily, "PlayerArt", selArt, 0.82f, 10, false, feetFrac);
             }
 
             // ---- HUD: hearts row + wooden panel token counter (shared builder) ----
@@ -290,8 +300,10 @@ namespace LilFoots.EditorTools
                     new Vector2(120f, 90f), new Vector2(150f, 150f));
                 MakeDeckButton(canvasGo.transform, "BtnRight", btnL, true,  TouchDeckButton.Kind.Right,
                     new Vector2(300f, 90f), new Vector2(150f, 150f));
+                // JUMP bigger + pulled inward (Sept 19: "jumping doesn't work" on the phone) -
+                // taps at the extreme screen edge can land on browser chrome, not the canvas.
                 MakeDeckButton(canvasGo.transform, "BtnJump",  btnJ, false, TouchDeckButton.Kind.Jump,
-                    new Vector2(1214f, 90f), new Vector2(170f, 170f));
+                    new Vector2(1120f, 100f), new Vector2(230f, 230f));
             }
             Debug.Log("[ArtPass] Touch deck built: uGUI LEFT/RIGHT/JUMP wired to TouchDeck.");
         }
@@ -410,8 +422,10 @@ namespace LilFoots.EditorTools
         ///    select law is ANIMATED idle, not a static portrait. Static-sprite fallback if the
         ///    rig stage can't build.</summary>
         static void BuildCharacterMenu(UnityEngine.Camera cam) {
-            // 1) EventSystem first - without it nothing in uGUI is clickable (the pick bug's #1 suspect).
-            if (UnityEngine.EventSystems.EventSystem.current == null) {
+            // 1) EventSystem first - but check the SCENE, not EventSystem.current (current is
+            // null in edit mode even when one exists; a duplicate EventSystem breaks uGUI input
+            // stability at runtime - the Sept 19 jump-button suspect).
+            if (UnityEngine.Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null) {
                 var esGo = new GameObject("CharMenuEventSystem");
                 esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
                 esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
@@ -447,9 +461,14 @@ namespace LilFoots.EditorTools
             // ---- IDLE RIG STAGE (select law): 3 rigged characters on an off-map stage,
             // one shared RenderTexture; each card shows its third. Fails soft to static art. ----
             RenderTexture idleRt = null;
-            try { idleRt = BuildIdleStage(go.transform); }
+            try {
+                idleRt = BuildIdleStage(out var stageRoot);
+                ctl.idleStageTexture = idleRt;
+                ctl.idleStageRoot = stageRoot; // SCENE-ROOT stage: world objects parented under an
+                // overlay canvas inherit its UI transform (scale/position), which put the stage
+                // camera in empty space - the cards rendered bind pose (T-pose), Sept 19.
+            }
             catch (System.Exception e) { Debug.LogWarning("[ArtPass] Idle rig stage failed, static cards: " + e.Message); }
-            ctl.idleStageTexture = idleRt;
 
             // three cards
             string[] names = { "LILY", "BUDDY", "EMMA" };
@@ -516,16 +535,20 @@ namespace LilFoots.EditorTools
         /// background). Parented under the menu so it dies with the menu. Renders once immediately
         /// so the cards have content on frame one (and in editor QC); at runtime the Animator
         /// drives the idle clip and the camera re-renders every frame = animated select cards.</summary>
-        static RenderTexture BuildIdleStage(Transform menuRoot) {
+        static RenderTexture BuildIdleStage(out GameObject stageRoot) {
+            stageRoot = null;
             string[] names = { "Lily", "Buddy", "Emma" };
             string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
             for (int i = 0; i < 3; i++)
                 if (!System.IO.File.Exists(System.IO.Path.Combine("Assets/Art", files[i])))
                     return null; // art missing -> caller falls back to static cards
 
-            var stage = new GameObject("IdleStage");
-            stage.transform.SetParent(menuRoot, false); // destroyed with the menu
-
+            // SCENE-ROOT stage, NOT under the menu canvas: an overlay canvas drives its own
+            // transform and world objects parented under it inherit UI scale - the stage camera
+            // then renders empty space and the cards show bind pose (the Sept 19 T-pose bug).
+            // The menu controller destroys this root + the RT when the pick happens.
+            var stage = new GameObject("CharIdleStage");
+            stageRoot = stage;
             for (int i = 0; i < 3; i++) {
                 var root = RigPass.BuildStageRig(names[i], "Assets/Art/" + files[i],
                     new Vector3((i - 1) * 3f, -60f, 0f)); // off-map band, far below any gameplay
@@ -543,7 +566,38 @@ namespace LilFoots.EditorTools
             cam.transform.position = new Vector3(0f, -60f, -10f);
             cam.targetTexture = rt;
             cam.Render(); // immediate content for frame one + editor QC
-            Debug.Log("[ArtPass] Idle rig stage built: 3 rigged characters -> shared RenderTexture.");
+
+            // BUILD-TIME CONTENT CHECK: verify the stage camera actually frames the characters.
+            // Read the RT and measure alpha coverage in each card third - if a third is empty the
+            // camera is pointed wrong and the cards would ship blank: fall back to static art.
+            var prevActive = RenderTexture.active;
+            RenderTexture.active = rt;
+            var probe = new Texture2D(1536, 512, TextureFormat.RGBA32, false);
+            probe.ReadPixels(new Rect(0, 0, 1536, 512), 0, 0);
+            probe.Apply();
+            bool coverageOk = true;
+            var px = probe.GetPixels32();
+            for (int c = 0; c < 3; c++) {
+                int hit = 0, n = 0;
+                for (int y = 32; y < 480; y += 8)
+                    for (int x = c * 512 + 64; x < (c + 1) * 512 - 64; x += 8) {
+                        n++;
+                        if (px[y * 1536 + x].a > 32) hit++;
+                    }
+                float cov = 100f * hit / Mathf.Max(1, n);
+                Debug.Log("[ArtPass] Idle stage card " + names[c] + " coverage: " + cov.ToString("F1") + "%");
+                if (cov < 3f) coverageOk = false;
+            }
+            RenderTexture.active = prevActive;
+            Object.DestroyImmediate(probe);
+            if (!coverageOk) {
+                Debug.LogWarning("[ArtPass] Idle stage camera framed nothing - static card fallback.");
+                Object.DestroyImmediate(stage);
+                Object.DestroyImmediate(rt);
+                stageRoot = null;
+                return null;
+            }
+            Debug.Log("[ArtPass] Idle rig stage built + coverage verified -> shared RT.");
             return rt;
         }
 

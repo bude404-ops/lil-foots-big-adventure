@@ -6,7 +6,9 @@ namespace LilFoots {
     /// Sept 19 pick-bug fix pass: also owns the idle-rig stage RenderTexture
     /// (built by LilFootsArtPass.BuildIdleStage) and releases it on pick.</summary>
     public class CharacterMenuController : MonoBehaviour {
-        [System.NonSerialized] public RenderTexture idleStageTexture; // dies with the menu
+        [System.NonSerialized] public RenderTexture idleStageTexture; // released on pick
+        [System.NonSerialized] public GameObject idleStageRoot;      // SCENE-ROOT rig stage (Sept 19:
+        // parented under a plain root, not this canvas - destroyed here so nothing leaks after the pick)
 
         public static string Current() {
             return PlayerPrefs.GetString("selChar", "lily");
@@ -21,6 +23,10 @@ namespace LilFoots {
             if (idleStageTexture != null) {
                 Destroy(idleStageTexture);
                 idleStageTexture = null;
+            }
+            if (idleStageRoot != null) {
+                Destroy(idleStageRoot);
+                idleStageRoot = null;
             }
             Destroy(gameObject); // menu canvas -> also kills the idle stage (its child)
         }

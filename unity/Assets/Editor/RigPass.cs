@@ -111,7 +111,12 @@ namespace LilFoots.EditorTools
         /// the natural select stance. Returns the root GameObject; parent/cleanup is the caller's.
         /// World height 2.4 so three of them fit one shared stage camera.</summary>
         public static GameObject BuildStageRig(string name, string artPath, Vector3 pos) {
-            var root = BuildRig(name, artPath, 2.4f, pos, SelectStance).Root;
+            var rig = BuildRig(name, artPath, 2.4f, pos, SelectStance);
+            // Bake the idle clip's deepest-breath pose onto the bones at BUILD time (deterministic,
+            // clip data drives it) so the saved scene carries the arms-down idle stance - the
+            // runtime Animator then owns the live breathing loop from the same clip.
+            ApplyPoseFromClip(rig, rig.IdleClip, 1f / 6f);
+            var root = rig.Root;
             var anim = root.GetComponent<Animator>();
             if (anim != null) {
                 // the select menu pauses the game (timeScale 0) - unscaled time keeps the idle
