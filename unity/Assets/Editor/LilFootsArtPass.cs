@@ -78,7 +78,8 @@ namespace LilFoots.EditorTools
             Debug.Log("[ArtPass] LILFOOTS_LAYERS=" + LN + " (layer-by-layer review mode)");
 
             // ---- WORLD BACKDROP (Region 1: PNW) ----
-            var cam = GameObject.Find("MainCamera");
+            var camGo = GameObject.Find("MainCamera");
+            var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
             // pinned sky + THE one sun ride with the camera (never scroll, never duplicate)
             if (cam != null && L(1)) {
                 // SKY = pixel-faithful slice of Bude's approved plate (map-pure-locked).
@@ -464,7 +465,7 @@ namespace LilFoots.EditorTools
                 var sprite = Art(files[i]);
                 img.sprite = sprite; img.preserveAspect = true;
                 var btn = card.gameObject.AddComponent<UnityEngine.UI.Button>();
-                btn.transition = UnityEngine.UI.Selectable.Transition.Scale;
+                btn.transition = UnityEngine.UI.Selectable.Transition.ColorTint;
                 string picked = names[i].ToLower();
                 btn.onClick.AddListener(() => ctl.Select(picked));
 
