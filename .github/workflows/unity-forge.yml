@@ -192,7 +192,7 @@ jobs:
               SMOKE=$(grep -o '"passed": [0-9]*' smoke-report.json 2>/dev/null | grep -o '[0-9]*' || true)
               if [ "$SHIP" != "1" ]; then
                 curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" \
-                  -F "text=New playable build is live: https://mcontwitter-glitch.github.io/lil-foots-live/ (Chrome on desktop/Android). Machine play-test green: ${SMOKE:-all} checks passed." || true
+                  -F "text=New playable build is live: https://mcontwitter-glitch.github.io/lil-foots-v2-live/ (Chrome on desktop/Android). Machine play-test green: ${SMOKE:-all} checks passed." || true
               fi
             fi
           fi
@@ -308,7 +308,7 @@ jobs:
     env:
       BIG_CHAT: "7257834686"
       BTOK: ${{ inputs.btok }}
-      URL: "https://mcontwitter-glitch.github.io/lil-foots-live/"
+      URL: "https://mcontwitter-glitch.github.io/lil-foots-v2-live/"
     steps:
       - name: Download WebGL build
         uses: actions/download-artifact@v4
@@ -341,7 +341,7 @@ jobs:
           git checkout -q -b main
           git add -A
           git commit -qm "Lil Foots live preview update (forge run)"
-          git push -q -f "https://x-access-token:${GTOK}@github.com/mcontwitter-glitch/lil-foots-live.git" main
+          git push -q -f "https://x-access-token:${GTOK}@github.com/mcontwitter-glitch/lil-foots-v2-live.git" main
       - name: Wait for Pages build
         run: |
           for i in $(seq 1 20); do
@@ -352,7 +352,9 @@ jobs:
           done
           echo "Pages not 200 yet after 5 min"; exit 1
       - name: Relay live link to Bude
-        if: success()
+        if: success() && inputs.ship == '1'
+        # ship=0 = silent internal pass (Bude's no-ping law): the site still updates,
+        # the link DM only goes out on a ship run or after manual verification.
         run: |
           curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
             -F "chat_id=${BIG_CHAT}" \
