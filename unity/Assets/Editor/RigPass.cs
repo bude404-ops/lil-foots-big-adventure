@@ -69,12 +69,12 @@ namespace LilFoots.EditorTools
         // gentle breathing bob — shoulders counter-sway 3°, neck 2°, head 1.5°, hip 1°. 2s loop.
         // IDLE REST POSE v2 (Bude, Sept 19: 'Show me one image of lily in an idle pose'): an idle
         // pose is a RELAXED STANCE, not a T-pose with 3 degrees of breathing - the arms must come
-        // DOWN from the T-pose (~66° shoulder swing, straight single-bone arms) with the breathing
+        // DOWN at the natural arms-down rest (bind art IS the approved original art, Sept 20) with the breathing
         // sway on top. Sign: shoulderL sits left of center in local space; +z rotates its hand
         // offset down; shoulderR mirrors with -z.
         static readonly Dictionary<string, float[]> Idle = new Dictionary<string, float[]> {
-            {"shoulderL", new float[]{ 69f,  66f,  63f,  66f}},
-            {"shoulderR", new float[]{ -69f, -66f, -63f, -66f}},
+            {"shoulderL", new float[]{ 3f,  0f,  -3f,  0f}},
+            {"shoulderR", new float[]{ -3f,  0f,  3f,  0f}},
             {"neck",      new float[]{ 2.0f,  0.0f, -2.0f,  0.0f}},
             {"head",      new float[]{ 1.5f,  0.0f, -1.5f,  0.0f}},
             {"hip",       new float[]{ 1.0f,  0.0f, -1.0f,  0.0f}},
@@ -84,8 +84,8 @@ namespace LilFoots.EditorTools
         static readonly Dictionary<string, float[]> Walk = new Dictionary<string, float[]> {
             {"legL",      new float[]{  30f,  14f,  -6f, -24f}},
             {"legR",      new float[]{ -24f,  -6f,  14f,  30f}},
-            {"shoulderL", new float[]{  87f,  66f,  45f,  66f}},  // counter-swing around the arms-down rest pose
-            {"shoulderR", new float[]{  45f,  66f,  87f,  66f}},
+            {"shoulderL", new float[]{  21f,  0f,  -21f,  0f}},  // counter-swing around the natural arms-down rest
+            {"shoulderR", new float[]{  -21f,  0f,  21f,  0f}},
             {"neck",      new float[]{   4f,   2f, -2f,  -4f}},
         };
 
@@ -94,8 +94,8 @@ namespace LilFoots.EditorTools
         static readonly Dictionary<string, float[]> Jump = new Dictionary<string, float[]> {
             {"legL",      new float[]{ 24f,  20f,  23f,  24f}},
             {"legR",      new float[]{ 34f,  38f,  35f,  34f}},
-            {"shoulderL", new float[]{ 42f,  37f,  40f,  42f}},
-            {"shoulderR", new float[]{ -42f, -37f, -40f, -42f}},
+            {"shoulderL", new float[]{ -24f, -29f,  -26f,  -24f}},
+            {"shoulderR", new float[]{  24f,  29f,   26f,   24f}},
             {"neck",      new float[]{ -2.0f, -1.0f, -1.5f, -2.0f}},
             {"hip",       new float[]{ -2.0f,  0.0f, -1.0f, -2.0f}},
         };
@@ -148,7 +148,7 @@ namespace LilFoots.EditorTools
         public static GameObject BuildPlayerRigs(GameObject player, string defaultChar) {
             string[] names = { "Lily", "Buddy", "Emma" };
             string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
-            float[] feetFrac = { 0.071f, 0.165f, 0.079f };
+            float[] feetFrac = { 0.071f, 0.001f, 0.002f };  // measured off Bude's original art (arms-down)
             GameObject active = null;
             for (int i = 0; i < 3; i++) {
                 var rig = BuildRig(names[i] + "Rig", "Assets/Art/" + files[i], 0.82f, player.transform.position, SelectStance);

@@ -9,7 +9,7 @@ namespace LilFoots {
 /// higher ground scrolls out of view. Unity-native SmoothDamp does the easing.</summary>
 public class CameraFollow : MonoBehaviour {
     public Transform target;
-    public float lookAhead = 0.8f;   // small forward bias so there's run room ahead
+    public float lookAhead = 0.15f;  // Bude Sept 20: "camera also needs to move over to the left some more" - nearly centered, tiny lead
     public float smoothTime = 0.08f;
     public float yFollow = 0.8f;     // camera rides this above the player (ground framing unchanged)
     public float minX = 6.7f, maxX = 93f;   // level bounds (px/100, half-screen margin)
