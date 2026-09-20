@@ -41,8 +41,13 @@ public static class LilFootsLevelBuilder {
             float x = F(po[0]), y = F(po[1]), w = F(po[2]), h = F(po[3]);
             var go = new GameObject("Plat_" + x);
             go.transform.SetParent(root.transform);
-            // top surface sits at y (engine convention), slab hangs below it
-            go.transform.position = new Vector3(x/100f, y/100f - (h/100f)/2f, 0);
+            // CANVAS-Y FLIP (found Sept 20, root cause of Bude's 'random floating objects' +
+            // 'no falling points' on the live build): map JSON is authored in the JS engine's
+            // canvas space where y grows DOWN from the top of an 880px canvas (GROUND_Y = 620,
+            // JUMPVEL = -900). Unity is y-up. unityY = 2*GY - y/100 flips it back, so steps
+            // RISE above ground, tokens hover over the grass, cams/drone fly above it, and the
+            // secret heart sits on its high route - exactly the playtested JS layout.
+            go.transform.position = new Vector3(x/100f, 2f * GY - y/100f - (h/100f)/2f, 0);
             var bc = go.AddComponent<BoxCollider2D>();
             bc.size = new Vector2(w/100f, h/100f);
             var sr = go.AddComponent<SpriteRenderer>();
@@ -86,7 +91,7 @@ public static class LilFootsLevelBuilder {
         foreach (var co in cams.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
             var c = new GameObject("TrailCam");
             c.transform.SetParent(root.transform);
-            c.transform.position = new Vector3(F(co["x"])/100f, F(co["y"])/100f, 0);
+            c.transform.position = new Vector3(F(co["x"])/100f, 2f * GY - F(co["y"])/100f, 0); // canvas-y flip
             var cc = c.AddComponent<CircleCollider2D>(); cc.isTrigger = true; cc.radius = 0.45f;
             c.AddComponent<TrailCamController>();
             BuildTreeArt(root.transform, c.transform.position); // REAL TREE, not a pole (playtest fix)
@@ -96,7 +101,7 @@ public static class LilFootsLevelBuilder {
         var drone = (System.Collections.Generic.Dictionary<string, object>)data["drone"];
         var d = new GameObject("Drone");
         d.transform.SetParent(root.transform);
-        d.transform.position = new Vector3(F(drone["x"])/100f, F(drone["y"])/100f, 0);
+        d.transform.position = new Vector3(F(drone["x"])/100f, 2f * GY - F(drone["y"])/100f, 0); // canvas-y flip
         d.AddComponent<DroneController>();
 
         // ---- tokens (73, 4 tiers) ----
@@ -104,7 +109,7 @@ public static class LilFootsLevelBuilder {
         foreach (var to in tokens.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
             var t = new GameObject("Token_" + F(to["x"]));
             t.transform.SetParent(root.transform);
-            t.transform.position = new Vector3(F(to["x"])/100f, F(to["y"])/100f, 0);
+            t.transform.position = new Vector3(F(to["x"])/100f, 2f * GY - F(to["y"])/100f, 0); // canvas-y flip
             var cc = t.AddComponent<CircleCollider2D>(); cc.isTrigger = true; cc.radius = 0.34f;
             t.AddComponent<TokenCollectible>().tier = (int)F(to["tier"]);
         }

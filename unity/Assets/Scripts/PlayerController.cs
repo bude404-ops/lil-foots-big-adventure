@@ -94,6 +94,12 @@ public class PlayerController : MonoBehaviour {
 
         if (invuln > 0) invuln -= Time.deltaTime;
         maxX = Mathf.Max(maxX, transform.position.x);
+
+        // ---- FALLING POINTS (Bude, Sept 20: 'no falling points') ----
+        // The stream gaps are real pits: fall below the kill line and it costs a life +
+        // respawns at the last checkpoint (classic). Before this, falling into a pit was an
+        // infinite fall with no consequence - a softlock.
+        if (transform.position.y < 1.0f && LivesManager.Instance != null) LivesManager.Instance.Die();
     }
 
     void FixedUpdate() {

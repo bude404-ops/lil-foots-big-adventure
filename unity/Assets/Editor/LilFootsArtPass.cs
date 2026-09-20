@@ -241,7 +241,7 @@ namespace LilFoots.EditorTools
             if (sh != null && heartArt != null && L(2)) {
                 var hb = new GameObject("SecretHeart");
                 hb.transform.SetParent(map.transform);
-                hb.transform.position = new Vector3(F(sh["x"]) / 100f, F(sh["y"]) / 100f, 0);
+                hb.transform.position = new Vector3(F(sh["x"]) / 100f, 12.4f - F(sh["y"]) / 100f, 0); // canvas-y flip (2*GY - y)
                 var hsr = hb.AddComponent<SpriteRenderer>(); hsr.sprite = heartArt; hsr.sortingOrder = 5;
                 float hf = 0.55f / heartArt.bounds.size.y; hb.transform.localScale = new Vector3(hf, hf, 1f);
                 var hc = hb.AddComponent<CircleCollider2D>(); hc.isTrigger = true; hc.radius = 0.5f;
