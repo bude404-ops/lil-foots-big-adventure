@@ -167,12 +167,31 @@ namespace LilFoots.EditorTools
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
                 .OrderBy(a => a[0]).ToList();
             if (water != null && L(2)) {
+                // MAP v2 (Bude, Sept 20 course redo): hop blocks now float OVER ground, so the
+                // naive consecutive-plat gap can span solid earth. Subtract every ground-level
+                // plat interval from the candidate gap and draw water only in the true pits.
+                var grounds = sorted.Where(a => a[1] >= 600f)
+                    .Select(a => new float[] { (a[0] - a[2] / 2f) / 100f, (a[0] + a[2] / 2f) / 100f })
+                    .OrderBy(g => g[0]).ToList();
                 for (int i = 0; i < sorted.Count - 1; i++) {
                     var a = sorted[i]; var b = sorted[i + 1];
                     float gapL = (a[0] + a[2] / 2f) / 100f, gapR = (b[0] - b[2] / 2f) / 100f;
-                    float gw = gapR - gapL;
-                    if (gw < 0.3f || gw > 7f) continue;
-                    SpriteGo("Stream", water, new Vector3(gapL + gw / 2f, GY - 0.55f, 0), gw + 0.6f, -60, map.transform);
+                    if (gapR - gapL < 0.05f) continue;
+                    var runs = new System.Collections.Generic.List<float[]> { new float[] { gapL, gapR } };
+                    foreach (var g in grounds) {
+                        var next = new System.Collections.Generic.List<float[]>();
+                        foreach (var seg in runs) {
+                            if (g[1] <= seg[0] || g[0] >= seg[1]) { next.Add(seg); continue; }
+                            if (g[0] > seg[0]) next.Add(new float[] { seg[0], g[0] });
+                            if (g[1] < seg[1]) next.Add(new float[] { g[1], seg[1] });
+                        }
+                        runs = next;
+                    }
+                    foreach (var seg in runs) {
+                        float w = seg[1] - seg[0];
+                        if (w < 0.3f || w > 7f) continue;
+                        SpriteGo("Stream", water, new Vector3((seg[0] + seg[1]) / 2f, GY - 0.55f, 0), w + 0.6f, -60, map.transform);
+                    }
                 }
             }
 
