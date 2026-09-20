@@ -190,8 +190,10 @@ jobs:
             # NO QC SHOT DMs (art-fatigue rule). A shipped build DMs the playable link only.
             if [ "$FX" = "0" ]; then
               SMOKE=$(grep -o '"passed": [0-9]*' smoke-report.json 2>/dev/null | grep -o '[0-9]*' || true)
-              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" \
-                -F "text=New playable build is live: https://mcontwitter-glitch.github.io/lil-foots-live/ (Chrome on desktop/Android). Machine play-test green: ${SMOKE:-all} checks passed." || true
+              if [ "$SHIP" != "1" ]; then
+                curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" \
+                  -F "text=New playable build is live: https://mcontwitter-glitch.github.io/lil-foots-live/ (Chrome on desktop/Android). Machine play-test green: ${SMOKE:-all} checks passed." || true
+              fi
             fi
           fi
           if [ -f "unity/Builds/LilFoots.apk" ]; then
@@ -201,13 +203,13 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendDocument" \
                 -F "chat_id=${BIG_CHAT}" \
                 -F "document=@unity/Builds/LilFoots.apk" \
-                -F "caption=Unity-built build of Lil Foots (per your source-of-truth law: Unity imported it, compiled it, validated it, BUILT it). Map 001 + full art pass. Feel test: run, jump, tokens, hounds, cams, gate." || true
+                -F "caption=Unity-built build of Lil Foots (per your source-of-truth law: Unity imported it, compiled it, validated it, BUILT it). Freshly built playable — install: allow apps from unknown sources, then open the file." || true
             else
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=Lil Foots APK built ($SZ bytes) — over Telegram's 50MB send cap, it's in the run artifact." || true
             fi
           fi
           if [ ! -f "unity/QCShots/unity_start.png" ] && [ ! -f "unity/QCShots/ui_menu.png" ]; then
-            curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=LIL FOOTS UNITY FORGE: build failed (FX=$FX) — logs in artifact." || true
+# silenced per Bude: no failure pings, only new playable content
           fi
       - name: Upload artifact
         if: always()
@@ -346,8 +348,8 @@ jobs:
           done
           echo "Pages not 200 yet after 5 min"; exit 1
       - name: Relay live link to Bude
-        if: always()
+        if: success()
         run: |
           curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
             -F "chat_id=${BIG_CHAT}" \
-            -F "text=LIVE PREVIEW LINK: ${URL} — the actual Unity build of Lil Foots in your browser. Open it in CHROME, not the Telegram browser (Telegram's built-in browser blocks WebGL). It auto-updates every forge pass. NEW: on-screen LEFT/RIGHT/JUMP buttons — it's actually playable now (also works with a mouse)." || true
+            -F "text=LIVE PREVIEW LINK: ${URL} — the actual Unity build of Lil Foots in your browser. Open it in CHROME, not the Telegram browser (Telegram's built-in browser blocks WebGL). This link was shipped by this exact build — nothing cached. On-screen LEFT/RIGHT/JUMP buttons, also works with a mouse." || true
