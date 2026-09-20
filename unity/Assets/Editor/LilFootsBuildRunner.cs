@@ -24,7 +24,7 @@ public static class LilFootsBuildRunner {
 
         // player identity
         PlayerSettings.companyName = "Bigfoot404 LLC";
-        PlayerSettings.productName = "Lil Foots Big Adventure";
+        PlayerSettings.productName = "Lil Foots: Big Adventures";
         PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.bigfoot404.lilfootsbigadventure");
 
         // STUDIO SPLASH LAW (Bude, Sept 19): Unity load screen -> BIG Entertainment -> Bude
@@ -59,7 +59,7 @@ public static class LilFootsBuildRunner {
         }
 
         PlayerSettings.companyName = "Bigfoot404 LLC";
-        PlayerSettings.productName = "Lil Foots Big Adventure";
+        PlayerSettings.productName = "Lil Foots: Big Adventures";
         PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.WebGL, "com.bigfoot404.lilfootsbigadventure");
 
         // STUDIO SPLASH LAW (Bude, Sept 19): Unity load screen -> BIG Entertainment -> Bude

@@ -100,12 +100,14 @@ public static class LilFootsLevelBuilder {
             BuildTreeArt(root.transform, c.transform.position); // REAL TREE, not a pole (playtest fix)
         }
 
-        // ---- drone ----
-        var drone = (System.Collections.Generic.Dictionary<string, object>)data["drone"];
-        var d = new GameObject("Drone");
-        d.transform.SetParent(root.transform);
-        d.transform.position = new Vector3(F(drone["x"])/100f, 2f * GY - F(drone["y"])/100f, 0); // canvas-y flip
-        d.AddComponent<DroneController>();
+        // ---- drone (v2 M1: maps carry no drone - the clean floor ships without it) ----
+        var drone = data.ContainsKey("drone") ? data["drone"] as System.Collections.Generic.Dictionary<string, object> : null;
+        if (drone != null) {
+            var d = new GameObject("Drone");
+            d.transform.SetParent(root.transform);
+            d.transform.position = new Vector3(F(drone["x"])/100f, 2f * GY - F(drone["y"])/100f, 0); // canvas-y flip
+            d.AddComponent<DroneController>();
+        }
 
         // ---- tokens (73, 4 tiers) ----
         var tokens = (System.Collections.Generic.List<object>)data["tokens"];

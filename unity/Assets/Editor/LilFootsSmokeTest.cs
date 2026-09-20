@@ -120,22 +120,37 @@ public static class LilFootsSmokeTest {
         }
         C(cardsHaveArt, "select: every card has a visible graphic");
 
-        // 5) COURSE CONTENT — the shipped loop must be present
+        // 5) COURSE CONTENT — the shipped loop must be present.
+        // v2 M1 (RESTART-V2.md): the clean-floor milestone ships character + run/jump/touch +
+        // camera + meadow + flag ONLY. Course content checks swap to scope-purity checks.
+        bool m1 = (System.Environment.GetEnvironmentVariable("MAP_DATA") == "map_m1.json") || sceneName.StartsWith("MapM1");
         var tokens = UnityEngine.Object.FindObjectsOfType<LilFoots.TokenCollectible>();
         // Sept 20: 3-tier doctrine (gate needs 15) - 30+ tokens means the course carries
             // double the gate cost across easy/exploration/difficult tiers. The old >=60 was
             // calibrated to the retired 73-token map, not the redesigned courses.
+        if (m1) {
+            // M1 SCOPE PURITY: the floor must be clean - no course content rides along early.
+            C(tokens.Length == 0, "M1: no tokens on the floor (found " + tokens.Length + ")");
+            var cps0 = UnityEngine.Object.FindObjectsOfType<LilFoots.CheckpointController>();
+            C(cps0.Length == 0, "M1: no checkpoints (found " + cps0.Length + ")");
+            var h0 = UnityEngine.Object.FindObjectsOfType<LilFoots.HoundController>();
+            C(h0.Length == 0, "M1: no hounds (found " + h0.Length + ")");
+            C(UnityEngine.Object.FindObjectsOfType<LilFoots.DroneController>().Length == 0, "M1: no drone");
+        } else {
             C(tokens.Length >= 30, "course: >=30 Big Tokens across tiers (found " + tokens.Length + ")");
-        var cps = UnityEngine.Object.FindObjectsOfType<LilFoots.CheckpointController>();
-        C(cps.Length >= 4, "course: >=4 checkpoints (found " + cps.Length + ")");
+            var cps = UnityEngine.Object.FindObjectsOfType<LilFoots.CheckpointController>();
+            C(cps.Length >= 4, "course: >=4 checkpoints (found " + cps.Length + ")");
+        }
         var gate = GameObject.Find("Gate");
         C(gate != null && gate.GetComponent<LilFoots.GateController>() != null, "course: gate + GateController wired");
-        C(gate != null && gate.transform.position.x > 80f,
+        C(gate != null && gate.transform.position.x > (m1 ? 30f : 80f),
           "course: gate at the terminus (x=" + (gate != null ? gate.transform.position.x.ToString("F1") : "none") + ")");
         C(GameObject.Find("FlagGateArt") != null, "course: flag art at the finish");
         C(GameObject.Find("PortalArt") != null, "course: portal art at the finish");
-        var hounds = UnityEngine.Object.FindObjectsOfType<LilFoots.HoundController>();
-        C(hounds.Length >= 1, "course: hounds present (" + hounds.Length + ")");
+        if (!m1) {
+            var hounds = UnityEngine.Object.FindObjectsOfType<LilFoots.HoundController>();
+            C(hounds.Length >= 1, "course: hounds present (" + hounds.Length + ")");
+        }
 
         // 6) REPORT
         bool allPass = fail.Count == 0;

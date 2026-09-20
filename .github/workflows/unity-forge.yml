@@ -132,6 +132,7 @@ jobs:
             exit 0
           fi
           PRE="LIL FOOTS UNITY PASS 1"
+          if [ "${{ inputs.map_data }}" = "map_m1.json" ]; then PRE="LIL FOOTS: BIG ADVENTURES — v2 M1 CLEAN FLOOR (fresh Unity project, command-script built)"; fi
           if [ "$LAYERS" = "3" ]; then PRE="MAP REBUILD - ALL 3 LAYERS (fix plan executed: organic seams, baked atmosphere, foreground props, HQ Lily)"; fi
           if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ] && [ "$LAYERS" != "3" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 3 (3-layer doctrine: 1=static vista, 2=gameplay plane, 3=foreground props; layers above $LAYERS intentionally absent)"; fi
           if [ "$LILFOOTS_UI" = "1" ]; then PRE="UI PASS - CHARACTER MENU / CONTROLS / HEARTS (HQ style, no world layers in this build)"; fi
