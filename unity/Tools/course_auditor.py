@@ -119,6 +119,17 @@ def audit(path):
     if not d.get("secretHeart") and 3 not in tiers:
         errors.append("no secret: need a heart or a tier-3 hidden cache")
 
+    # ---- hounds (course doctrine: solo enemies patrol solid ground, spawn stays safe) ----
+    hounds = d.get("hounds", [])
+    if len(hounds) < 1:
+        errors.append("course: hounds present (0) - a course map needs at least one patrol enemy")
+    for h in hounds:
+        inside = any(p[0] <= h["min"] and h["max"] <= p[0] + p[2] and p[1] >= GROUND_TOLERANCE for p in plats)
+        if not inside:
+            errors.append(f"hound patrol [{h.get('min')},{h.get('max')}] leaves solid ground")
+        if h.get("min", 1e9) < 1000:
+            errors.append(f"hound patrol reaches into the spawn opening (min={h.get('min')} < 1000)")
+
     # ---- report ----
     print(f"== AUDIT {path} ==")
     print(f"   plats={len(plats)} tokens={n} checkpoints={len(cps)} width={d['meta']['width']/100:.0f}u")

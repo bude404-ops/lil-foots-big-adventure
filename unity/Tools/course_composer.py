@@ -148,6 +148,54 @@ def ground_point_near(plats, target, hardmax, hardmin):
             bd, best = d, cand
     return best if best is not None else hardmax
 
+def place_hounds(recipe, plats):
+    """Doctrine: hounds patrol solid ground, solo before combos, away from spawn/flag.
+
+    Recipe key "hounds": N (default 3 for course maps). Each hound gets a wide
+    ground stretch (y=620), spread across the course, patrol bounded inside
+    its plat. Speeds 90/100/120 per the v2 course feel."""
+    n = int(recipe.get("hounds", 3))
+    if n <= 0:
+        return []
+    ground = [p for p in plats if p[1] == 620 and p[3] >= 100]
+    if not ground:
+        return []
+    taken = []
+    candidates = sorted(ground, key=lambda p: -p[2])
+    for p in candidates:
+        if p[2] < 700:
+            continue  # need room to patrol
+        if p[0] + 120 < 1000:
+            continue  # spawn safety: no hound reaches into the opening stretch
+        if any(abs(p[0] - t) < 1500 for t in taken):
+            continue
+        taken.append(p[0])
+        if len(taken) >= n:
+            break
+    if len(taken) < n:  # fallback: any ground >= 400 wide
+        for p in candidates:
+            if p[2] >= 400 and not any(abs(p[0] - t) < 1200 for t in taken):
+                taken.append(p[0])
+            if len(taken) >= n:
+                break
+    taken.sort()
+    speeds = [90, 100, 120]
+    out = []
+    for i, x in enumerate(taken[:n]):
+        plat = [p for p in ground if p[0] == x][0]
+        margin = 120
+        lo = plat[0] + margin
+        hi = plat[0] + plat[2] - margin
+        if hi - lo < 200:
+            mid = plat[0] + plat[2] / 2
+            lo, hi = mid - 100, mid + 100
+        out.append({"x": int((lo + hi) / 2), "y": 620,
+                    "min": int(lo), "max": int(hi),
+                    "dir": 1 if i % 2 == 0 else -1,
+                    "spd": speeds[i % len(speeds)]})
+    return out
+
+
 def ensure_cadence(checkpoints, plats, width):
     """Doctrine: checkpoints at most ~30u apart, always on solid ground."""
     cps = sorted(set([0] + checkpoints))
@@ -188,7 +236,7 @@ def main():
                      "jumpHold": 0.28, "jumpHoldGravityFactor": 0.9,
                      "coyote": 0.12, "buffer": 0.14},
         "plats": plats,
-        "hounds": [],
+        "hounds": place_hounds(recipe, plats),
         "cams": [],
         "drone": None,
         "checkpoints": sorted(set(checkpoints)),
