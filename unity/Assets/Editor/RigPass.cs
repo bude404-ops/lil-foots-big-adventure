@@ -182,7 +182,7 @@ namespace LilFoots.EditorTools
         public static GameObject BuildPlayerRigs(GameObject player, string defaultChar) {
             string[] names = { "Lily", "Buddy", "Emma" };
             string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
-            float[] feetFrac = { 0.071f, 0.001f, 0.002f };  // measured off Bude's original art (arms-down)
+            float[] feetFrac = { 0.001f, 0.001f, 0.002f };  // Lily re-measured off his reference art (feet at bottom, no shadow strip)  // measured off Bude's original art (arms-down)
             GameObject active = null;
             for (int i = 0; i < 3; i++) {
                 var rig = BuildRig(names[i] + "Rig", "Assets/Art/" + files[i], 0.82f, player.transform.position, StanceFor(names[i]));
