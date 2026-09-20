@@ -203,14 +203,12 @@ jobs:
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendDocument" \
                 -F "chat_id=${BIG_CHAT}" \
                 -F "document=@unity/Builds/LilFoots.apk" \
-                -F "caption=Unity-built build of Lil Foots (per your source-of-truth law: Unity imported it, compiled it, validated it, BUILT it). Freshly built playable — install: allow apps from unknown sources, then open the file." || true
+                -F "caption=New playable APK build of Lil Foots — after download: allow installs from unknown sources, then open the file." || true
             else
               curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=Lil Foots APK built ($SZ bytes) — over Telegram's 50MB send cap, it's in the run artifact." || true
             fi
           fi
-          if [ ! -f "unity/QCShots/unity_start.png" ] && [ ! -f "unity/QCShots/ui_menu.png" ]; then
-# silenced per Bude: no failure pings, only new playable content
-          fi
+          # No failure DM to Bude (his call: only send the new stuff). Failures watched internally.
       - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -352,4 +350,4 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
             -F "chat_id=${BIG_CHAT}" \
-            -F "text=LIVE PREVIEW LINK: ${URL} — the actual Unity build of Lil Foots in your browser. Open it in CHROME, not the Telegram browser (Telegram's built-in browser blocks WebGL). This link was shipped by this exact build — nothing cached. On-screen LEFT/RIGHT/JUMP buttons, also works with a mouse." || true
+            -F "text=NEW PLAYABLE IS LIVE: ${URL} — this link is freshly shipped from this build, not a cached one. Open in CHROME (Telegram's built-in browser blocks WebGL). On-screen LEFT/RIGHT/JUMP buttons, also works with a mouse." || true
