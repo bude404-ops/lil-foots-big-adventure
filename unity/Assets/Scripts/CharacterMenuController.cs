@@ -48,7 +48,10 @@ namespace LilFoots {
             Time.timeScale = 1f;
             // GAMEPLAY RIG SWAP: three rigged Lil Foots are pre-built under the player; the
             // pick enables the chosen one so the in-game character matches the select (Sept 20).
-            var player = UnityEngine.GameObject.Find("Lily");
+            // find the PLAYER by its controller, not by name - the select stage also has
+            // "Lily"-named copies (off-map band), and Find can return those instead.
+            var pctrl = UnityEngine.Object.FindObjectOfType<PlayerController>();
+            var player = pctrl != null ? pctrl.gameObject : null;
             if (player != null) {
                 string cap = character.ToLower();
                 cap = char.ToUpper(cap[0]) + cap.Substring(1);
