@@ -32,6 +32,19 @@ public class HoundController : MonoBehaviour {
 
     void Start() { rb = GetComponent<Rigidbody2D>(); dir = (transform.position.x > (minX+maxX)/2) ? -1 : 1; }
 
+    // ALIVE ON SCREEN (Bude, Sept 20: 'the enemies are still just stale models'): the art
+    // child faces the patrol/chase direction and only waddles while the hound actually moves.
+    Transform art;
+    void Update() {
+        if (dead) return;
+        if (art == null) { var a = transform.Find("HoundArt"); if (a != null) art = a; else return; }
+        float moving = Mathf.Abs(rb.velocity.x);
+        var an = art.GetComponent<Animator>();
+        if (an != null) an.speed = moving > 0.05f ? 1f : 0f;   // waddle only when walking
+        float sx = Mathf.Abs(art.localScale.x) * (dir >= 0 ? 1f : -1f);
+        var sc = art.localScale; sc.x = sx; art.localScale = sc;
+    }
+
     void FixedUpdate() {
         if (dead) return;
         var p = PlayerController.Instance;
@@ -55,6 +68,15 @@ public class HoundController : MonoBehaviour {
 
         if (px > maxX) dir = -1;
         if (px < minX) dir = 1;
+
+        // FACE THE PATROL DIRECTION (Bude, Sept 20: "the enemies are still just stale models"):
+        // the art child flips live when the hound turns - a hound running backwards reads dead.
+        var art = transform.Find("HoundArt");
+        if (art != null) {
+            float want = Mathf.Abs(art.localScale.x) * ((dir < 0) ? -1f : 1f);
+            if (!Mathf.Approximately(art.localScale.x, want))
+                art.localScale = new Vector3(want, art.localScale.y, art.localScale.z);
+        }
     }
 
     bool ProbeGround(float x) {

@@ -46,6 +46,17 @@ namespace LilFoots {
             PlayerPrefs.SetString("selChar", character.ToLower());
             PlayerPrefs.Save();
             Time.timeScale = 1f;
+            // GAMEPLAY RIG SWAP: three rigged Lil Foots are pre-built under the player; the
+            // pick enables the chosen one so the in-game character matches the select (Sept 20).
+            var player = UnityEngine.GameObject.Find("Lily");
+            if (player != null) {
+                string cap = character.ToLower();
+                cap = char.ToUpper(cap[0]) + cap.Substring(1);
+                foreach (Transform t in player.transform) {
+                    bool match = t.name == cap + "Rig";
+                    if (t.name.EndsWith("Rig")) t.gameObject.SetActive(match);
+                }
+            }
             if (idleStageTexture != null) {
                 Destroy(idleStageTexture);
                 idleStageTexture = null;

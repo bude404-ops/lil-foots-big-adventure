@@ -89,6 +89,17 @@ namespace LilFoots.EditorTools
             {"neck",      new float[]{   4f,   2f, -2f,  -4f}},
         };
 
+        // JUMP (gameplay law): legs split-tuck mid-air, arms swing out for balance.
+        // Same curve-convention as Walk (signs mirror around the arms-down rest pose).
+        static readonly Dictionary<string, float[]> Jump = new Dictionary<string, float[]> {
+            {"legL",      new float[]{ 24f,  20f,  23f,  24f}},
+            {"legR",      new float[]{ 34f,  38f,  35f,  34f}},
+            {"shoulderL", new float[]{ 42f,  37f,  40f,  42f}},
+            {"shoulderR", new float[]{ -42f, -37f, -40f, -42f}},
+            {"neck",      new float[]{ -2.0f, -1.0f, -1.5f, -2.0f}},
+            {"hip",       new float[]{ -2.0f,  0.0f, -1.0f, -2.0f}},
+        };
+
         // natural standing stance measured off the whole_lily art (arms angled down, feet splayed) -
         // THE character-select idle stance (Bude's approved idle look, Sept 19).
         static readonly Dictionary<string, Vector2> SelectStance = new Dictionary<string, Vector2> {
@@ -126,6 +137,39 @@ namespace LilFoots.EditorTools
                 anim.updateMode = AnimatorUpdateMode.UnscaledTime;
             }
             return root;
+        }
+
+        /// <summary>GAMEPLAY PLAYER RIGS (Bude, Sept 20: "the characters pose still is the t pose
+        /// and no animations"): builds ALL THREE Lil Foots fully rigged under the player object -
+        /// feet anchored to the player origin, gameplay height, idle default state, speed/air
+        /// params wired for idle <-> walk <-> jump. The chosen character's rig is active, the
+        /// other two disabled; CharacterMenuController.Select swaps them at runtime. Falls back
+        /// to null on any failure (caller keeps the static whole-sprite path).</summary>
+        public static GameObject BuildPlayerRigs(GameObject player, string defaultChar) {
+            string[] names = { "Lily", "Buddy", "Emma" };
+            string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
+            float[] feetFrac = { 0.071f, 0.165f, 0.079f };
+            GameObject active = null;
+            for (int i = 0; i < 3; i++) {
+                var rig = BuildRig(names[i] + "Rig", "Assets/Art/" + files[i], 0.82f, player.transform.position, SelectStance);
+                rig.Root.transform.SetParent(player.transform, false);
+                // feet-anchor: sprite center sits (0.5 - feetFrac) * worldH above the player origin
+                float off = (0.5f - feetFrac[i]) * 0.82f;
+                rig.Root.transform.localPosition = new Vector3(0f, off, 0f);
+                // bake the arms-down idle stance into the saved scene (same as the select cards)
+                ApplyPoseFromClip(rig, rig.IdleClip, 1f / 6f);
+                var anim = rig.Root.GetComponent<Animator>();
+                if (anim != null) {
+                    anim.cullingMode = AnimatorCullingMode.AlwaysAnimate; // in-game rig never sleeps
+                    anim.updateMode = AnimatorUpdateMode.Normal;
+                }
+                bool isDefault = names[i].ToLower() == defaultChar;
+                rig.Root.SetActive(isDefault);
+                if (isDefault) active = rig.Root;
+                // flip anchor for PlayerAnimBridge: store the base scale so facing flips are sign-safe
+                rig.Root.AddComponent<PlayerAnimBridge>();
+            }
+            return active;
         }
 
         class CharRig {
@@ -225,6 +269,34 @@ namespace LilFoots.EditorTools
             ctrl.layers[0].stateMachine.defaultState = idleState;
             var walkState = ctrl.layers[0].stateMachine.AddState("walk");
             walkState.motion = walkClip;
+            var jumpClip = bake(Jump, 8, "Jump");
+
+            // ---- gameplay state machine (Bude, Sept 20: 'the characters pose still is the t pose
+            // and no animations'): speed/air params drive idle <-> walk <-> jump so the PLAYER
+            // rig is fully animated. Stage rigs keep idle as default (select law) - they simply
+            // never set the params. ----
+            var speedP = new AnimatorControllerParameter { name = "speed", type = AnimatorControllerParameterType.Float, defaultFloat = 0f };
+            ctrl.AddParameter(speedP);
+            var airP = new AnimatorControllerParameter { name = "air", type = AnimatorControllerParameterType.Bool, defaultBool = false };
+            ctrl.AddParameter(airP);
+            var jumpState = ctrl.layers[0].stateMachine.AddState("jump");
+            jumpState.motion = jumpClip;
+            var sm = ctrl.layers[0].stateMachine;
+            // idle <-> walk on speed
+            var i2w = idleState.AddTransition(walkState);
+            i2w.AddCondition(AnimatorConditionMode.Greater, 0.1f, "speed"); i2w.hasExitTime = false; i2w.duration = 0.08f;
+            var w2i = walkState.AddTransition(idleState);
+            w2i.AddCondition(AnimatorConditionMode.Less, 0.1f, "speed"); w2i.hasExitTime = false; w2i.duration = 0.08f;
+            // grounded -> jump on air
+            var i2j = idleState.AddTransition(jumpState);
+            i2j.AddCondition(AnimatorConditionMode.If, 0f, "air"); i2j.hasExitTime = false; i2j.duration = 0.0f;
+            var w2j = walkState.AddTransition(jumpState);
+            w2j.AddCondition(AnimatorConditionMode.If, 0f, "air"); w2j.hasExitTime = false; w2j.duration = 0.0f;
+            // jump -> back down when landed
+            var j2i = jumpState.AddTransition(idleState);
+            j2i.AddCondition(AnimatorConditionMode.IfNot, 0f, "air"); j2i.AddCondition(AnimatorConditionMode.Less, 0.1f, "speed"); j2i.hasExitTime = false; j2i.duration = 0.05f;
+            var j2w = jumpState.AddTransition(walkState);
+            j2w.AddCondition(AnimatorConditionMode.IfNot, 0f, "air"); j2w.AddCondition(AnimatorConditionMode.Greater, 0.1f, "speed"); j2w.hasExitTime = false; j2w.duration = 0.05f;
 
             var animator = charGo.AddComponent<Animator>();
             animator.runtimeAnimatorController = ctrl;

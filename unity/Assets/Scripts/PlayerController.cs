@@ -38,7 +38,7 @@ public class PlayerController : MonoBehaviour {
 
     float coyote, buffer, jumpHold;
     bool jumpWas;
-    int facing = 1;
+    public int facing = 1;
 
     void Awake() { Instance = this; if (!rb) rb = GetComponent<Rigidbody2D>(); rb.gravityScale = gravityScale; }
 

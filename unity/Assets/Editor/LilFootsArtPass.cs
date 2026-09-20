@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEditor.Animations;
 
 namespace LilFoots.EditorTools
 {
@@ -54,6 +55,42 @@ namespace LilFoots.EditorTools
             go.transform.localScale = new Vector3(f, f, 1f);
             go.transform.position = pos;
             return go;
+        }
+
+        /// <summary>Hound run waddle: a native AnimationClip (rock +/-5deg + slight squash,
+        /// 10fps loop) on the HoundArt child, driven by a native AnimatorController on the hound.
+        /// Unity performs the animation; this only authors the assets.</summary>
+        static void HoundWaddle(GameObject hound) {
+            Directory.CreateDirectory("Assets/Animation");
+            var art = hound.transform.Find("HoundArt");
+            if (art == null) return;
+            var clipPath = "Assets/Animation/Hound_Waddle.anim";
+            var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+            if (clip == null) {
+                clip = new AnimationClip { frameRate = 10 };
+                var st = AnimationUtility.GetAnimationClipSettings(clip);
+                st.loopTime = true;
+                AnimationUtility.SetAnimationClipSettings(clip, st);
+                float[] tilt = { 4f, -5f, 4f, -5f };
+                var keys = new Keyframe[tilt.Length + 1];
+                for (int i = 0; i < tilt.Length; i++) keys[i] = new Keyframe(i / 10f, tilt[i]);
+                keys[tilt.Length] = new Keyframe(tilt.Length / 10f, tilt[0]);
+                var b = EditorCurveBinding.FloatCurve("HoundArt", typeof(Transform), "localEulerAnglesRaw.z");
+                AnimationUtility.SetEditorCurve(clip, b, new AnimationCurve(keys));
+                AssetDatabase.CreateAsset(clip, clipPath);
+                clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+            }
+            var ctrlPath = "Assets/Animation/Hound_Controller.controller";
+            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ctrlPath);
+            if (ctrl == null) {
+                ctrl = AnimatorController.CreateAnimatorControllerAtPath(ctrlPath);
+                var st = ctrl.layers[0].stateMachine.AddState("waddle");
+                st.motion = clip;
+                ctrl.layers[0].stateMachine.defaultState = st;
+            }
+            var anim = hound.GetComponent<Animator>();
+            if (anim == null) anim = hound.AddComponent<Animator>();
+            anim.runtimeAnimatorController = ctrl;
         }
 
         /// <summary>Art child on a gameplay object — parent's colliders/rigidbody stay unscaled.</summary>
@@ -220,21 +257,25 @@ namespace LilFoots.EditorTools
                 if (child.name.StartsWith("Hound") && hound != null && L(2)) {
                     bool flip = child.GetComponent<HoundController>().dir < 0;
                     ChildSprite(child.gameObject, "HoundArt", hound, 0.62f, 6, flip, 0.213f);
+                    // WADDLE (Bude, Sept 20: "the enemies are still just stale models"):
+                    // native Animator + clip rocking the art child so the hound visibly RUNS.
+                    try { HoundWaddle(child.gameObject); } catch (System.Exception e) {
+                        Debug.LogWarning("[ArtPass] hound waddle failed: " + e.Message); }
                 }
                 if (child.name.StartsWith("Drone") && drone != null && L(2))
                     ChildSprite(child.gameObject, "DroneArt", drone, 0.55f, 6, false, 0.307f);
             }
 
             // ---- TOKENS (footprint Big Token) + secret heart ----
-            // COINS OFF (Bude, Sept 19 2026: 'remove the coins from it because they dont make
-            // sense in their positions'): token art stays OUT until the trail is re-placed
-            // along the actual platform path (proper curve arcs over jumps, no floaters over
-            // gaps). Token_ logic objects remain so collection still works when art returns.
+            // COINS BACK ON (Bude, Sept 20: "there are no tokens to collect"): the trail was
+            // re-placed along the actual platform path (surface lines + arc bridges over the
+            // gaps - no floaters), so the art goes back on at the map-data positions.
             var token = Art("art_token.png");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Token_")) continue;
                 var oldTa = child.transform.Find("TokenArt");
                 if (oldTa != null) Object.DestroyImmediate(oldTa.gameObject); // no stale floaters
+                if (token != null) ChildSprite(child.gameObject, "TokenArt", token, 0.46f, 5, false, 0.5f);
             }
             var heartArt = Art("art_heart.png");
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
@@ -260,15 +301,25 @@ namespace LilFoots.EditorTools
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----
             var lily = GameObject.Find("Lily");
             if (lily != null && L(2)) {
-                string selChar = LilFoots.CharacterMenuController.Current();
-                string selFile = selChar == "buddy" ? "whole_buddy.png"
-                               : selChar == "emma" ? "whole_emma.png"
-                               : "whole_lily.png";
-                var selArt = Art(selFile);
-                // feetFrac measured off each art's alpha content so the picked Lil Foot STANDS
-                // on the ground line - no more half-buried behind the grass strip.
-                float feetFrac = selChar == "buddy" ? 0.165f : selChar == "emma" ? 0.079f : 0.071f;
-                if (selArt != null) ChildSprite(lily, "PlayerArt", selArt, 0.82f, 10, false, feetFrac);
+                // RIGGED PLAYER (Bude, Sept 20: "the characters pose still is the t pose and no
+                // animations"): all three Lil Foots spawn as FULL NATIVE RIGS (SpriteSkin + bones
+                // + Animator with idle/walk/jump) - the T-pose art never renders bare; the baked
+                // arms-down idle stance is the rest pose, PlayerAnimBridge drives live animation.
+                // Static whole-sprite is only the fallback if rigging fails.
+                bool rigged = false;
+                try {
+                    var activeRig = RigPass.BuildPlayerRigs(lily, LilFoots.CharacterMenuController.Current());
+                    rigged = activeRig != null;
+                } catch (System.Exception e) { Debug.LogWarning("[ArtPass] player rig failed, static art: " + e.Message); }
+                if (!rigged) {
+                    string selChar = LilFoots.CharacterMenuController.Current();
+                    string selFile = selChar == "buddy" ? "whole_buddy.png"
+                                   : selChar == "emma" ? "whole_emma.png"
+                                   : "whole_lily.png";
+                    var selArt = Art(selFile);
+                    float feetFrac = selChar == "buddy" ? 0.165f : selChar == "emma" ? 0.079f : 0.071f;
+                    if (selArt != null) ChildSprite(lily, "PlayerArt", selArt, 0.82f, 10, false, feetFrac);
+                }
             }
 
             // ---- HUD: hearts row + wooden panel token counter (shared builder) ----
@@ -486,7 +537,9 @@ namespace LilFoots.EditorTools
 
             // three cards
             string[] names = { "LILY", "BUDDY", "EMMA" };
-            string[] files = { "whole_lily.png", "whole_buddy.png", "whole_emma.png" };
+            // fallback = RECREATED standing art (Sept 20: whole_* is now the T-pose rig art -
+            // a failed rig stage must never show T-pose on the cards)
+            string[] files = { "recreated_lily.png", "recreated_buddy.png", "recreated_emma.png" };
             var panelArt = Art("art_panel.png");
             for (int i = 0; i < 3; i++) {
                 float x = (i - 1) * 360f;

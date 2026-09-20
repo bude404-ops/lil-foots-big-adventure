@@ -75,7 +75,10 @@ public static class LilFootsLevelBuilder {
         foreach (var ho in hounds.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
             var h = new GameObject("Hound");
             h.transform.SetParent(root.transform);
-            h.transform.position = new Vector3(F(ho["x"])/100f, GY - 0.3f, 0);
+            h.transform.position = new Vector3(F(ho["x"])/100f, GY + 0.35f, 0); // spawn ABOVE the slab
+            // (Sept 20: spawning at GY-0.3 embedded the hound's 0.6-tall box INTO the ground -
+            // depenetration jitter + a "stale model" look. Box half-height is 0.3, so GY+0.35
+            // falls 0.05 to a clean rest.)
             var hc = h.AddComponent<HoundController>();
             hc.minX = F(ho["min"])/100f; hc.maxX = F(ho["max"])/100f;
             hc.dir = (int)F(ho["dir"]); hc.speed = F(ho["spd"])/100f;
