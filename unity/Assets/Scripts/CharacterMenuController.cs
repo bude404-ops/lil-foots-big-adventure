@@ -14,7 +14,33 @@ namespace LilFoots {
             return PlayerPrefs.GetString("selChar", "lily");
         }
 
-        void Start() { Time.timeScale = 0f; }
+        float upFor;
+
+        void Start() { Time.timeScale = 0f; upFor = 0f; }
+
+        void Update() {
+            // MENU UN-STICK (Bude, Sept 20: live build report "the foreground is covering the
+            // middle layer so can't even see the character and the jump button isnt working").
+            // This modal menu is ALSO the thing that freezes the game (timeScale 0 + a 55%-black
+            // backdrop over the gameplay). If uGUI pointer events die on phone WebGL, the pick
+            // never fires and the game strands HERE - which reads exactly like Bude's report.
+            // Two EventSystem-independent exits:
+            //  1) a raw touch/mouse press picks the card under that screen third (the cards are
+            //     laid out as three columns, so thirds match the visible layout)
+            //  2) 12s idle -> auto-start as the current character
+            // Either way the game can never strand on the select screen.
+            upFor += Time.unscaledDeltaTime;
+            if (upFor < 0.6f) return; // ignore the tap that got us here (splash skip)
+            bool pressed = Input.touchCount > 0 || Input.GetMouseButtonDown(0);
+            if (pressed) {
+                float u = 0.5f;
+                if (Input.touchCount > 0) u = Input.GetTouch(0).position.x / (float)Screen.width;
+                else u = Input.mousePosition.x / (float)Screen.width;
+                Select(u < 1f / 3f ? "lily" : u < 2f / 3f ? "buddy" : "emma");
+            } else if (upFor > 12f) {
+                Select(Current()); // idle safety net - the game always starts
+            }
+        }
 
         public void Select(string character) {
             PlayerPrefs.SetString("selChar", character.ToLower());

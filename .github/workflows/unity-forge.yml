@@ -320,6 +320,13 @@ jobs:
           rm -rf site && mkdir -p site
           unzip -q lilfoots-webgl-site.zip -d site
           ls site
+          # ---- WEBGL PHONE INPUT FIX (Sept 20, Bude: jump button dead + stuck on select):
+          # phone browsers claim canvas touches for scroll/pull-to-refresh, which kills
+          # Unity's uGUI pointer events (touch deck AND character select go dead).
+          # Inject CSS touch-action:none + JS preventDefault into the shipped site. ----
+          printf '\n/* WEBGL PHONE INPUT FIX: browser must never claim canvas touches */\nhtml, body { overscroll-behavior: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; margin: 0; padding: 0; }\n#unity-canvas { touch-action: none; }\n' >> site/TemplateData/style.css
+          sed -i 's|loadingBar.style.display = "block";|canvas.addEventListener("touchstart", function(e){ e.preventDefault(); }, { passive: false });\n          canvas.addEventListener("touchmove", function(e){ e.preventDefault(); }, { passive: false });\n\n          loadingBar.style.display = "block";|' site/index.html
+          grep -c "touch-action" site/TemplateData/style.css || true
           cd site
           git init -q
           git config user.name "Lil Foots Forge"

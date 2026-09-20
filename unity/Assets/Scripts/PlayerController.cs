@@ -44,10 +44,28 @@ public class PlayerController : MonoBehaviour {
 
     void Update() {
         // ---- input (keyboard + touch) ----
+        // RAW TOUCH SAFETY NET (Bude, Sept 20: "the jump button isnt working" on the live phone
+        // build): phone browsers can swallow uGUI pointer events (no touch-action on the WebGL
+        // canvas -> the browser eats the gesture), which kills the whole touch deck. Raw
+        // UnityEngine.Touch still arrives, so screen zones keep the game playable no matter
+        // what happens to uGUI: left 28% = LEFT, next 32% = RIGHT, right 40% = JUMP.
+        // The zones only activate while the deck reports NOTHING, so when the buttons work
+        // they stay the only controls - no double input.
+        bool rawJump = false, rawLeft = false, rawRight = false;
+        if (!TouchDeck.LeftHeld && !TouchDeck.RightHeld && !TouchDeck.JumpHeld && Input.touchCount > 0) {
+            for (int i = 0; i < Input.touchCount; i++) {
+                var t = Input.GetTouch(i);
+                if (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled) continue;
+                float u = t.position.x / (float)Screen.width;
+                if (u < 0.28f) rawLeft = true;
+                else if (u < 0.60f) rawRight = true;
+                else rawJump = true;
+            }
+        }
         bool jump = Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.W)
-                    || TouchDeck.JumpHeld;
-        bool left = Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A) || TouchDeck.LeftHeld;
-        bool right = Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D) || TouchDeck.RightHeld;
+                    || TouchDeck.JumpHeld || rawJump;
+        bool left = Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.A) || TouchDeck.LeftHeld || rawLeft;
+        bool right = Input.GetKey(KeyCode.RightArrow) || Input.GetKey(KeyCode.D) || TouchDeck.RightHeld || rawRight;
         if (jump && !jumpWas) buffer = jumpBuffer;
         if (!jump) buffer = 0;
         jumpWas = jump;
