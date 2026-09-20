@@ -211,6 +211,7 @@ public static class MiniJson {
             } }
         if (c=='"') { i++; int st=i; while(!(s[i]=='"'&&s[i-1]!='\\')) i++; var v=s.Substring(st,i-st); i++; return v; }
         if (c=='t'||c=='f') { bool b=s[i]=='t'; while(s[i]!='e'&&s[i]>' ') i++; if(s[i]=='e')i++; return b; }
+        if (c=='n') { i+=4; return null; } // JSON null (map_m1: drone/secretHeart are null)
         int ns=i; while (i<s.Length && (char.IsDigit(s[i])||s[i]=='-'||s[i]=='+'||s[i]=='.'||s[i]=='e'||s[i]=='E')) i++;
         return double.Parse(s.Substring(ns,i-ns), System.Globalization.CultureInfo.InvariantCulture);
     }
