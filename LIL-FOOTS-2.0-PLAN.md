@@ -72,7 +72,7 @@ Arrive -> learn the level's mechanic in a safe space -> run the course (tokens, 
 
 ### The Mario-inspired structure, ours (World 1: Pacific Northwest, 6 levels)
 - 1-1 Meadow Run — pure teach: run/jump/tokens/one hound, first secret, flag+portal
-- 1-2 Fern Gully — verticality: climbing branches, trail cams introduced (stealth-lite)
+- 1-2 Fern Hollow — verticality: climbing branches, trail cams introduced (stealth-lite)
 - 1-3 Stream Crossing — moving platforms + water hazards, drones introduced
 - 1-4 Old Growth — darkness pockets + firefly lanterns (light mechanic), hound packs
 - 1-5 The Ravine — trap doctrine showcase (bear pit, log rollers, deadfall), momentum level
@@ -104,3 +104,12 @@ Arrive -> learn the level's mechanic in a safe space -> run the course (tokens, 
 
 ## THE ONE-LINE SUMMARY
 Frozen Mario-method level design, frozen feel-perfect core, Bude's lore and art, three automated quality gates — no build reaches Bude that a machine hasn't played first.
+
+## REGIONAL COURSE NAMING DOCTRINE (Bude, Sept 20 2026: "make the names regional based for the map layouts so they all flow properly")
+World format: `Region # — Name`. Every course is named after that region's own terrain, using ONLY that biome's vocabulary — course lists read like a trail map of that region; regions read like chapters.
+
+- REGION 1 — PACIFIC NORTHWEST (Sasquatch): 1-1 Mossveil Meadow · 1-2 Fern Hollow · 1-3 Cedar Run · 1-4 Old Growth Deep (Wendigo boss course)
+- REGION 2 — HIMALAYAS (Yeti): snowfield / glacier names
+- REGION 3 — OUTBACK (Yowie): bush / red-desert names
+- REGION 4 — EVERGLADES (Skunk Ape): swamp names
+- REGION 5 — AMAZON (Mapinguari): jungle names
