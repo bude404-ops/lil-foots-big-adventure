@@ -142,14 +142,29 @@ namespace LilFoots.EditorTools
             if (cam != null && L(1)) {
                 var skinSpr = Art("art_worldskin_ref.png");
                 if (skinSpr != null) {
-                    float skinH = 7.5f;   // exactly the ortho frame height
-                    float skinW = 8.1f;   // two mirrored tiles cover the 16.2u view width
-                    for (int i = 0; i < 2; i++) {
+                    // ---- FLOOR-LINE PIN (Bude, Sept 20: "a big issue is the layers the character
+                    // is moving on is wrong"): the painting was pinned to fill the frame, which put
+                    // its near-black forest-floor band at the bottom ~9% of the screen while the
+                    // character walks the GY line at ~39% - he was strolling through the painting's
+                    // mid-forest instead of ON its floor. The painting now rides so its floor band
+                    // (transition measured at 0.905 from the art top) sits EXACTLY at the walking
+                    // line: the world above the character is his reference composition, floor edge
+                    // under his feet, grass strip + earth fill below (both render over the band).
+                    // Still camera-pinned (static vista law), still mirror-tiled, still the exact
+                    // reference art - the top of the painting (pale sky wash) simply crops past the
+                    // frame. Ride height = CameraFollow.minY 7.0 (M1 flat floor keeps the camera at
+                    // its clamp; the local offset is baked for that height). ----
+                    float skinH = 7.5f;                    // full painting height (sky crops above the frame)
+                    float floorFracFromTop = 0.905f;       // measured off art_worldskin_ref: band transition
+                    float camRideY = 7.0f;                 // CameraFollow.minY - approved gameplay ride height
+                    float centerWorldY = GameManager.GroundY + (0.5f - (1f - floorFracFromTop)) * skinH;
+                    float skinW = 8.1f;                    // mirrored tiles, 4 wide for ultrawide safety
+                    for (int i = 0; i < 4; i++) {
                         var sk = SpriteGo("WorldSkin", skinSpr, Vector3.zero, skinW, -100, cam.transform);
                         float sy = skinH / skinSpr.bounds.size.y;
                         sk.transform.localScale = new Vector3(sk.transform.localScale.x, sy, 1f);
-                        sk.transform.localPosition = new Vector3(-skinW / 2f + i * skinW, 0f, 10f);
-                        if (i == 1) sk.GetComponent<SpriteRenderer>().flipX = true;
+                        sk.transform.localPosition = new Vector3(-12.15f + i * skinW, centerWorldY - camRideY, 10f);
+                        if (i % 2 == 1) sk.GetComponent<SpriteRenderer>().flipX = true;
                     }
                 } else {
                     Debug.LogError("[ArtPass] art_worldskin_ref.png missing - copy Bude's reference into Assets/Art");
