@@ -129,64 +129,30 @@ namespace LilFoots.EditorTools
             bool L(int n) => LN >= n;
             Debug.Log("[ArtPass] LILFOOTS_LAYERS=" + LN + " (layer-by-layer review mode)");
 
-            // ---- WORLD BACKDROP = BUDE'S EXACT REFERENCE ART (Sept 19 2026, imgur JAnDjxQ:
-            // "I'll send a file that is suppose to be the reference art for the world skin").
-            // THE REFERENCE IS THE WORLD SKIN: his 1024x1024 painting (pale sage sky wash ->
-            // deepening forest -> near-black floor edge, one continuous gradient, no hard seams)
-            // is used AS the backdrop, pixel for pixel - the map looks like the reference by
-            // construction. Coverage: two mirrored tiles, each 8.1u wide x 7.5u tall (frame
-            // height), seamless by mirror construction, <10% stretch. Camera-pinned (static
-            // vista law). Mid band + foreground depth come from the painting itself. ----
+            // ---- LAYER 1: NEW SKY BACKDROP (BudE, Sept 20: 'why are you using that old world
+            // skin art I thought we were creating new ones with the new building system') - the
+            // reference-painting world skin and the whole old stamp stack are RETIRED. Fresh
+            // world skin art built for the block system: one clean overcast sky plate with a
+            // distant ridge wash, camera-pinned (static backdrop law - never scrolls), mirrored
+            // x2 so any aspect stays covered. Minimal layers per his verdict: sky + gameplay
+            // plane. No middle-ground bands, no foreground props over the playfield. ----
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
             if (cam != null && L(1)) {
-                var skinSpr = Art("art_worldskin_ref.png");
-                if (skinSpr != null) {
-                    // ---- FLOOR-LINE PIN (Bude, Sept 20: "a big issue is the layers the character
-                    // is moving on is wrong"): the painting was pinned to fill the frame, which put
-                    // its near-black forest-floor band at the bottom ~9% of the screen while the
-                    // character walks the GY line at ~39% - he was strolling through the painting's
-                    // mid-forest instead of ON its floor. The painting now rides so its floor band
-                    // (transition measured at 0.905 from the art top) sits EXACTLY at the walking
-                    // line: the world above the character is his reference composition, floor edge
-                    // under his feet, grass strip + earth fill below (both render over the band).
-                    // Still camera-pinned (static vista law), still mirror-tiled, still the exact
-                    // reference art - the top of the painting (pale sky wash) simply crops past the
-                    // frame. Ride height = CameraFollow.minY 7.0 (M1 flat floor keeps the camera at
-                    // its clamp; the local offset is baked for that height). ----
-                    float skinH = 7.5f;                    // full painting height (sky crops above the frame)
-                    float floorFracFromTop = 0.905f;       // measured off art_worldskin_ref: band transition
-                    float camRideY = 7.0f;                 // CameraFollow.minY - approved gameplay ride height
-                    float centerWorldY = GameManager.GroundY + (0.5f - (1f - floorFracFromTop)) * skinH;
-                    float skinW = 8.1f;                    // mirrored tiles, 4 wide for ultrawide safety
-                    for (int i = 0; i < 4; i++) {
-                        var sk = SpriteGo("WorldSkin", skinSpr, Vector3.zero, skinW, -100, cam.transform);
-                        float sy = skinH / skinSpr.bounds.size.y;
+                var skySpr = Art("art_sky_new.png");
+                if (skySpr != null) {
+                    float skyH = 12f;                 // frame is 7.5 tall - generous bleed top and bottom
+                    float skyW = 12f;                  // square art, mirrored x2 = 24 wide for ultrawide
+                    float sy = skyH / skySpr.bounds.size.y;
+                    for (int i = 0; i < 2; i++) {
+                        var sk = SpriteGo("SkyBackdrop", skySpr, Vector3.zero, skyW, -100, cam.transform);
                         sk.transform.localScale = new Vector3(sk.transform.localScale.x, sy, 1f);
-                        sk.transform.localPosition = new Vector3(-12.15f + i * skinW, centerWorldY - camRideY, 10f);
+                        sk.transform.localPosition = new Vector3(-6f + i * skyW, 1.0f, 10f);
                         if (i % 2 == 1) sk.GetComponent<SpriteRenderer>().flipX = true;
                     }
                 } else {
-                    Debug.LogError("[ArtPass] art_worldskin_ref.png missing - copy Bude's reference into Assets/Art");
+                    Debug.LogError("[ArtPass] art_sky_new.png missing - fresh world skin art required");
                 }
-            }
-
-            // ---- LAYER 1 VISTA STACK (BudE, Sept 20 Paper Mario directive: 'the world maps
-            // [get] the Paper Mario 2.5D treatment - layered paper dioramas with parallax
-            // backdrop layers'). The reference painting stays the static furthest wash
-            // (reference law + static-backdrop law, camera-pinned, never scrolls). In front
-            // of it three paper-cutout depth bands sweep at increasing rates: far ridges,
-            // snow-capped volcano band, fir wall — the diorama depth cue, from the re-skinned
-            // vista-family art (art_ridges / art_vista / art_firwall, same palette as the
-            // reference painting). Bands sit behind the gameplay plane (orders -90/-80/-70,
-            // vs earth -2 / grass -1) and stream water (-60) still renders in front of them. ----
-            if (cam != null && L(1)) {
-                var metaD = data["meta"] as Dictionary<string, object>;
-                float lvlW = F(metaD["width"]) / 100f;
-                float lvlCx = lvlW / 2f;
-                Band(map.transform, "art_ridges.png",   "Vista_Ridges",  3.4f, GY + 0.6f, lvlCx, lvlW * 3f, -90, 0.15f);
-                Band(map.transform, "art_vista.png",    "Vista_Volcano", 4.6f, GY + 0.8f, lvlCx, lvlW * 3f, -80, 0.30f);
-                Band(map.transform, "art_firwall.png",  "Vista_FirWall", 5.0f, GY - 0.3f, lvlCx, lvlW * 3f, -70, 0.55f);
             }
 
             // MIST + WASH REMOVED (Bude, Sept 19 2026: 'remove the clouds and mist that layer 2
@@ -229,8 +195,8 @@ namespace LilFoots.EditorTools
             }
 
             // ---- PLATFORM SKINS: real earth body + ground strip top (procedural slabs retired) ----
-            var earth = Art("art_earth.png");
-            var strip = Art("art_ground_strip.png");
+            var earth = Art("art_earth_new.png"); // NEW world skin (BudE: fresh art with the new building system)
+            var strip = Art("art_grass_new.png"); // NEW world skin (BudE: fresh art with the new building system)
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Plat_")) continue;
                 var bc = child.GetComponent<BoxCollider2D>();
@@ -258,29 +224,6 @@ namespace LilFoots.EditorTools
                     }
                 }
 
-                // ---- EDGE BREAKERS (Bude Sept 19 diagnosis: no ruler-straight layer seams).
-                // Tufts rise through the grass line and moss fringe hangs under the lip so
-                // the ground-to-forest seam goes organic, like the approved concept plate. ----
-                var tufts = Art("art_tufts.png");
-                if (tufts != null && L(2)) {
-                    float tw2 = tufts.bounds.size.x * (0.30f / tufts.bounds.size.y);
-                    int ti = 0;
-                    for (float x = child.position.x - w / 2f + 0.4f; x < child.position.x + w / 2f; x += tw2 * 0.78f) {
-                        var tt = SpriteGo("Tuft", tufts, new Vector3(x, top + 0.17f, 0), tw2, 3, child);
-                        if (ti % 2 == 1) tt.GetComponent<SpriteRenderer>().flipX = true;
-                        ti++;
-                    }
-                }
-                var fringe = Art("art_fringe.png");
-                if (fringe != null && L(2)) {
-                    float fw3 = fringe.bounds.size.x * (0.42f / fringe.bounds.size.y);
-                    int fi2 = 0;
-                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += fw3 * 0.82f) {
-                        var ft = SpriteGo("LipFringe", fringe, new Vector3(x, top - 0.73f, 0), fw3, 4, child);
-                        if (fi2 % 2 == 1) ft.GetComponent<SpriteRenderer>().flipX = true;
-                        fi2++;
-                    }
-                }
             }
 
             // ---- CAM TREES + trail cam art ----
@@ -389,29 +332,6 @@ namespace LilFoots.EditorTools
         /// statics via TouchDeckButton. Without this the game only answers a keyboard — unplayable
         /// on Bude's phone and mouse-only on the web preview.
         /// </summary>
-        /// <summary>Paper-diorama depth band: a world-space parent carrying a slow ParallaxProp
-        /// (factor &lt; 1 sweeps slower than the gameplay plane = reads as distant), children tiled
-        /// mirror-flip so no seam shows. totalW is 3x the level width so the parallax shift can
-        /// never expose a band edge inside the camera frame.</summary>
-        static void Band(Transform parent, string file, string goName,
-                         float bandH, float bottomY, float cx, float totalW, int order, float parallax) {
-            var spr = Art(file);
-            if (spr == null) { Debug.LogWarning("[ArtPass] vista band missing art: " + file); return; }
-            var bandGo = new GameObject(goName);
-            bandGo.transform.SetParent(parent);
-            bandGo.transform.position = new Vector3(cx, 0f, 0f);
-            float tileW = bandH * (spr.bounds.size.x / spr.bounds.size.y);
-            int n = Mathf.Max(2, Mathf.CeilToInt(totalW / tileW));
-            for (int i = 0; i < n; i++) {
-                var t = SpriteGo(goName + "Tile", spr,
-                    new Vector3(-n * tileW / 2f + (i + 0.5f) * tileW, bottomY + bandH / 2f, 0f),
-                    tileW, order, bandGo.transform);
-                if (i % 2 == 1) t.GetComponent<SpriteRenderer>().flipX = true;
-            }
-            var pp = bandGo.AddComponent<ParallaxProp>(); // factor < 1 = distant depth band
-            pp.factor = parallax;
-        }
-
         static void BuildTouchDeck() {
             // EventSystem — uGUI pointer events need it
             var esGo = new GameObject("EventSystem");

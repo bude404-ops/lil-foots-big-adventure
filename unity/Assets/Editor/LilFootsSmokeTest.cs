@@ -156,10 +156,6 @@ public static class LilFootsSmokeTest {
           "course: gate at the terminus (x=" + (gate != null ? gate.transform.position.x.ToString("F1") : "none") + ")");
         C(GameObject.Find("FlagGateArt") != null, "course: flag art at the finish");
         C(GameObject.Find("PortalArt") != null, "course: portal art at the finish");
-        if (!m1) {
-            var hounds = UnityEngine.Object.FindObjectsOfType<LilFoots.HoundController>();
-            C(hounds.Length >= 1, "course: hounds present (" + hounds.Length + ")");
-        }
 
         // 6) REPORT
         bool allPass = fail.Count == 0;

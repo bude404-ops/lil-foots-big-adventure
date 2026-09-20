@@ -236,7 +236,7 @@ def main():
                      "jumpHold": 0.28, "jumpHoldGravityFactor": 0.9,
                      "coyote": 0.12, "buffer": 0.14},
         "plats": plats,
-        "hounds": place_hounds(recipe, plats),
+        "hounds": [],
         "cams": [],
         "drone": None,
         "checkpoints": sorted(set(checkpoints)),
