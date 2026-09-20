@@ -372,11 +372,12 @@ namespace LilFoots.EditorTools
             canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
 
             var btnL = Art("art_btnL.png");
+            var btnR = Art("art_btnR.png"); // dedicated right-button art (BudE, Sept 20: 'missing right button in the art') - the runtime localScale mirror never showed on device
             var btnJ = Art("art_btnJ.png");
-            if (btnL != null && btnJ != null) {
+            if (btnL != null && btnR != null && btnJ != null) {
                 MakeDeckButton(canvasGo.transform, "BtnLeft",  btnL, false, TouchDeckButton.Kind.Left,
                     new Vector2(120f, 90f), new Vector2(150f, 150f));
-                MakeDeckButton(canvasGo.transform, "BtnRight", btnL, true,  TouchDeckButton.Kind.Right,
+                MakeDeckButton(canvasGo.transform, "BtnRight", btnR, false, TouchDeckButton.Kind.Right,
                     new Vector2(300f, 90f), new Vector2(150f, 150f));
                 // JUMP bigger + pulled inward (Sept 19: "jumping doesn't work" on the phone) -
                 // taps at the extreme screen edge can land on browser chrome, not the canvas.
