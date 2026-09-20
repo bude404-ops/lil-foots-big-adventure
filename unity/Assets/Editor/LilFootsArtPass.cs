@@ -171,6 +171,24 @@ namespace LilFoots.EditorTools
                 }
             }
 
+            // ---- LAYER 1 VISTA STACK (BudE, Sept 20 Paper Mario directive: 'the world maps
+            // [get] the Paper Mario 2.5D treatment - layered paper dioramas with parallax
+            // backdrop layers'). The reference painting stays the static furthest wash
+            // (reference law + static-backdrop law, camera-pinned, never scrolls). In front
+            // of it three paper-cutout depth bands sweep at increasing rates: far ridges,
+            // snow-capped volcano band, fir wall — the diorama depth cue, from the re-skinned
+            // vista-family art (art_ridges / art_vista / art_firwall, same palette as the
+            // reference painting). Bands sit behind the gameplay plane (orders -90/-80/-70,
+            // vs earth -2 / grass -1) and stream water (-60) still renders in front of them. ----
+            if (cam != null && L(1)) {
+                var metaD = data["meta"] as Dictionary<string, object>;
+                float lvlW = F(metaD["width"]) / 100f;
+                float lvlCx = lvlW / 2f;
+                Band(map.transform, "art_ridges.png",   "Vista_Ridges",  3.4f, GY + 0.6f, lvlCx, lvlW * 3f, -90, 0.15f);
+                Band(map.transform, "art_vista.png",    "Vista_Volcano", 4.6f, GY + 0.8f, lvlCx, lvlW * 3f, -80, 0.30f);
+                Band(map.transform, "art_firwall.png",  "Vista_FirWall", 5.0f, GY - 0.3f, lvlCx, lvlW * 3f, -70, 0.55f);
+            }
+
             // MIST + WASH REMOVED (Bude, Sept 19 2026: 'remove the clouds and mist that layer 2
             // adds'). Layer 2 no longer spawns mist banks or the below-ground teal wash - the
             // vista depth base carries the below-ground atmosphere instead.
@@ -371,6 +389,29 @@ namespace LilFoots.EditorTools
         /// statics via TouchDeckButton. Without this the game only answers a keyboard — unplayable
         /// on Bude's phone and mouse-only on the web preview.
         /// </summary>
+        /// <summary>Paper-diorama depth band: a world-space parent carrying a slow ParallaxProp
+        /// (factor &lt; 1 sweeps slower than the gameplay plane = reads as distant), children tiled
+        /// mirror-flip so no seam shows. totalW is 3x the level width so the parallax shift can
+        /// never expose a band edge inside the camera frame.</summary>
+        static void Band(Transform parent, string file, string goName,
+                         float bandH, float bottomY, float cx, float totalW, int order, float parallax) {
+            var spr = Art(file);
+            if (spr == null) { Debug.LogWarning("[ArtPass] vista band missing art: " + file); return; }
+            var bandGo = new GameObject(goName);
+            bandGo.transform.SetParent(parent);
+            bandGo.transform.position = new Vector3(cx, 0f, 0f);
+            float tileW = bandH * (spr.bounds.size.x / spr.bounds.size.y);
+            int n = Mathf.Max(2, Mathf.CeilToInt(totalW / tileW));
+            for (int i = 0; i < n; i++) {
+                var t = SpriteGo(goName + "Tile", spr,
+                    new Vector3(-n * tileW / 2f + (i + 0.5f) * tileW, bottomY + bandH / 2f, 0f),
+                    tileW, order, bandGo.transform);
+                if (i % 2 == 1) t.GetComponent<SpriteRenderer>().flipX = true;
+            }
+            var pp = bandGo.AddComponent<ParallaxProp>(); // factor < 1 = distant depth band
+            pp.factor = parallax;
+        }
+
         static void BuildTouchDeck() {
             // EventSystem — uGUI pointer events need it
             var esGo = new GameObject("EventSystem");

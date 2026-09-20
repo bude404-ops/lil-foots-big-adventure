@@ -41,10 +41,20 @@ public static class LilFootsSmokeTest {
         var es = UnityEngine.Object.FindObjectsOfType<EventSystem>();
         C(es.Length == 1, "input: exactly ONE EventSystem (found " + es.Length + ")");
 
+        bool m1 = (System.Environment.GetEnvironmentVariable("MAP_DATA") == "map_m1.json") || sceneName.StartsWith("MapM1");
         var cams = UnityEngine.Object.FindObjectsOfType<Camera>();
         var mains = cams.Where(c => c.CompareTag("MainCamera")).ToList();
         C(mains.Count == 1, "camera: exactly one MainCamera (found " + mains.Count + ")");
         C(mains.Count == 1 && mains[0].GetComponent<LilFoots.CameraFollow>() != null, "camera: CameraFollow attached");
+        // CAMERA BOUNDS vs COURSE (BudE, Sept 20: the old M1 maxX=93 clamped the 225u course
+        // and the player walked off screen at 40% of the level. The clamp must reach the gate.)
+        if (!m1) {
+            var cf = mains.Count == 1 ? mains[0].GetComponent<LilFoots.CameraFollow>() : null;
+            var gateGo = GameObject.Find("Gate");
+            C(cf != null && gateGo != null && cf.maxX >= gateGo.transform.position.x - 7.5f,
+              "camera: bounds reach the gate (maxX=" + (cf != null ? cf.maxX : 0).ToString("0") +
+              ", gate=" + (gateGo != null ? gateGo.transform.position.x : 0).ToString("0") + ")");
+        }
 
         // 2) PLAYER + FEET (Sept 19: "the terrain hides the character")
         // PLAYER RESOLUTION LAW (run 35469967904 red): the idle-rig stage builds clones that
@@ -123,7 +133,6 @@ public static class LilFootsSmokeTest {
         // 5) COURSE CONTENT — the shipped loop must be present.
         // v2 M1 (RESTART-V2.md): the clean-floor milestone ships character + run/jump/touch +
         // camera + meadow + flag ONLY. Course content checks swap to scope-purity checks.
-        bool m1 = (System.Environment.GetEnvironmentVariable("MAP_DATA") == "map_m1.json") || sceneName.StartsWith("MapM1");
         var tokens = UnityEngine.Object.FindObjectsOfType<LilFoots.TokenCollectible>();
         // Sept 20: 3-tier doctrine (gate needs 15) - 30+ tokens means the course carries
             // double the gate cost across easy/exploration/difficult tiers. The old >=60 was

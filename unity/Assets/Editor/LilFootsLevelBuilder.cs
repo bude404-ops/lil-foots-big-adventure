@@ -156,6 +156,17 @@ public static class LilFootsLevelBuilder {
         var camc = cam.AddComponent<Camera>(); camc.orthographic = true; camc.orthographicSize = 3.75f;
         camc.backgroundColor = new Color(0.10f, 0.20f, 0.14f);
         var cf = cam.AddComponent<CameraFollow>(); cf.target = player.transform;
+        // CAMERA BOUNDS FROM MAP DATA (BudE, Sept 20: 'why is it the same shitty map design' —
+        // CameraFollow's defaults still carried the old M1 bounds (maxX 93) while the composed
+        // course runs 225u: the player walked OFF SCREEN at 40% and never saw the rest of the
+        // level. Bounds now derive from the map width; the smoke gate enforces them.
+        float viewHalfW = camc.orthographicSize * (16f / 9f);
+        var metaD = data["meta"] as System.Collections.Generic.Dictionary<string, object>;
+        cf.minX = viewHalfW;
+        if (metaD != null && metaD.ContainsKey("width")) {
+            float lvlW = F(metaD["width"]) / 100f;
+            cf.maxX = Mathf.Max(cf.minX + 1f, lvlW - viewHalfW);
+        }
         cam.tag = "MainCamera";
         var gm = new GameObject("GameManager").AddComponent<GameManager>();
 
