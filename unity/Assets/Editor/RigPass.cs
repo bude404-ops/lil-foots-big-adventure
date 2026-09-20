@@ -116,13 +116,47 @@ namespace LilFoots.EditorTools
             {"footR",     new Vector2(0.72f, 0.08f)},
         };
 
+        // BUDDY + EMMA STANCES (Sept 20 fix): their original art hangs the arms at the sides
+        // (measured off the restored exact-ref sprites) - Lily keeps her spread stance.
+        static readonly Dictionary<string, Vector2> BuddyStance = new Dictionary<string, Vector2> {
+            {"hip",       new Vector2(0.50f, 0.50f)},
+            {"neck",      new Vector2(0.50f, 0.78f)},
+            {"head",      new Vector2(0.50f, 0.96f)},
+            {"shoulderL", new Vector2(0.40f, 0.70f)},
+            {"handL",     new Vector2(0.14f, 0.42f)},
+            {"shoulderR", new Vector2(0.60f, 0.70f)},
+            {"handR",     new Vector2(0.87f, 0.42f)},
+            {"legL",      new Vector2(0.45f, 0.50f)},
+            {"footL",     new Vector2(0.28f, 0.02f)},
+            {"legR",      new Vector2(0.55f, 0.50f)},
+            {"footR",     new Vector2(0.72f, 0.02f)},
+        };
+        static readonly Dictionary<string, Vector2> EmmaStance = new Dictionary<string, Vector2> {
+            {"hip",       new Vector2(0.50f, 0.50f)},
+            {"neck",      new Vector2(0.50f, 0.78f)},
+            {"head",      new Vector2(0.50f, 0.96f)},
+            {"shoulderL", new Vector2(0.40f, 0.70f)},
+            {"handL",     new Vector2(0.10f, 0.42f)},
+            {"shoulderR", new Vector2(0.60f, 0.70f)},
+            {"handR",     new Vector2(0.90f, 0.42f)},
+            {"legL",      new Vector2(0.45f, 0.50f)},
+            {"footL",     new Vector2(0.30f, 0.02f)},
+            {"legR",      new Vector2(0.55f, 0.50f)},
+            {"footR",     new Vector2(0.70f, 0.02f)},
+        };
+        public static Dictionary<string, Vector2> StanceFor(string name) {
+            if (name.ToLower().Contains("buddy")) return BuddyStance;
+            if (name.ToLower().Contains("emma")) return EmmaStance;
+            return SelectStance;
+        }
+
         /// <summary>Character-select stage rig (Bude, Sept 19: "I thought we were going to use
         /// their idle pose in the character select"). Builds one fully rigged character -
         /// SpriteSkin + Animator with the IDLE clip as default state (the select law) - posed in
         /// the natural select stance. Returns the root GameObject; parent/cleanup is the caller's.
         /// World height 2.4 so three of them fit one shared stage camera.</summary>
         public static GameObject BuildStageRig(string name, string artPath, Vector3 pos) {
-            var rig = BuildRig(name, artPath, 2.4f, pos, SelectStance);
+            var rig = BuildRig(name, artPath, 2.4f, pos, StanceFor(name));
             // Bake the idle clip's deepest-breath pose onto the bones at BUILD time (deterministic,
             // clip data drives it) so the saved scene carries the arms-down idle stance - the
             // runtime Animator then owns the live breathing loop from the same clip.
@@ -151,7 +185,7 @@ namespace LilFoots.EditorTools
             float[] feetFrac = { 0.071f, 0.001f, 0.002f };  // measured off Bude's original art (arms-down)
             GameObject active = null;
             for (int i = 0; i < 3; i++) {
-                var rig = BuildRig(names[i] + "Rig", "Assets/Art/" + files[i], 0.82f, player.transform.position, SelectStance);
+                var rig = BuildRig(names[i] + "Rig", "Assets/Art/" + files[i], 0.82f, player.transform.position, StanceFor(names[i]));
                 rig.Root.transform.SetParent(player.transform, false);
                 // feet-anchor: sprite center sits (0.5 - feetFrac) * worldH above the player origin
                 float off = (0.5f - feetFrac[i]) * 0.82f;
@@ -382,14 +416,19 @@ namespace LilFoots.EditorTools
             Directory.CreateDirectory(outDir);
 
             // rig all three approved T-poses with the NATIVE stack (Unity 2D Animation + Animator)
+            // Sept 20 FIX: QC binds the SAME art + stances the game binds (whole_* restored
+            // exact-ref art + per-char stances). The old QC bound the T-pose measuring files,
+            // where the +66deg T-swing READ as arms-down - so a curve calibrated for the wrong
+            // bind art passed QC while the live game flung the characters' real arms out
+            // horizontal ("the t pose is whats showing" - Bude, Sept 20).
             var chars = new[] {
-                new { name = "Lily",  file = "lily-rig-ready-v1-cut.png",  x = -3.2f },
-                new { name = "Buddy", file = "buddy-rig-ready-v1-cut.png", x =  0.0f },
-                new { name = "Emma",  file = "emma-rig-ready-v1-cut.png",  x =  3.2f },
+                new { name = "Lily",  file = "whole_lily.png",  x = -3.2f },
+                new { name = "Buddy", file = "whole_buddy.png", x =  0.0f },
+                new { name = "Emma",  file = "whole_emma.png",  x =  3.2f },
             };
             var rigs = new List<CharRig>();
             foreach (var c in chars)
-                rigs.Add(BuildRig(c.name, "Assets/Art/Characters/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f)));
+                rigs.Add(BuildRig(c.name, "Assets/Art/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f), StanceFor(c.name)));
 
             // ---- QC 1: bind pose (native SpriteSkin, rest pose) ----
             cam.Render();

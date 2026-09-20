@@ -122,7 +122,10 @@ public static class LilFootsSmokeTest {
 
         // 5) COURSE CONTENT — the shipped loop must be present
         var tokens = UnityEngine.Object.FindObjectsOfType<LilFoots.TokenCollectible>();
-        C(tokens.Length >= 60, "course: >=60 Big Tokens (found " + tokens.Length + ")");
+        // Sept 20: 3-tier doctrine (gate needs 15) - 30+ tokens means the course carries
+            // double the gate cost across easy/exploration/difficult tiers. The old >=60 was
+            // calibrated to the retired 73-token map, not the redesigned courses.
+            C(tokens.Length >= 30, "course: >=30 Big Tokens across tiers (found " + tokens.Length + ")");
         var cps = UnityEngine.Object.FindObjectsOfType<LilFoots.CheckpointController>();
         C(cps.Length >= 4, "course: >=4 checkpoints (found " + cps.Length + ")");
         var gate = GameObject.Find("Gate");
