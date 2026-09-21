@@ -138,7 +138,13 @@ public static class LilFootsLevelBuilder {
         // ---- player ----
         var player = new GameObject("Lily");
         player.transform.SetParent(root.transform);
-        player.transform.position = new Vector3(1.1f, GY + 0.1f, 0);
+        // SPAWN AT THE CAMERA CLAMP LINE (BudE, Sept 20: 'the beginning camera isnt locked onto
+        // the character'): the camera clamps at x=viewHalfW (~6.67) but the old spawn x=1.1 left
+        // the character 5.5u left of center on frame 1. Spawning AT the clamp line minus the
+        // lookAhead bias puts the character dead-center on frame 1; walking LEFT slides the
+        // character toward the screen edge (classic Mario level-start), walking RIGHT pans.
+        float viewHalfW0 = 3.75f * (16f / 9f);
+        player.transform.position = new Vector3(viewHalfW0 - 0.15f, GY + 0.1f, 0);
         var pc = player.AddComponent<PlayerController>();
         var pcol = player.AddComponent<CapsuleCollider2D>(); pcol.size = new Vector2(0.44f, 0.7f); pcol.offset = new Vector2(0, 0.35f);
         var prb = player.AddComponent<Rigidbody2D>();
