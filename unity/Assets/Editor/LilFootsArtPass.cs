@@ -172,6 +172,39 @@ namespace LilFoots.EditorTools
                 }
             }
 
+            // ---- LAYER 1.5: MIDDLE GROUND (BudE, Sept 21 render verdict: 'the landscape
+            // isn't meshing and flowing together... its all just floating in the sky instead
+            // of a proper middle ground background and foreground'): misty PNW ridgeline band
+            // between the sky and the gameplay plane, drifting at half camera speed. This
+            // supersedes the Sept 20 'no middle-ground bands' minimal-layer rule as stated -
+            // the stripped world read as floating blocks; depth comes back as ONE continuous
+            // lore-native band (not the old stamp clutter). Art: art_midground.png, mirrored
+            // double = seamless 16u tile. ----
+            var midArt = Art("art_midground.png");
+            if (midArt != null && L(1)) {
+                int mt = 0;
+                for (float bx = -16f; bx <= 360f; bx += 16f, mt++) {
+                    var mg = SpriteGo("Midground_" + mt, midArt, new Vector3(bx, 5.5f, 0), 16f, -70, map.transform);
+                    if (mt % 2 == 1) mg.GetComponent<SpriteRenderer>().flipX = true;
+                    mg.AddComponent<ParallaxProp>().factor = 0.5f;
+                }
+            }
+
+            // ---- LAYER 4: FOREGROUND (same verdict): near-black forest floor fringe along
+            // the bottom edge, sweeping 1.3x so the near-field reads as close. Band top sits
+            // below the streams (y=4.5) so it frames the bottom of the frame without covering
+            // standing gameplay. ----
+            var fgArt = Art("art_foreground.png");
+            if (fgArt != null && L(4)) {
+                int ft = 0;
+                for (float bx = -16f; bx <= 200f; bx += 16f, ft++) {
+                    var fg = SpriteGo("Foreground_" + ft, fgArt, new Vector3(bx, 3.0f, 0), 16f, 30, map.transform);
+                    fg.transform.localScale = new Vector3(fg.transform.localScale.x, fg.transform.localScale.x * 3f / 8f, 1f);
+                    if (ft % 2 == 1) fg.GetComponent<SpriteRenderer>().flipX = true;
+                    fg.AddComponent<ParallaxProp>().factor = 1.3f;
+                }
+            }
+
             // MIST + WASH REMOVED (Bude, Sept 19 2026: 'remove the clouds and mist that layer 2
             // adds'). Layer 2 no longer spawns mist banks or the below-ground teal wash - the
             // vista depth base carries the below-ground atmosphere instead.
@@ -315,9 +348,9 @@ namespace LilFoots.EditorTools
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2)) {
                 var fgArt = Art("art_flaggate.png");
-                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.1f, 0), 2.2f, 4, map.transform); // gate center = top(8.2) + half art(1.1)
+                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform); // surface=GY; gate art 2.2 tall -> center GY+1.2 puts its base on the grass
                 var portal = Art("art_flagportal.png");
-                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 3.6f, 0), 3.2f, 3, map.transform); // portal center = top(8.2) + half art(1.6)
+                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0), 3.2f, 3, map.transform); // surface=GY; portal 3.2 tall -> base exactly on the grass
             }
 
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----

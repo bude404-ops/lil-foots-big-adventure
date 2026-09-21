@@ -63,7 +63,7 @@ public static class LilFootsLevelBuilder {
         for (int i = 0; i < cpList.Count; i++) {
             var cp = new GameObject("Checkpoint_" + i);
             cp.transform.SetParent(root.transform);
-            cp.transform.position = new Vector3(cpList[i]/100f, GY + 2f, 0); // GROUND TOP: plats are 4u tall, tops at GY+2 (BudE 2:11 AM ET: totems were buried)
+            cp.transform.position = new Vector3(cpList[i]/100f, GY + 0.85f, 0); // SURFACE = GY (canvas-y flip: map y=620 -> surface 6.2). Totem art is center-pivoted 1.7u tall, so its center sits surface+0.85 to STAND on the grass (was half-sunk at GY). Trigger still overlaps the standing player.
             var col = cp.AddComponent<BoxCollider2D>(); col.isTrigger = true;
             cp.AddComponent<CheckpointController>().index = i;
             cpTransforms[i] = cp.transform;
@@ -127,7 +127,7 @@ public static class LilFootsLevelBuilder {
         // it from the map's own width instead, a few units before the final edge.
         var metaW = (System.Collections.Generic.Dictionary<string, object>)data["meta"];
         float gateX = (float)System.Convert.ToDouble(metaW["width"]) / 100f - 4f;
-        gate.transform.position = new Vector3(gateX, GY + 2f, 0); // ground TOP
+        gate.transform.position = new Vector3(gateX, GY, 0);
         var gc = gate.AddComponent<BoxCollider2D>(); gc.isTrigger = true; gc.size = new Vector2(0.8f, 3f);
         gate.AddComponent<GateController>();
 
