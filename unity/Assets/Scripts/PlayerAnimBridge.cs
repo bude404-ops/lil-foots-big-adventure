@@ -25,10 +25,15 @@ public class PlayerAnimBridge : MonoBehaviour {
         // state -> native Animator parameters (the controller drives idle/walk/jump)
         anim.SetFloat("speed", Mathf.Abs(pc.rb.velocity.x));
         anim.SetBool("air", !pc.onGround);
-        // face the run direction (rig flip, sign-safe off the baked base scale)
+        // face the run direction (rig flip, sign-safe off the baked base scale).
+        // ART FACES LEFT NATIVELY (same law as the JS engine: ctx.scale(-player.face*...) -
+        // "art faces left natively -> flip so characters face travel direction"), so moving
+        // RIGHT (facing=+1) needs the MIRRORED scale and moving LEFT needs the baked scale.
+        // (BudE, Sept 20: "the player character faces the wrong direction when going left or
+        // right its reversed" - the old baseScaleX*facing had it backwards.)
         if (pc.facing != 0) {
             var sc = transform.localScale;
-            float want = baseScaleX * pc.facing;
+            float want = baseScaleX * -pc.facing;
             if (!Mathf.Approximately(sc.x, want)) { sc.x = want; transform.localScale = sc; }
         }
     }
