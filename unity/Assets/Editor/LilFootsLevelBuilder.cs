@@ -127,17 +127,27 @@ public static class LilFootsLevelBuilder {
         // it from the map's own width instead, a few units before the final edge.
         var metaW = (System.Collections.Generic.Dictionary<string, object>)data["meta"];
         float gateX = (float)System.Convert.ToDouble(metaW["width"]) / 100f - 4f;
-        gate.transform.position = new Vector3(gateX, GY, 0);
+        // [STORY MAP Sept 21] courses can END on raised ground (summit runway at 11.8u) - the
+        // gate trigger + props must sit on the ACTUAL surface under gateX, not hardcoded GY.
+        float gateSurf = GY;
+        foreach (var po in ((System.Collections.Generic.List<object>)data["plats"]).Cast<System.Collections.Generic.List<object>>()) {
+            float px0 = F(po[0]), pw0 = F(po[2]), ptop = F(po[1]), ph0 = F(po[3]);
+            float l0 = (px0 - pw0 / 2f) / 100f, r0 = (px0 + pw0 / 2f) / 100f;
+            if (gateX >= l0 && gateX <= r0 && (ptop >= 600f || ph0 >= 400f)) {
+                float s0 = 2f * GY - ptop / 100f; if (s0 > gateSurf) gateSurf = s0;
+            }
+        }
+        gate.transform.position = new Vector3(gateX, gateSurf, 0);
         var gc = gate.AddComponent<BoxCollider2D>(); gc.isTrigger = true; gc.size = new Vector2(0.8f, 3f);
         gate.AddComponent<GateController>();
 
         // ---- FINISH PROPS (terminus law): flag + portal exist even in greybox as placeholder
         // geometry (the course must visibly terminate); ArtPass re-skins them with the HQ art at L(2).
         var flag = new GameObject("FlagGateArt"); flag.transform.SetParent(root.transform);
-        flag.transform.position = new Vector3(gate.transform.position.x, GY + 1.2f, 0);
+        flag.transform.position = new Vector3(gate.transform.position.x, gateSurf + 1.2f, 0);
         var fsr = flag.AddComponent<SpriteRenderer>(); fsr.sprite = SlabSprite(1.1f, 2.2f); fsr.color = new Color(0.20f, 0.45f, 0.25f); fsr.sortingOrder = 4;
         var portal = new GameObject("PortalArt"); portal.transform.SetParent(root.transform);
-        portal.transform.position = new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0);
+        portal.transform.position = new Vector3(gate.transform.position.x + 2.8f, gateSurf + 1.6f, 0); // [SCALE LAW Sept 21] past the flag
         var psr = portal.AddComponent<SpriteRenderer>(); psr.sprite = SlabSprite(3.2f, 3.2f); psr.color = new Color(0.28f, 0.50f, 0.42f); psr.sortingOrder = 3;
 
         // ---- player ----

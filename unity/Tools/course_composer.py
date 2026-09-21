@@ -34,10 +34,10 @@ def place_plats(b, bx, dial, block_span):
         if i in edges and prev_right is not None and g != 1.0:
             gap = px - prev_right
             px = px + int(gap * (g - 1))
-        out.append([bx + px, py, pw, ph])
+        out.append([bx + px + pw // 2, py, pw, ph])   # CENTER-based x (matches course_auditor span() + LevelBuilder)
         prev_right = px + pw
     for s in b.get("snags", []):
-        out.append([bx + s[0], s[1], s[2], s[3]])
+        out.append([bx + s[0] + s[2] // 2, s[1], s[2], s[3]])
     return out
 
 
@@ -49,64 +49,65 @@ def tokens_for(b, plats_in_block, dial):
     out = []
     t = b.get("tokens")
 
-    def cx(p): return p[0] + p[2] / 2
+    def cx(p): return p[0]              # plats are center-based now
+    def lx(p): return p[0] - p[2] // 2  # left edge
 
     if t == "ground_trail":
         n = b.get("tokens_n", 5)
         g0, g1 = grounds[0], grounds[-1]
-        return [{"x": int(g0[0] + (g1[0] + g1[2] - g0[0]) * (i + 0.5) / n), "y": 580, "tier": 0}
+        return [{"x": int(lx(g0) + (lx(g1) + g1[2] - lx(g0)) * (i + 0.5) / n), "y": 580, "tier": 0}
                 for i in range(n)]
     if t == "hop_arc":
         for p in raised:
             out += [{"x": int(cx(p)), "y": p[1] - 90, "tier": 0},
                     {"x": int(cx(p)), "y": p[1] - 220, "tier": 1}]
-        return out + [{"x": grounds[0][0] + 150, "y": 580, "tier": 0},
-                      {"x": grounds[0][0] + 300, "y": 580, "tier": 0}]
+        return out + [{"x": lx(grounds[0]) + 150, "y": 580, "tier": 0},
+                      {"x": lx(grounds[0]) + 300, "y": 580, "tier": 0}]
     if t == "stair_arc":
         for i, p in enumerate(raised):
             out.append({"x": int(cx(p)), "y": p[1] - 80, "tier": 0 if i < 2 else 1})
-        return out + [{"x": grounds[0][0] + 150, "y": 580, "tier": 0}]
+        return out + [{"x": lx(grounds[0]) + 150, "y": 580, "tier": 0}]
     if t == "log_arc":
         for p in raised:
             out += [{"x": int(cx(p)), "y": p[1] - 70, "tier": 0},
                     {"x": int(cx(p)), "y": p[1] - 200, "tier": 1}]
-        return out + [{"x": grounds[0][0] + 200, "y": 580, "tier": 0}]
+        return out + [{"x": lx(grounds[0]) + 200, "y": 580, "tier": 0}]
     if t == "fog_arc":
         for p in raised:
             out.append({"x": int(cx(p)), "y": p[1] - 80, "tier": 1})
-        mid = (grounds[0][0] + grounds[0][2] + grounds[-1][0]) / 2
+        mid = (lx(grounds[0]) + lx(grounds[-1]) + grounds[-1][2]) / 2
         return out + [{"x": int(mid), "y": 580, "tier": 2},
                       {"x": int(mid + 300), "y": 580, "tier": 2},
-                      {"x": grounds[0][0] + 150, "y": 580, "tier": 0}]
+                      {"x": lx(grounds[0]) + 150, "y": 580, "tier": 0}]
     if t == "climb_arc":
         for i, p in enumerate(raised):
             out.append({"x": int(cx(p)), "y": p[1] - 80, "tier": 1 if i < 2 else 2})
-        return out + [{"x": grounds[0][0] + 150, "y": 580, "tier": 0}]
+        return out + [{"x": lx(grounds[0]) + 150, "y": 580, "tier": 0}]
     if t == "gauntlet_arc":
         for p in raised:
             out.append({"x": int(cx(p)), "y": p[1] - 120, "tier": 2})
-        return out + [{"x": grounds[0][0] + 150, "y": 580, "tier": 0}]
+        return out + [{"x": lx(grounds[0]) + 150, "y": 580, "tier": 0}]
     if t == "tower_cache":
         out += [{"x": int(cx(raised[0])), "y": raised[0][1] - 80, "tier": 1},
                 {"x": int(cx(raised[1])), "y": raised[1][1] - 80, "tier": 1}]
         top = raised[2]
         for i in range(3):   # tier3 exploration cache at the tower top
-            out.append({"x": int(top[0] + 60 + i * 80), "y": top[1] - 70, "tier": 3})
+            out.append({"x": int(lx(top) + 60 + i * 80), "y": top[1] - 70, "tier": 3})
         return out
     if t == "runway_arc":
         r = raised[0] if raised else grounds[0]
         for i in range(6):
-            out.append({"x": int(r[0] + 60 + i * 140), "y": r[1] - 90, "tier": 0})
+            out.append({"x": int(lx(r) + 60 + i * 140), "y": r[1] - 90, "tier": 0})
         return out
     if t == "gully_cache":
         gully = raised[0]
         for i in range(3):
-            out.append({"x": int(gully[0] + 80 + i * 120), "y": gully[1] - 50, "tier": 3})
+            out.append({"x": int(lx(gully) + 80 + i * 120), "y": gully[1] - 50, "tier": 3})
         return out
     if t == "cave_cache":
         under = grounds[1]
         for i in range(3):
-            out.append({"x": int(under[0] - 90 + i * 60), "y": 560, "tier": 3})
+            out.append({"x": int(lx(under) - 90 + i * 60), "y": 560, "tier": 3})
         return out
     return out
 
@@ -125,7 +126,8 @@ def compose(recipe):
         tokens.extend(tokens_for(b, b_plats, dial))
         if b.get("checkpoint"):
             cpx = b.get("checkpoint_x", b["length"] - 200)
-            checkpoints.append(bx + cpx)
+            # snap onto solid ground (center-based spans): block offsets can land over gaps
+            checkpoints.append(ground_point_near(plats, bx + cpx, bx + cpx + 400, bx + cpx - 400))
         if b.get("heart"):
             hearts.append({"x": bx + b["heart"]["dx"], "y": b["heart"]["y"]})
         cursor += block_span
@@ -138,8 +140,8 @@ def ground_point_near(plats, target, hardmax, hardmin):
     for px, py, pw, ph in plats:
         if py < GROUND:
             continue
-        lo = max(px + 40, hardmin)
-        hi = min(px + pw - 40, hardmax)
+        lo = max(px - pw // 2 + 40, hardmin)   # center-based spans
+        hi = min(px + pw // 2 - 40, hardmax)
         if lo > hi:
             continue
         cand = min(hi, max(lo, target))
@@ -184,10 +186,10 @@ def place_hounds(recipe, plats):
     for i, x in enumerate(taken[:n]):
         plat = [p for p in ground if p[0] == x][0]
         margin = 120
-        lo = plat[0] + margin
-        hi = plat[0] + plat[2] - margin
+        lo = plat[0] - plat[2] // 2 + margin     # center-based spans
+        hi = plat[0] + plat[2] // 2 - margin
         if hi - lo < 200:
-            mid = plat[0] + plat[2] / 2
+            mid = plat[0]
             lo, hi = mid - 100, mid + 100
         out.append({"x": int((lo + hi) / 2), "y": 620,
                     "min": int(lo), "max": int(hi),
