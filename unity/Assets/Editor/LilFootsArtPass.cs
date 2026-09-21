@@ -183,9 +183,17 @@ namespace LilFoots.EditorTools
             var midArt = Art("art_midground.png");
             if (midArt != null && L(1)) {
                 int mt = 0;
-                for (float bx = -16f; bx <= 360f; bx += 16f, mt++) {
+                for (float bx = -48f; bx <= 360f; bx += 48f, mt++) {
                     var mg = SpriteGo("Midground_" + mt, midArt, new Vector3(bx, 5.5f, 0), 16f, -70, map.transform);
-                    if (mt % 2 == 1) mg.GetComponent<SpriteRenderer>().flipX = true;
+                    var sr = mg.GetComponent<SpriteRenderer>();
+                    // DEPTH LIGHT (BudE 'looks like crap' verdict fix): background bands get
+                    // dimmed + cooled so the play plane owns the frame (DKC suppressed-bg
+                    // doctrine). Band height stays 8u: localScale y = 16*3/8*2... keep 2:1 art
+                    // at HALF height so a 48u-wide tile keeps the same silhouette height.
+                    sr.flipX = (mt % 2 == 1);
+                    sr.color = new Color(0.52f, 0.58f, 0.62f, 1f);
+                    var tr = mg.transform;
+                    tr.localScale = new Vector3(tr.localScale.x, tr.localScale.y * 0.5f, 1f);
                     mg.AddComponent<ParallaxProp>().factor = 0.5f;
                 }
             }
@@ -268,7 +276,7 @@ namespace LilFoots.EditorTools
                     for (int ri = 0; ri < rxs.Length; ri++) {
                         var ray = SpriteGo("GodRay_" + ri, rays, new Vector3(rxs[ri], 6.5f, 0), 11f, -80, map.transform);
                         var rsr = ray.GetComponent<SpriteRenderer>();
-                        rsr.color = new Color(1f, 0.96f, 0.82f, 0.52f);
+                        rsr.color = new Color(1f, 0.96f, 0.82f, 0.35f);
                         ray.AddComponent<ParallaxProp>().factor = 0.3f;
                         if (ri % 2 == 1) rsr.flipX = true;
                     }
