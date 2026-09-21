@@ -451,10 +451,10 @@ namespace LilFoots.EditorTools
                     // of the grass'): the totem was centered on the cp trigger at the ground
                     // LINE, sinking it half into the earth. The art rides a child raised so its
                     // FEET sit ON the grass (top = GroundY), trigger stays put.
-                    float cf = 1.7f / totem.bounds.size.y;
+                    float cf = 3.4f / totem.bounds.size.y;   // [SCALE LAW Sept 21] totem 3.4u tall - world dwarfs the character (BudE: 'objects way bigger than the lil foots')
                     var to = new GameObject("TotemArt");
                     to.transform.SetParent(cp.transform, false);
-                    to.transform.localPosition = new Vector3(0f, 0.85f, 0f); // feet on the grass
+                    to.transform.localPosition = new Vector3(0f, 1.7f, 0f); // feet on the grass
                     to.transform.localScale = new Vector3(cf, cf, 1f);
                     var sr = to.AddComponent<SpriteRenderer>();
                     sr.sprite = totem; sr.sortingOrder = 1;
@@ -471,7 +471,7 @@ namespace LilFoots.EditorTools
                 if (!child.name.StartsWith("Token_")) continue;
                 var oldTa = child.transform.Find("TokenArt");
                 if (oldTa != null) Object.DestroyImmediate(oldTa.gameObject); // no stale floaters
-                if (token != null) ChildSprite(child.gameObject, "TokenArt", token, 0.46f, 5, false, 0.5f);
+                if (token != null) ChildSprite(child.gameObject, "TokenArt", token, 0.28f, 5, false, 0.5f); // [SCALE LAW Sept 21] 0.28u - Mario-coin size vs 0.82u Lily
             }
             var heartArt = Art("art_heart.png");
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
@@ -489,9 +489,9 @@ namespace LilFoots.EditorTools
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2)) {
                 var fgArt = Art("art_flaggate.png");
-                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform); // surface=GY; gate art 2.2 tall -> center GY+1.2 puts its base on the grass
+                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
                 var portal = Art("art_flagportal.png");
-                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0), 3.2f, 3, map.transform); // surface=GY; portal 3.2 tall -> base exactly on the grass
+                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x + 2.8f, GY + 3.25f, 0), 6.5f, 3, map.transform); // [SCALE LAW Sept 21] 6.5u tall, placed PAST the flag (flag-then-portal flow, was behind the flag at -1.4)
             }
 
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----
