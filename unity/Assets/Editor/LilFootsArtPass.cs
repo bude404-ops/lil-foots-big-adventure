@@ -155,7 +155,7 @@ namespace LilFoots.EditorTools
             // plane. No middle-ground bands, no foreground props over the playfield. ----
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
-            if (cam != null && L(1) && !isFull && !isLong) {   // [FULL MAP] the painting is the sky
+            if (cam != null && L(1) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painting is the sky
                 var skySpr = Art("art_sky_new.png");
                 if (skySpr != null) {
                     float skyH = 12f;                 // frame is 7.5 tall - generous bleed top and bottom
@@ -189,6 +189,7 @@ namespace LilFoots.EditorTools
             bool isStory = (mapId == "r1_story");
             bool isFull = (mapId == "r1_full");   // ONE COMPLETE MAP (BudE Sept 21 ~2:30 PM ET)
             bool isLong = (mapId == "r1_long");   // FULL-LENGTH 128u variant (Sept 21 verdict: length + depth)
+            bool isEpic = (mapId == "r1_epic");   // 256u FULL JOURNEY (Sept 21 ~4:40 PM ET: 5-minute map + ground-fix verdict)
             if (isFull) {
                 // ---- ONE COMPLETE FULL NEW MAP (BudE, Sept 21 ~2:30 PM ET: 'stop adding the
                 // blocks and pieces in, its not turning out like im wanting i need to to generate
@@ -235,6 +236,46 @@ namespace LilFoots.EditorTools
                         s1.AddComponent<StreamFlow>().flowLeft = true;
                         var s2 = SpriteGo("Stream", wArt, new Vector3(99.0f, 3.5f, 0), 3.6f, -60, map.transform);
                         s2.AddComponent<StreamFlow>().flowLeft = false;
+                    }
+                }
+                if (isEpic) {
+                    // [EPIC MAP] four continuous strips of ONE 256u world.
+                    // A: baked full-frame, meadow surface -> world 6.2 (asset row 620 = canvas).
+                    // B2/C: full-frame 12.4u (v 0.01211 u/row). D: 639 rows at 0.0229 u/row (60 sky rows
+                    // added on top, 150 mass rows at bottom -> covers world -2.2..12.4).
+                    var eA = Art("art_epic_a.png");
+                    var eB = Art("art_epic_b.png");
+                    var eC = Art("art_epic_c.png");
+                    var eD = Art("art_epic_d.png");
+                    if (eA != null) {
+                        var gA = SpriteGo("Epic_A", eA, new Vector3(32f, 6.2f, 0), 64f, -95, map.transform);
+                        gA.transform.localScale = new Vector3(64f / eA.bounds.size.x, 12.4f / eA.bounds.size.y, 1f);
+                    }
+                    if (eB != null) {
+                        var gB = SpriteGo("Epic_B", eB, new Vector3(96f, 6.2f, 0), 64f, -95, map.transform);
+                        gB.transform.localScale = new Vector3(64f / eB.bounds.size.x, 12.4f / eB.bounds.size.y, 1f);
+                    }
+                    if (eC != null) {
+                        var gC = SpriteGo("Epic_C", eC, new Vector3(160f, 6.2f, 0), 64f, -95, map.transform);
+                        gC.transform.localScale = new Vector3(64f / eC.bounds.size.x, 12.4f / eC.bounds.size.y, 1f);
+                    }
+                    if (eD != null) {
+                        float dH = 639f * 0.0229f;                                  // 14.63u
+                        var gD = SpriteGo("Epic_D", eD, new Vector3(224f, 12.4f - dH / 2f, 0), 64f, -95, map.transform);
+                        gD.transform.localScale = new Vector3(64f / eD.bounds.size.x, dH / eD.bounds.size.y, 1f);
+                    }
+                    var wArt2 = Art("art_stream.png");
+                    if (wArt2 != null) {
+                        var st1 = SpriteGo("Stream", wArt2, new Vector3(39.8f, 2.22f, 0), 3.0f, -60, map.transform);
+                        st1.AddComponent<StreamFlow>().flowLeft = true;    // canyon of the stream
+                        var st2 = SpriteGo("Stream", wArt2, new Vector3(94.5f, 4.02f, 0), 3.5f, -60, map.transform);
+                        st2.AddComponent<StreamFlow>().flowLeft = false;  // rapids high
+                        var st3 = SpriteGo("Stream", wArt2, new Vector3(99.0f, 2.1f, 0), 3.5f, -60, map.transform);
+                        st3.AddComponent<StreamFlow>().flowLeft = false; // rapids low
+                        var st4 = SpriteGo("Stream", wArt2, new Vector3(142.5f, 1.5f, 0), 4.5f, -60, map.transform);
+                        st4.AddComponent<StreamFlow>().flowLeft = true;    // riverbend stones
+                        var st5 = SpriteGo("Stream", wArt2, new Vector3(157.5f, 1.2f, 0), 3.0f, -60, map.transform);
+                        st5.AddComponent<StreamFlow>().flowLeft = false; // second crossing
                     }
                 }
                 // deep-earth fill below the painting's bottom edge (world 0..3.2): one solid,
@@ -320,7 +361,7 @@ namespace LilFoots.EditorTools
             // below the streams (y=4.5) so it frames the bottom of the frame without covering
             // standing gameplay. ----
             var fgArt = Art("art_foreground.png");
-            if (fgArt != null && L(4) && !isFull && !isLong) {   // [FULL MAP] the painting carries the foreground
+            if (fgArt != null && L(4) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painting carries the foreground
                 int ft = 0;
                 for (float bx = -16f; bx <= 200f; bx += 16f, ft++) {
                     var fg = SpriteGo("Foreground_" + ft, fgArt, new Vector3(bx, 3.0f, 0), 16f, 30, map.transform);
@@ -341,7 +382,7 @@ namespace LilFoots.EditorTools
             var sorted = plats.Cast<List<object>>()
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
                 .OrderBy(a => a[0]).ToList();
-            if (water != null && L(2) && !isLong) {   // [LONG MAP] streams placed manually at the painted waterlines
+            if (water != null && L(2) && !isLong && !isEpic) {   // [LONG MAP] streams placed manually at the painted waterlines
                 // MAP v2 (Bude, Sept 20 course redo): hop blocks now float OVER ground, so the
                 // naive consecutive-plat gap can span solid earth. Subtract every ground-level
                 // plat interval from the candidate gap and draw water only in the true pits.
@@ -383,7 +424,7 @@ namespace LilFoots.EditorTools
                 // ---- SET PIECE: Old Growth cedar giant (BudE 'Keep' msg 8870) — the Region 1
                 // signature landmark, standing ON the raised plateau (x=94, surface 8.2). ----
                 var cedar = Art("art_cedar_giant.png");
-                if (cedar != null && L(2) && !isFull && !isLong) {   // [FULL MAP] the cedar is painted into the map
+                if (cedar != null && L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the cedar is painted into the map
                     float cw = 14f;
                     // [COMPACT COURSE FIX] the 62u Mossveil Meadow course has no plateau -
                     // the cedar stands as the terminus landmark behind the flag-gate approach.
@@ -409,7 +450,7 @@ namespace LilFoots.EditorTools
 
                 // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
                 var rays = Art("art_godrays.png");
-                if (rays != null && L(1) && !isFull && !isLong) {   // [FULL MAP] light is baked into the painting
+                if (rays != null && L(1) && !isFull && !isLong && !isEpic) {   // [FULL MAP] light is baked into the painting
                     // [COMPACT COURSE FIX] rays distribute across the actual map width
                     var rmeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
                     float mw = rmeta != null && rmeta.ContainsKey("width") ? F(rmeta["width"]) / 100f : 225f;
@@ -425,7 +466,7 @@ namespace LilFoots.EditorTools
 
                 // ---- SURFACE LIFE: sparse fern/tuft/stone props ON grass tops, world-x keyed,
                 // never over gaps, edges, checkpoints or hop blocks (BudE: nothing covering gameplay). ----
-                if (L(2) && !isFull && !isLong) {   // [FULL MAP] the painted terrain already lives
+                if (L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painted terrain already lives
                     var hopXs = new System.Collections.Generic.List<float>();
                     foreach (var a in sorted) if (a[3] < 400f) hopXs.Add(a[0] / 100f);
                     int pi = 0;
@@ -449,7 +490,7 @@ namespace LilFoots.EditorTools
                 }
 
                 // ---- PIT FRAMING: root/rock lips hanging from both edges of every true pit. ----
-                if (L(2) && !isFull && !isLong) {   // [FULL MAP] the painted banks frame the pit
+                if (L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painted banks frame the pit
                     var gs2 = sorted.Where(a => a[1] >= 600f || a[3] >= 400f).OrderBy(a => a[0]).ToList();
                     int li = 0;
                     for (int i = 0; i < gs2.Count - 1; i++) {
@@ -482,7 +523,7 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
-                if (isFull || isLong) continue;   // [FULL MAP] colliders are INVISIBLE - the painting is the terrain
+                if (isFull || isLong || isEpic) continue;   // [FULL MAP] colliders are INVISIBLE - the painting is the terrain
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
@@ -604,7 +645,7 @@ namespace LilFoots.EditorTools
 
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
-            if (gate != null && L(2) && !isFull && !isLong) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
+            if (gate != null && L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
                 var fgArt = Art("art_flaggate.png");
                 if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
                 var portal = Art("art_flagportal.png");
