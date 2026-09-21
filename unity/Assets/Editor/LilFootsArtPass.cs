@@ -155,7 +155,7 @@ namespace LilFoots.EditorTools
             // plane. No middle-ground bands, no foreground props over the playfield. ----
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
-            if (cam != null && L(1)) {
+            if (cam != null && L(1) && !isFull) {   // [FULL MAP] the painting is the sky
                 var skySpr = Art("art_sky_new.png");
                 if (skySpr != null) {
                     float skyH = 12f;                 // frame is 7.5 tall - generous bleed top and bottom
@@ -187,7 +187,42 @@ namespace LilFoots.EditorTools
             var smeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
             string mapId = smeta != null && smeta.ContainsKey("map") ? (smeta["map"] as string) : "";
             bool isStory = (mapId == "r1_story");
-            if (isStory) {
+            bool isFull = (mapId == "r1_full");   // ONE COMPLETE MAP (BudE Sept 21 ~2:30 PM ET)
+            if (isFull) {
+                // ---- ONE COMPLETE FULL NEW MAP (BudE, Sept 21 ~2:30 PM ET: 'stop adding the
+                // blocks and pieces in, its not turning out like im wanting i need to to generate
+                // one comlete full new map'): the ENTIRE level is ONE generated painting
+                // (art_fullmap.png) - terrain, ledges, stream, cedar, gate and portal are all
+                // PAINTED IN. Colliders are invisible and follow the painted terrain. No band
+                // slices, no cap/edge tiles, no hop-block art, no zone stamps, no god rays, no
+                // props, no gate/portal sprites pasted on top - nothing assembled from pieces.
+                // Calibration (painted row -> world y): meadow surface row 400 -> 6.2, stream
+                // water row 504 -> 3.5, summit surface row 195 -> 11.5. Vertical scale
+                // 0.02585 u/px, painting bottom edge anchored at world y 3.2. ----
+                var fullArt = Art("art_fullmap.png");
+                if (fullArt != null) {
+                    float fw = F(smeta["width"]) / 100f;
+                    float ph = 516f * 0.02585f;                    // 13.34u of painted world
+                    var sg = SpriteGo("FullMapPainting", fullArt, new Vector3(fw / 2f, 3.2f + ph / 2f, 0), fw, -95, map.transform);
+                    var ssr2 = sg.GetComponent<SpriteRenderer>();
+                    ssr2.color = Color.white;                       // the painting is the world: no suppression tint
+                    float fx = sg.transform.localScale.x;
+                    sg.transform.localScale = new Vector3(fx, ph / (fullArt.bounds.size.y), 1f); // independent vertical fit
+                } else {
+                    Debug.LogError("[ArtPass] art_fullmap.png missing - the full map IS the art");
+                }
+                // deep-earth fill below the painting's bottom edge (world 0..3.2): one solid,
+                // not pieces - reads as the shadowed earth under the painted terrain mass.
+                var fillTex = new Texture2D(2, 2);
+                var fillPx = fillTex.GetPixels();
+                for (int fi = 0; fi < fillPx.Length; fi++) fillPx[fi] = new Color(0.10f, 0.12f, 0.07f, 1f);
+                fillTex.SetPixels(fillPx); fillTex.Apply();
+                var fillSpr = Sprite.Create(fillTex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 100f);
+                float fwfill = F(smeta["width"]) / 100f;
+                SpriteGo("FullMapUnderfill", fillSpr, new Vector3(fwfill / 2f, 1.6f, 0), fwfill, -94, map.transform)
+                    .transform.localScale = new Vector3(fwfill / 2f, 3.2f / 2f, 1f);
+            }
+            else if (isStory) {
                 var storyArt = Art("art_story_r1.png");
                 if (storyArt != null) {
                     float sw = F(smeta["width"]) / 100f;
@@ -257,7 +292,7 @@ namespace LilFoots.EditorTools
             // below the streams (y=4.5) so it frames the bottom of the frame without covering
             // standing gameplay. ----
             var fgArt = Art("art_foreground.png");
-            if (fgArt != null && L(4)) {
+            if (fgArt != null && L(4) && !isFull) {   // [FULL MAP] the painting carries the foreground
                 int ft = 0;
                 for (float bx = -16f; bx <= 200f; bx += 16f, ft++) {
                     var fg = SpriteGo("Foreground_" + ft, fgArt, new Vector3(bx, 3.0f, 0), 16f, 30, map.transform);
@@ -302,7 +337,8 @@ namespace LilFoots.EditorTools
                     foreach (var seg in runs) {
                         float w = seg[1] - seg[0];
                         if (w < 0.3f || w > 7f) continue;
-                        var st = SpriteGo("Stream", water, new Vector3((seg[0] + seg[1]) / 2f, GY - 0.55f, 0), w + 0.6f, -60, map.transform);
+                        float waterY = isFull ? 3.5f : GY - 0.55f;   // [FULL MAP] stream drawn at the painted water line
+                        var st = SpriteGo("Stream", water, new Vector3((seg[0] + seg[1]) / 2f, waterY, 0), w + 0.6f, -60, map.transform);
                         st.AddComponent<StreamFlow>().flowLeft = (seg[1] < 31f); // alive water: scrolls + bobs (BudE Sept 21 'flowing water... bring to life')
                     }
                 }
@@ -319,7 +355,7 @@ namespace LilFoots.EditorTools
                 // ---- SET PIECE: Old Growth cedar giant (BudE 'Keep' msg 8870) — the Region 1
                 // signature landmark, standing ON the raised plateau (x=94, surface 8.2). ----
                 var cedar = Art("art_cedar_giant.png");
-                if (cedar != null && L(2)) {
+                if (cedar != null && L(2) && !isFull) {   // [FULL MAP] the cedar is painted into the map
                     float cw = 14f;
                     // [COMPACT COURSE FIX] the 62u Mossveil Meadow course has no plateau -
                     // the cedar stands as the terminus landmark behind the flag-gate approach.
@@ -345,7 +381,7 @@ namespace LilFoots.EditorTools
 
                 // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
                 var rays = Art("art_godrays.png");
-                if (rays != null && L(1)) {
+                if (rays != null && L(1) && !isFull) {   // [FULL MAP] light is baked into the painting
                     // [COMPACT COURSE FIX] rays distribute across the actual map width
                     var rmeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
                     float mw = rmeta != null && rmeta.ContainsKey("width") ? F(rmeta["width"]) / 100f : 225f;
@@ -361,7 +397,7 @@ namespace LilFoots.EditorTools
 
                 // ---- SURFACE LIFE: sparse fern/tuft/stone props ON grass tops, world-x keyed,
                 // never over gaps, edges, checkpoints or hop blocks (BudE: nothing covering gameplay). ----
-                if (L(2)) {
+                if (L(2) && !isFull) {   // [FULL MAP] the painted terrain already lives
                     var hopXs = new System.Collections.Generic.List<float>();
                     foreach (var a in sorted) if (a[3] < 400f) hopXs.Add(a[0] / 100f);
                     int pi = 0;
@@ -385,7 +421,7 @@ namespace LilFoots.EditorTools
                 }
 
                 // ---- PIT FRAMING: root/rock lips hanging from both edges of every true pit. ----
-                if (L(2)) {
+                if (L(2) && !isFull) {   // [FULL MAP] the painted banks frame the pit
                     var gs2 = sorted.Where(a => a[1] >= 600f || a[3] >= 400f).OrderBy(a => a[0]).ToList();
                     int li = 0;
                     for (int i = 0; i < gs2.Count - 1; i++) {
@@ -418,6 +454,7 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
+                if (isFull) continue;   // [FULL MAP] colliders are INVISIBLE - the painting is the terrain
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
@@ -539,7 +576,7 @@ namespace LilFoots.EditorTools
 
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
-            if (gate != null && L(2)) {
+            if (gate != null && L(2) && !isFull) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
                 var fgArt = Art("art_flaggate.png");
                 if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
                 var portal = Art("art_flagportal.png");
