@@ -159,7 +159,8 @@ namespace LilFoots.EditorTools
             // adds'). Layer 2 no longer spawns mist banks or the below-ground teal wash - the
             // vista depth base carries the below-ground atmosphere instead.
 
-            // ---- STREAM WATER in the gaps ----
+            // ---- STREAM WATER (PIECE 4, new PNW stream art pending BudE verdict - old
+            // art_water.png deleted in the purge; block no-ops until the new art lands) ----
             var water = Art("art_water.png");
             var plats = (List<object>)data["plats"];
             var sorted = plats.Cast<List<object>>()
@@ -226,40 +227,16 @@ namespace LilFoots.EditorTools
 
             }
 
-            // ---- CAM TREES + trail cam art ----
-            var camTree = Art("art_camtree.png");
-            var trailcamArt = Art("art_trailcam.png");
-            foreach (Transform child in map.transform) {
-                if (!child.name.StartsWith("TrailCam")) continue;
-                if (camTree != null && L(2)) {
-                    // TREE HEIGHT (Bude, Sept 19 'layer 2 is too high'): 3.1u trees poked above
-                    // the vista treeline; 2.3u keeps the canopy under the L1 backdrop line.
-                    float cth = 2.3f; float ctw = cth * (camTree.bounds.size.x / camTree.bounds.size.y);
-                    SpriteGo("CamTreeArt", camTree, new Vector3(child.position.x, GY - 0.55f + cth / 2f, 0), ctw, -6, map.transform);
-                }
-                if (trailcamArt != null && L(2)) ChildSprite(child.gameObject, "TrailCamArt", trailcamArt, 0.52f, 6, false, 0.181f);
-            }
+            // ---- CAM TREES + TRAIL CAMS + HOUNDS + DRONES: PURGED (BudE, Sept 20: 'remove any
+            // and delete all old work art skins' + enemy doctrine: v1 gadget/hound enemies retired,
+            // Roster B creatures land at the M3 life pass; new art files deleted from the repo).
 
             // ---- LAYER 3 FOREGROUND PROPS REMOVED (Sept 19: Bude's world-skin reference
             // carries the near-field treatment itself - a continuous near-black forest floor
             // at the bottom edge, not discrete prop blobs. Fore props stay out until Bude
             // asks for garnish; the painting's own bottom band is the foreground depth). ----
 
-            // ---- ENEMY ART (child sprites — hitboxes untouched) ----
-            var hound = Art("art_hound.png");
-            var drone = Art("art_drone.png");
-            foreach (Transform child in map.transform) {
-                if (child.name.StartsWith("Hound") && hound != null && L(2)) {
-                    bool flip = child.GetComponent<HoundController>().dir < 0;
-                    ChildSprite(child.gameObject, "HoundArt", hound, 0.62f, 6, flip, 0.213f);
-                    // WADDLE (Bude, Sept 20: "the enemies are still just stale models"):
-                    // native Animator + clip rocking the art child so the hound visibly RUNS.
-                    try { HoundWaddle(child.gameObject); } catch (System.Exception e) {
-                        Debug.LogWarning("[ArtPass] hound waddle failed: " + e.Message); }
-                }
-                if (child.name.StartsWith("Drone") && drone != null && L(2))
-                    ChildSprite(child.gameObject, "DroneArt", drone, 0.55f, 6, false, 0.307f);
-            }
+            // ---- ENEMY ART: PURGED (see above) ----
 
             // ---- TOKENS (footprint Big Token) + secret heart ----
             // COINS BACK ON (Bude, Sept 20: "there are no tokens to collect"): the trail was

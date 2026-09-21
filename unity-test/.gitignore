@@ -1,9 +1,0 @@
-unity/Library/
-unity/Temp/
-unity/Logs/
-unity/dist/
-unity/QCShots/
-unity/unity-editor.log
-unity/Assets/Scenes/
-unity/Assets/**/*.meta
-unity/Assets/Resources/**/*.meta
