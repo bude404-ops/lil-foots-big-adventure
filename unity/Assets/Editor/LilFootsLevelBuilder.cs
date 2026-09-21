@@ -127,6 +127,7 @@ public static class LilFootsLevelBuilder {
         // it from the map's own width instead, a few units before the final edge.
         var metaW = (System.Collections.Generic.Dictionary<string, object>)data["meta"];
         float gateX = (float)System.Convert.ToDouble(metaW["width"]) / 100f - 4f;
+        if (metaW.ContainsKey("gateX")) gateX = (float)System.Convert.ToDouble(metaW["gateX"]) / 100f;   // [LONG MAP] trigger at the PAINTED gate
         // [STORY MAP Sept 21] courses can END on raised ground (summit runway at 11.8u) - the
         // gate trigger + props must sit on the ACTUAL surface under gateX, not hardcoded GY.
         float gateSurf = GY;
