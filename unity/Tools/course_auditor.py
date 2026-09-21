@@ -23,8 +23,14 @@ MIN_TOKENS = 62
 MAX_CP_SPAN = 3000
 
 
+def span(p):
+    """plat [cx, cy, w, h] (center-based) -> (left, top, right, h). top = standing surface."""
+    cx, cy, w, h = p
+    return (cx - w/2, cy + h/2, cx + w/2, h)
+
+
 def plat_top(p):
-    return p[1]
+    return p[1] + p[3]/2
 
 
 def audit(path):
@@ -40,8 +46,9 @@ def audit(path):
 
     def over_plat(x, y):
         """Is point (x, y) above some plat (standing surface)?"""
-        for px, py, pw, ph in plats:
-            if px - 10 <= x <= px + pw + 10 and y >= py - 5:
+        for p in plats:
+            left, top, right, h = span(p)
+            if left - 10 <= x <= right + 10 and y >= top - 5:
                 return True
         return False
 
@@ -50,24 +57,22 @@ def audit(path):
     for p in plats:
         if p[1] >= GROUND_TOLERANCE:  # ground-level: reachable by walking
             continue
-        px, py, pw, ph = p
+        pl, ptop, pr, ph = span(p)
         best = None
         for q in plats:
-            qx, qy, qw, qh = q
             if q is p:
                 continue
+            ql, qtop, qr, qh = span(q)
             # candidate takeoff: stand on q, jump toward p
             # horizontal distance between q's right edge and p's left edge (or overlap)
-            if qx + qw <= px + 5:      # q is to the left
-                dx = px - (qx + qw)
-                from_x = qx + qw
-            elif px + pw <= qx + 5:    # q is to the right (backtracking jumps ok)
-                dx = qx - (px + pw)
-                from_x = qx
+            if qr <= pl + 5:          # q is to the left
+                dx = pl - qr
+            elif pr <= ql + 5:        # q is to the right (backtracking jumps ok)
+                dx = ql - pr
             else:
                 continue               # overlapping in x: vertical step
                 # vertical reachability handled by rise check below
-            rise = qy - py              # positive = p is higher than q
+            rise = qtop - ptop          # positive = p is higher than q (canvas: smaller y = higher)
             if rise > MAX_RISE:
                 continue
             if dx > MAX_GAP:
@@ -77,29 +82,30 @@ def audit(path):
                 best = (score, q)
         if best is None:
             # maybe it's directly above another plat (stacked, no dx)
-            stacked = any(q[0] - 10 < px < q[0] + q[2] + 10 and q[1] >= py and q is not p
+            stacked = any(span(q)[0] - 10 < (pl+pr)/2 < span(q)[2] + 10 and span(q)[1] >= ptop and q is not p
                           for q in plats)
             if not stacked:
-                errors.append(f"UNREACHABLE plat at x={px} top={py} (no takeoff within {MAX_GAP}px / {MAX_RISE}px rise)")
+                errors.append(f"UNREACHABLE plat at x={(pl+pr)/2:.0f} top={ptop:.0f} (no takeoff within {MAX_GAP}px / {MAX_RISE}px rise)")
         elif best[0] > WARN_GAP:
-            warnings.append(f"tight jump onto plat x={px} (cost {best[0]:.0f}px)")
+            warnings.append(f"tight jump onto plat x={(pl+pr)/2:.0f} (cost {best[0]:.0f}px)")
 
     # ---- full traverse: walk the main route left->right at ground level ----
     grounds = sorted([p for p in plats if p[1] >= GROUND_TOLERANCE], key=lambda p: p[0])
     for a, b in zip(grounds, grounds[1:]):
-        gap = b[0] - (a[0] + a[2])
+        al, at, ar, ah = span(a); bl, bt, br, bh = span(b)
+        gap = bl - ar
         if gap > MAX_GAP and not any(  # a mid-gap hop block saves it
-            p[1] < GROUND_TOLERANCE and a[0] + a[2] <= p[0] and p[0] + p[2] <= b[0] + MAX_GAP
+            p[1] < GROUND_TOLERANCE and ar <= span(p)[0] and span(p)[2] <= bl + MAX_GAP
             for p in plats):
-            errors.append(f"GAP {gap:.0f}px between ground plats x={a[0]+a[2]:.0f}->{b[0]:.0f} exceeds {MAX_GAP}px")
+            errors.append(f"GAP {gap:.0f}px between ground plats x={ar:.0f}->{bl:.0f} exceeds {MAX_GAP}px")
 
     # ---- checkpoints ----
     prev = 0
     for cp in sorted(cps):
-        span = cp - prev
-        if span > MAX_CP_SPAN:
-            errors.append(f"checkpoint gap {span:.0f}px before x={cp} exceeds {MAX_CP_SPAN}px")
-        if not over_plat(cp, GROUND_Y(d)):
+        cp_span = cp - prev
+        if cp_span > MAX_CP_SPAN:
+            errors.append(f"checkpoint gap {cp_span:.0f}px before x={cp} exceeds {MAX_CP_SPAN}px")
+        if not any(span(p)[0] - 10 <= cp <= span(p)[2] + 10 and p[1] >= GROUND_TOLERANCE for p in plats):
             errors.append(f"checkpoint x={cp} floats over a gap")
         prev = cp
     tail = d["meta"]["width"] - prev

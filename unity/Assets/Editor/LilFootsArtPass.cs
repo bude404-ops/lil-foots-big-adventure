@@ -20,6 +20,24 @@ namespace LilFoots.EditorTools
     {
         static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
 
+        static Sprite ArtCrop(string file, float targetAspect, int seed) {
+            // EXACT-FIT (BudE, Sept 21 'make sure everything is properly sized with the blocks'):
+            // cover+crop the source to the plat's own aspect, then uniform-scale to the collider
+            // bounds. Native pixels, no distortion, and the art silhouette == the gameplay
+            // collider (no 4.16:1 hop tiles spilling into gaps, no earth bleed into pits).
+            var full = Art(file);
+            if (full == null) return null;
+            int tw = full.texture.width, th = full.texture.height;
+            int cw, ch;
+            if ((float)tw / th > targetAspect) { ch = th; cw = Mathf.RoundToInt(th * targetAspect); }
+            else { cw = tw; ch = Mathf.RoundToInt(tw / targetAspect); }
+            // deterministic per-seed x offset for variety between neighboring plats
+            int maxX = Mathf.Max(0, tw - cw);
+            int ox = maxX == 0 ? 0 : (int)(seed * 2654435761u % (uint)maxX);
+            var rect = new Rect(ox, 0, cw, ch);
+            return Sprite.Create(full.texture, rect, new Vector2(0.5f, 0.5f), 100f);
+        }
+
         static Sprite Art(string file) {
             if (Cache.TryGetValue(file, out var cached)) return cached;
             string path = "Assets/Art/" + file;
@@ -211,33 +229,21 @@ namespace LilFoots.EditorTools
                 // ground - they wear the approved hop-block slab instead of earth + grass.
                 var hopArt = Art("art_hopblock.png");
                 if (hopArt != null && h < 2f) {
-                    float hw = hopArt.bounds.size.x * (h / hopArt.bounds.size.y);
-                    int hi = 0;
-                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += hw) {
-                        var hb = SpriteGo("HopBlockArt", hopArt, new Vector3(x, child.position.y, 0), hw, -2, child);
-                        if (hi % 2 == 1) hb.GetComponent<SpriteRenderer>().flipX = true; // break the repeat
-                        hi++;
-                    }
+                    int hi = Mathf.RoundToInt(child.position.x * 97f) & 1023;
+                    var crop = ArtCrop("art_hopblock.png", w / h, hi);
+                    if (crop != null) SpriteGo("HopBlockArt", crop, new Vector3(child.position.x, child.position.y, 0), w, -2, child);
                     continue;
                 }
 
                 if (earth != null && L(2)) {
-                    float ew = h * 0.94f * (earth.bounds.size.x / earth.bounds.size.y);
-                    int ei = 0;
-                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += ew) {
-                        var et = SpriteGo("Earth", earth, new Vector3(x, top - h / 2f, 0), ew, -2, child);
-                        if (ei % 2 == 1) et.GetComponent<SpriteRenderer>().flipX = true; // break the repeat
-                        ei++;
-                    }
+                    int ei = Mathf.RoundToInt(child.position.x * 89f) & 1023;
+                    var crop = ArtCrop("art_earth_new.png", w / h, ei);
+                    if (crop != null) SpriteGo("Earth", crop, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
                 }
                 if (strip != null && L(2)) {
-                    float sw = strip.bounds.size.x * (0.62f / strip.bounds.size.y);
-                    int si = 0;
-                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f - 0.05f; x += sw) {
-                        var st = SpriteGo("GrassTop", strip, new Vector3(x, top - 0.28f, 0), sw, -1, child);
-                        if (si % 2 == 1) st.GetComponent<SpriteRenderer>().flipX = true;
-                        si++;
-                    }
+                    int si = Mathf.RoundToInt(child.position.x * 83f) & 1023;
+                    var crop = ArtCrop("art_grass_new.png", w / 0.62f, si);
+                    if (crop != null) SpriteGo("GrassTop", crop, new Vector3(child.position.x, top - 0.31f, 0), w, -1, child);
                 }
 
             }
