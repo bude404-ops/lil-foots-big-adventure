@@ -55,9 +55,9 @@ def audit(path):
         return False
 
     # ---- reachability: every non-ground plat needs a reachable predecessor ----
-    ground = [p for p in plats if p[1] >= GROUND_TOLERANCE]
+    ground = [p for p in plats if p[3] >= 400 or p[1] >= GROUND_TOLERANCE]
     for p in plats:
-        if p[1] >= GROUND_TOLERANCE:  # ground-level: reachable by walking
+        if p[3] >= 400 or p[1] >= GROUND_TOLERANCE:  # tall ground body: reachable by walking (any height)
             continue
         pl, ptop, pr, ph = span(p)
         best = None
@@ -92,7 +92,7 @@ def audit(path):
             warnings.append(f"tight jump onto plat x={(pl+pr)/2:.0f} (cost {best[0]:.0f}px)")
 
     # ---- full traverse: walk the main route left->right at ground level ----
-    grounds = sorted([p for p in plats if p[1] >= GROUND_TOLERANCE], key=lambda p: p[0])
+    grounds = sorted([p for p in plats if p[3] >= 400 or p[1] >= GROUND_TOLERANCE], key=lambda p: p[0])
     for a, b in zip(grounds, grounds[1:]):
         al, at, ar, ah = span(a); bl, bt, br, bh = span(b)
         gap = bl - ar
@@ -107,7 +107,7 @@ def audit(path):
         cp_span = cp - prev
         if cp_span > MAX_CP_SPAN:
             errors.append(f"checkpoint gap {cp_span:.0f}px before x={cp} exceeds {MAX_CP_SPAN}px")
-        if not any(span(p)[0] - 10 <= cp <= span(p)[2] + 10 and p[1] >= GROUND_TOLERANCE for p in plats):
+        if not any(span(p)[0] - 10 <= cp <= span(p)[2] + 10 and p[3] >= 400 or p[1] >= GROUND_TOLERANCE for p in plats):
             errors.append(f"checkpoint x={cp} floats over a gap")
         prev = cp
     tail = d["meta"]["width"] - prev

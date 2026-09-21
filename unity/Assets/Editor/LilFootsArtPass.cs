@@ -220,7 +220,7 @@ namespace LilFoots.EditorTools
                 // MAP v2 (Bude, Sept 20 course redo): hop blocks now float OVER ground, so the
                 // naive consecutive-plat gap can span solid earth. Subtract every ground-level
                 // plat interval from the candidate gap and draw water only in the true pits.
-                var grounds = sorted.Where(a => a[1] >= 600f)
+                var grounds = sorted.Where(a => a[1] >= 600f || a[3] >= 400f) // [MAP OVERHAUL Sept 21] tall ground bodies at any height (plateau/hollow)
                     .Select(a => new float[] { (a[0] - a[2] / 2f) / 100f, (a[0] + a[2] / 2f) / 100f })
                     .OrderBy(g => g[0]).ToList();
                 for (int i = 0; i < sorted.Count - 1; i++) {
@@ -241,6 +241,83 @@ namespace LilFoots.EditorTools
                         float w = seg[1] - seg[0];
                         if (w < 0.3f || w > 7f) continue;
                         SpriteGo("Stream", water, new Vector3((seg[0] + seg[1]) / 2f, GY - 0.55f, 0), w + 0.6f, -60, map.transform);
+                    }
+                }
+            }
+
+            // [MAP OVERHAUL Sept 21] BudE: 'generate and keep what you need to get a full
+            // map going... ill judge when its all finished' — set pieces + light + surface life + pit
+            // framing, DKC/Rayman/Ori doctrine. All lore-native Region 1, nothing covers gameplay.
+            {
+                var cpsList = new System.Collections.Generic.List<float>();
+                if (data.ContainsKey("checkpoints"))
+                    foreach (var c in (List<object>)data["checkpoints"]) cpsList.Add(F(c) / 100f);
+
+                // ---- SET PIECE: Old Growth cedar giant (BudE 'Keep' msg 8870) — the Region 1
+                // signature landmark, standing ON the raised plateau (x=94, surface 8.2). ----
+                var cedar = Art("art_cedar_giant.png");
+                if (cedar != null && L(2)) {
+                    float cw = 14f;
+                    SpriteGo("CedarGiant", cedar, new Vector3(94f, 8.2f + cw / 2f, 0), cw, -50, map.transform);
+                }
+
+                // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
+                var rays = Art("art_godrays.png");
+                if (rays != null && L(1)) {
+                    float[] rxs = { 34f, 88f, 160f, 200f };
+                    for (int ri = 0; ri < rxs.Length; ri++) {
+                        var ray = SpriteGo("GodRay_" + ri, rays, new Vector3(rxs[ri], 6.5f, 0), 11f, -80, map.transform);
+                        var rsr = ray.GetComponent<SpriteRenderer>();
+                        rsr.color = new Color(1f, 0.96f, 0.82f, 0.52f);
+                        ray.AddComponent<ParallaxProp>().factor = 0.3f;
+                        if (ri % 2 == 1) rsr.flipX = true;
+                    }
+                }
+
+                // ---- SURFACE LIFE: sparse fern/tuft/stone props ON grass tops, world-x keyed,
+                // never over gaps, edges, checkpoints or hop blocks (BudE: nothing covering gameplay). ----
+                if (L(2)) {
+                    var hopXs = new System.Collections.Generic.List<float>();
+                    foreach (var a in sorted) if (a[3] < 400f) hopXs.Add(a[0] / 100f);
+                    int pi = 0;
+                    foreach (var g in sorted) {
+                        if (!(g[1] >= 600f || g[3] >= 400f)) continue;   // grounds only
+                        float l = (g[0] - g[2] / 2f) / 100f, r = (g[0] + g[2] / 2f) / 100f;
+                        float surf = 2f * GY - g[1] / 100f;               // standing surface (canvas flip)
+                        for (float x = l + 1.3f; x < r - 1.3f; x += 7f + (pi % 5), pi++) {
+                            bool clear = true;
+                            foreach (var cp in cpsList) if (Mathf.Abs(cp - x) < 2.0f) { clear = false; break; }
+                            if (clear) foreach (var hx in hopXs) if (Mathf.Abs(hx - x) < 1.6f) { clear = false; break; }
+                            if (!clear) continue;
+                            var ps = Art("art_prop_" + (pi % 5) + ".png");
+                            if (ps == null) continue;
+                            float pw = 0.9f;
+                            float ph = pw * ps.bounds.size.y / ps.bounds.size.x;
+                            var pgo = SpriteGo("SurfaceProp_" + pi, ps, new Vector3(x, surf + ph / 2f - 0.05f, 0), pw, 1, map.transform);
+                            if (pi % 2 == 1) pgo.GetComponent<SpriteRenderer>().flipX = true;
+                        }
+                    }
+                }
+
+                // ---- PIT FRAMING: root/rock lips hanging from both edges of every true pit. ----
+                if (L(2)) {
+                    var gs2 = sorted.Where(a => a[1] >= 600f || a[3] >= 400f).OrderBy(a => a[0]).ToList();
+                    int li = 0;
+                    for (int i = 0; i < gs2.Count - 1; i++) {
+                        var a = gs2[i]; var b = gs2[i + 1];
+                        float gapL = (a[0] + a[2] / 2f) / 100f, gapR = (b[0] - b[2] / 2f) / 100f;
+                        if (gapR - gapL < 0.9f || gapR - gapL > 5f) continue;   // frame real pits only
+                        float sA = 2f * GY - a[1] / 100f, sB = 2f * GY - b[1] / 100f;
+                        foreach (var side in new int[] { 0, 1 }) {
+                            var lip = Art("art_pitlip_" + (li % 3) + ".png"); li++;
+                            if (lip == null) continue;
+                            float lw = 2.2f;
+                            float lh = lw * lip.bounds.size.y / lip.bounds.size.x;
+                            float lx = side == 0 ? gapL - 0.35f : gapR + 0.35f;
+                            float ls = side == 0 ? sA : sB;
+                            var lgo = SpriteGo("PitLip_" + li, lip, new Vector3(lx, ls - lh / 2f + 0.18f, 0), lw, -3, map.transform);
+                            if (side == 1) lgo.GetComponent<SpriteRenderer>().flipX = true;
+                        }
                     }
                 }
             }
