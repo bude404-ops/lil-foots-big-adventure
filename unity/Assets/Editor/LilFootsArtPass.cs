@@ -755,12 +755,25 @@ namespace LilFoots.EditorTools
             go.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             var ctl = go.AddComponent<LilFoots.CharacterMenuController>();
 
-            // dim backdrop
+            // ---- STORY-WORLD LOADING/SELECT (BudE, Sept 21: 'change the character
+            // loading screen so it matches what we are changing and doing'): the select
+            // screen sits INSIDE the story painting - art_story_r1 fills the frame, dimmed
+            // + cooled so the cards own the light; a light black veil keeps text contrast. ----
+            var storyBg = Art("art_story_r1.png");
+            if (storyBg != null) {
+                var sbg = MakeUi(go.transform, "StoryBackdrop");
+                sbg.anchorMin = Vector2.zero; sbg.anchorMax = Vector2.one;
+                sbg.sizeDelta = Vector2.zero;
+                var sbgImg = sbg.gameObject.AddComponent<UnityEngine.UI.Image>();
+                sbgImg.sprite = storyBg; sbgImg.preserveAspect = false;
+                sbgImg.color = new Color(0.55f, 0.60f, 0.55f, 1f); // dimmed + cooled story world
+            }
+            // dim veil (lighter now - the painting carries the depth)
             var dim = MakeUi(go.transform, "Dim");
             dim.anchorMin = Vector2.zero; dim.anchorMax = Vector2.one;
             dim.sizeDelta = Vector2.zero;
             var dimImg = dim.gameObject.AddComponent<UnityEngine.UI.Image>();
-            dimImg.color = new Color(0f, 0f, 0f, 0.55f);
+            dimImg.color = new Color(0f, 0f, 0f, 0.30f);
 
             // title
             var title = MakeUi(go.transform, "Title");
@@ -789,7 +802,7 @@ namespace LilFoots.EditorTools
             // fallback = RECREATED standing art (Sept 20: whole_* is now the T-pose rig art -
             // a failed rig stage must never show T-pose on the cards)
             string[] files = { "recreated_lily.png", "recreated_buddy.png", "recreated_emma.png" };
-            var panelArt = Art("art_panel.png");
+            var panelArt = Art("art_panel_story.png") ?? Art("art_panel.png");   // story-matched painted cedar panel
             for (int i = 0; i < 3; i++) {
                 float x = (i - 1) * 360f;
                 var card = MakeUi(go.transform, "Card" + names[i]);
