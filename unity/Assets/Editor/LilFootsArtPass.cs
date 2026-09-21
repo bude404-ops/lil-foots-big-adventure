@@ -20,22 +20,21 @@ namespace LilFoots.EditorTools
     {
         static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
 
-        static Sprite ArtCrop(string file, float targetAspect, int seed) {
-            // EXACT-FIT (BudE, Sept 21 'make sure everything is properly sized with the blocks'):
-            // cover+crop the source to the plat's own aspect, then uniform-scale to the collider
-            // bounds. Native pixels, no distortion, and the art silhouette == the gameplay
-            // collider (no 4.16:1 hop tiles spilling into gaps, no earth bleed into pits).
+        static Sprite ArtCrop(string file, float worldW, float worldH, float worldX0) {
+            // EXACT-FIT + FLOW (BudE, Sept 21 'properly sized' + 'landscape meshing and flowing'):
+            // art is sampled at a CONSISTENT world scale (th px per worldH units) and the crop
+            // window is keyed to the plat's world x, so neighboring platforms sample adjoining
+            // texture - the whole map reads as one continuous surface instead of random patches.
             var full = Art(file);
             if (full == null) return null;
             int tw = full.texture.width, th = full.texture.height;
-            int cw, ch;
-            if ((float)tw / th > targetAspect) { ch = th; cw = Mathf.RoundToInt(th * targetAspect); }
-            else { cw = tw; ch = Mathf.RoundToInt(tw / targetAspect); }
-            // deterministic per-seed x offset for variety between neighboring plats
+            float pxPerUnit = th / worldH;                     // consistent world scale
+            int cw = Mathf.RoundToInt(worldW * pxPerUnit);
+            if (cw > tw) cw = tw;                              // very wide plat: full art width
             int maxX = Mathf.Max(0, tw - cw);
-            int ox = maxX == 0 ? 0 : (int)(seed * 2654435761u % (uint)maxX);
-            var rect = new Rect(ox, 0, cw, ch);
-            return Sprite.Create(full.texture, rect, new Vector2(0.5f, 0.5f), 100f);
+            int ox = maxX == 0 ? 0 : (int)(worldX0 * pxPerUnit) % maxX;  // world-x flow
+            var rect = new Rect(ox, 0, cw, th);
+            return Sprite.Create(full.texture, rect, new Vector2(0.5f, 0.5f), pxPerUnit);
         }
 
         static Sprite Art(string file) {
@@ -229,21 +228,28 @@ namespace LilFoots.EditorTools
                 // ground - they wear the approved hop-block slab instead of earth + grass.
                 var hopArt = Art("art_hopblock.png");
                 if (hopArt != null && h < 2f) {
-                    int hi = Mathf.RoundToInt(child.position.x * 97f) & 1023;
-                    var crop = ArtCrop("art_hopblock.png", w / h, hi);
+                    var crop = ArtCrop("art_hopblock.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("HopBlockArt", crop, new Vector3(child.position.x, child.position.y, 0), w, -2, child);
                     continue;
                 }
 
                 if (earth != null && L(2)) {
-                    int ei = Mathf.RoundToInt(child.position.x * 89f) & 1023;
-                    var crop = ArtCrop("art_earth_new.png", w / h, ei);
+                    var crop = ArtCrop("art_earth_new.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("Earth", crop, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
                 }
                 if (strip != null && L(2)) {
-                    int si = Mathf.RoundToInt(child.position.x * 83f) & 1023;
-                    var crop = ArtCrop("art_grass_new.png", w / 0.62f, si);
-                    if (crop != null) SpriteGo("GrassTop", crop, new Vector3(child.position.x, top - 0.31f, 0), w, -1, child);
+                    // CONSISTENT WORLD SCALE: the strip tiles at its natural size (art aspect x
+                    // 0.62u), phased to world x so the surface pattern flows across the map.
+                    float sw = 0.62f * (strip.bounds.size.x / strip.bounds.size.y);
+                    float left = child.position.x - w / 2f;
+                    float phase = left % sw;
+                    float x = left - phase;
+                    int si = 0;
+                    for (; x < child.position.x + w / 2f - 0.02f; x += sw) {
+                        var st = SpriteGo("GrassTop", strip, new Vector3(x + sw / 2f, top - 0.31f, 0), sw, -1, child);
+                        if (si % 2 == 1) st.GetComponent<SpriteRenderer>().flipX = true;
+                        si++;
+                    }
                 }
 
             }
@@ -267,10 +273,17 @@ namespace LilFoots.EditorTools
                 for (int ci = 0; ci < 64; ci++) {
                     var cp = GameObject.Find("Checkpoint_" + ci);
                     if (cp == null) break;
-                    var sr = cp.AddComponent<SpriteRenderer>();
-                    sr.sprite = totem; sr.sortingOrder = 1;
+                    // STANDING FIX (BudE, Sept 21: 'character inside the blocks and not on top
+                    // of the grass'): the totem was centered on the cp trigger at the ground
+                    // LINE, sinking it half into the earth. The art rides a child raised so its
+                    // FEET sit ON the grass (top = GroundY), trigger stays put.
                     float cf = 1.7f / totem.bounds.size.y;
-                    cp.transform.localScale = new Vector3(cf, cf, 1f);
+                    var to = new GameObject("TotemArt");
+                    to.transform.SetParent(cp.transform, false);
+                    to.transform.localPosition = new Vector3(0f, 0.85f, 0f); // feet on the grass
+                    to.transform.localScale = new Vector3(cf, cf, 1f);
+                    var sr = to.AddComponent<SpriteRenderer>();
+                    sr.sprite = totem; sr.sortingOrder = 1;
                     sr.color = new Color(0.72f, 0.82f, 0.74f, 1f); // dim moss until claimed
                 }
             }
@@ -302,9 +315,9 @@ namespace LilFoots.EditorTools
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2)) {
                 var fgArt = Art("art_flaggate.png");
-                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 1.2f, 0), 2.2f, 4, map.transform);
+                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.1f, 0), 2.2f, 4, map.transform); // gate center = top(8.2) + half art(1.1)
                 var portal = Art("art_flagportal.png");
-                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 1.6f, 0), 3.2f, 3, map.transform);
+                if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x - 1.4f, GY + 3.6f, 0), 3.2f, 3, map.transform); // portal center = top(8.2) + half art(1.6)
             }
 
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----

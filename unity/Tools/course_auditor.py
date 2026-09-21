@@ -24,13 +24,15 @@ MAX_CP_SPAN = 3000
 
 
 def span(p):
-    """plat [cx, cy, w, h] (center-based) -> (left, top, right, h). top = standing surface."""
-    cx, cy, w, h = p
-    return (cx - w/2, cy + h/2, cx + w/2, h)
+    """plat [cx, y, w, h] CANVAS-BASED (LevelBuilder: Unity top = 2*GY - y/100, i.e. canvas
+    y IS the plat's standing surface and y grows DOWN). x is center-based.
+    Returns (left, top, right, h) in canvas space: top = standing surface = p[1]."""
+    cx, y, w, h = p
+    return (cx - w/2, y, cx + w/2, h)
 
 
 def plat_top(p):
-    return p[1] + p[3]/2
+    return p[1]  # canvas top = standing surface (y-down)
 
 
 def audit(path):
