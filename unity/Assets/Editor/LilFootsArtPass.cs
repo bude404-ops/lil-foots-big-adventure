@@ -208,6 +208,7 @@ namespace LilFoots.EditorTools
             // backdrops carry their own atmospheric depth; a mirrored band tiled over them
             // was a main source of the 'cut and pasted reel' look.
             var midArt = (Sprite)null;
+            if (midArt != null) {   // [ZONE REBUILD] band disabled - guarded so no null-sprite objects spawn
                 int mt = 0;
                 for (float bx = -48f; bx <= 360f; bx += 48f, mt++) {
                     var mg = SpriteGo("Midground_" + mt, midArt, new Vector3(bx, 5.5f, 0), 16f, -70, map.transform);
@@ -222,7 +223,7 @@ namespace LilFoots.EditorTools
                     tr.localScale = new Vector3(tr.localScale.x, tr.localScale.y * 0.5f, 1f);
                     mg.AddComponent<ParallaxProp>().factor = 0.5f;
                 }
-            }
+            } // end midground guard
 
             // ---- LAYER 4: FOREGROUND (same verdict): near-black forest floor fringe along
             // the bottom edge, sweeping 1.3x so the near-field reads as close. Band top sits
@@ -274,7 +275,8 @@ namespace LilFoots.EditorTools
                     foreach (var seg in runs) {
                         float w = seg[1] - seg[0];
                         if (w < 0.3f || w > 7f) continue;
-                        SpriteGo("Stream", water, new Vector3((seg[0] + seg[1]) / 2f, GY - 0.55f, 0), w + 0.6f, -60, map.transform);
+                        var st = SpriteGo("Stream", water, new Vector3((seg[0] + seg[1]) / 2f, GY - 0.55f, 0), w + 0.6f, -60, map.transform);
+                        st.AddComponent<StreamFlow>().flowLeft = (seg[1] < 31f); // alive water: scrolls + bobs (BudE Sept 21 'flowing water... bring to life')
                     }
                 }
             }
@@ -367,7 +369,7 @@ namespace LilFoots.EditorTools
 
             // ---- PLATFORM SKINS: real earth body + ground strip top (procedural slabs retired) ----
             var earth = Art("art_earth_new.png"); // NEW world skin (BudE: fresh art with the new building system)
-            var strip = Art("art_grass_new.png"); // NEW world skin (BudE: fresh art with the new building system)
+            // [ZONE REBUILD] old flat grass strip art RETIRED (BudE Sept 21: remove the old blocks and arts) - surface is the organic cap + edge system
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Plat_")) continue;
                 var bc = child.GetComponent<BoxCollider2D>();
