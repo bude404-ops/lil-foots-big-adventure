@@ -172,6 +172,30 @@ namespace LilFoots.EditorTools
                 }
             }
 
+
+            // ---- LAYER 1.1: ZONE BACKDROPS (BudE, Sept 21 ~1:30 PM ET verdict: 'it just all
+            // so cut and pasted in and as a long reel instead of a real map feel'): the map
+            // reads as FOUR PAINTED SCENES, not tiled strips - Mossveil Meadow, Cedar Rise,
+            // Fern Hollow, Old Growth Gate. Each zone backdrop is ONE large painting covering
+            // its zone (world-anchored, no parallax so seams stay fixed), stretched to the
+            // full 14u frame height. Supersedes the mirrored-tile backdrop approach. ----
+            var zoneDefs = new (string art, float cx, float w)[] {
+                ("art_zone_1.png", 31f,  62f),   // Mossveil Meadow 0-62
+                ("art_zone_2.png", 86f,  52f),   // Cedar Rise 60-112 (plateau lives here)
+                ("art_zone_3.png", 136f, 52f),   // Fern Hollow 110-162
+                ("art_zone_4.png", 193f, 65f),   // Old Growth Gate 160-225
+            };
+            foreach (var zd in zoneDefs) {
+                var zArt = Art(zd.art);
+                if (zArt == null) continue;
+                var zg = SpriteGo("Zone_" + zd.art, zArt, new Vector3(zd.cx, 7.0f, 0), zd.w, -95, map.transform);
+                var zsr = zg.GetComponent<SpriteRenderer>();
+                // 2:1 art scaled to full frame height 14u: localScale y = 14 / (w/2) = 28/w
+                zg.transform.localScale = new Vector3(zg.transform.localScale.x, 28f / zd.w, 1f);
+                // suppressed-backdrop doctrine: zones sit slightly dim/cool behind the play plane
+                zsr.color = new Color(0.82f, 0.86f, 0.90f, 1f);
+            }
+
             // ---- LAYER 1.5: MIDDLE GROUND (BudE, Sept 21 render verdict: 'the landscape
             // isn't meshing and flowing together... its all just floating in the sky instead
             // of a proper middle ground background and foreground'): misty PNW ridgeline band
@@ -180,8 +204,10 @@ namespace LilFoots.EditorTools
             // the stripped world read as floating blocks; depth comes back as ONE continuous
             // lore-native band (not the old stamp clutter). Art: art_midground.png, mirrored
             // double = seamless 16u tile. ----
-            var midArt = Art("art_midground.png");
-            if (midArt != null && L(1)) {
+            // [ZONE REBUILD Sept 21] midground band DISABLED - the four painted zone
+            // backdrops carry their own atmospheric depth; a mirrored band tiled over them
+            // was a main source of the 'cut and pasted reel' look.
+            var midArt = (Sprite)null;
                 int mt = 0;
                 for (float bx = -48f; bx <= 360f; bx += 48f, mt++) {
                     var mg = SpriteGo("Midground_" + mt, midArt, new Vector3(bx, 5.5f, 0), 16f, -70, map.transform);
@@ -266,13 +292,22 @@ namespace LilFoots.EditorTools
                 var cedar = Art("art_cedar_giant.png");
                 if (cedar != null && L(2)) {
                     float cw = 14f;
-                    SpriteGo("CedarGiant", cedar, new Vector3(94f, 8.2f + cw / 2f, 0), cw, -50, map.transform);
+                    // [COMPACT COURSE FIX] the 62u Mossveil Meadow course has no plateau -
+                    // the cedar stands as the terminus landmark behind the flag-gate approach.
+                    // Long maps keep the plateau placement (94f, 8.2).
+                    var meta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
+                    float mapW = meta != null && meta.ContainsKey("width") ? F(meta["width"]) / 100f : 225f;
+                    if (mapW < 70f) SpriteGo("CedarGiant", cedar, new Vector3(mapW - 8f, GY + cw / 2f, 0), cw, -50, map.transform);
+                    else SpriteGo("CedarGiant", cedar, new Vector3(94f, 8.2f + cw / 2f, 0), cw, -50, map.transform);
                 }
 
                 // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
                 var rays = Art("art_godrays.png");
                 if (rays != null && L(1)) {
-                    float[] rxs = { 34f, 88f, 160f, 200f };
+                    // [COMPACT COURSE FIX] rays distribute across the actual map width
+                    var rmeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
+                    float mw = rmeta != null && rmeta.ContainsKey("width") ? F(rmeta["width"]) / 100f : 225f;
+                    float[] rxs = { mw * 0.22f, mw * 0.48f, mw * 0.72f, mw * 0.92f };
                     for (int ri = 0; ri < rxs.Length; ri++) {
                         var ray = SpriteGo("GodRay_" + ri, rays, new Vector3(rxs[ri], 6.5f, 0), 11f, -80, map.transform);
                         var rsr = ray.GetComponent<SpriteRenderer>();
@@ -355,18 +390,37 @@ namespace LilFoots.EditorTools
                     var crop = ArtCrop("art_earth_new.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("Earth", crop, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
                 }
-                if (strip != null && L(2)) {
-                    // CONSISTENT WORLD SCALE: the strip tiles at its natural size (art aspect x
-                    // 0.62u), phased to world x so the surface pattern flows across the map.
-                    float sw = 0.62f * (strip.bounds.size.x / strip.bounds.size.y);
+                // [ORGANIC GROUND Sept 21 - 'cut and pasted' fix] surface = ground cap band
+                // (art_ground_cap, organic painted grass) + hanging edge silhouettes rising
+                // above the walking line (art_grass_edge, flipped so the dense mass roots AT
+                // the surface and blade tips taper upward). Both tile world-x phased at natural
+                // scale so the pattern flows continuously across the map.
+                var cap = Art("art_ground_cap.png");
+                if (cap != null && L(2)) {
+                    float capH = 0.45f;
+                    float cw2 = capH * (cap.bounds.size.x / cap.bounds.size.y);
                     float left = child.position.x - w / 2f;
-                    float phase = left % sw;
-                    float x = left - phase;
-                    int si = 0;
-                    for (; x < child.position.x + w / 2f - 0.02f; x += sw) {
-                        var st = SpriteGo("GrassTop", strip, new Vector3(x + sw / 2f, top - 0.31f, 0), sw, -1, child);
-                        if (si % 2 == 1) st.GetComponent<SpriteRenderer>().flipX = true;
-                        si++;
+                    float x = left - (left % cw2);
+                    int ci = 0;
+                    for (; x < child.position.x + w / 2f - 0.02f; x += cw2) {
+                        var ct = SpriteGo("GroundCap", cap, new Vector3(x + cw2 / 2f, top - capH / 2f, 0), cw2, -1, child);
+                        if (ci % 2 == 1) ct.GetComponent<SpriteRenderer>().flipX = true;
+                        ci++;
+                    }
+                }
+                var edge = Art("art_grass_edge.png");
+                if (edge != null && L(2)) {
+                    float edgeH = 0.35f;
+                    float ew = edgeH * (edge.bounds.size.x / edge.bounds.size.y);
+                    float left = child.position.x - w / 2f;
+                    float x = left - (left % ew);
+                    int ei = 0;
+                    for (; x < child.position.x + w / 2f - 0.02f; x += ew) {
+                        var et = SpriteGo("GrassEdge", edge, new Vector3(x + ew / 2f, top + 0.02f + edgeH / 2f, 0), ew, 0, child);
+                        var esr = et.GetComponent<SpriteRenderer>();
+                        esr.flipY = true;                       // dense mass roots at the walking line
+                        if (ei % 2 == 1) esr.flipX = true;
+                        ei++;
                     }
                 }
 
