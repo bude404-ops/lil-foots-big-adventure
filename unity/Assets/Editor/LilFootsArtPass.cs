@@ -206,6 +206,21 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
+
+                // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
+                // ground - they wear the approved hop-block slab instead of earth + grass.
+                var hopArt = Art("art_hopblock.png");
+                if (hopArt != null && h < 2f) {
+                    float hw = hopArt.bounds.size.x * (h / hopArt.bounds.size.y);
+                    int hi = 0;
+                    for (float x = child.position.x - w / 2f; x < child.position.x + w / 2f; x += hw) {
+                        var hb = SpriteGo("HopBlockArt", hopArt, new Vector3(x, child.position.y, 0), hw, -2, child);
+                        if (hi % 2 == 1) hb.GetComponent<SpriteRenderer>().flipX = true; // break the repeat
+                        hi++;
+                    }
+                    continue;
+                }
+
                 if (earth != null && L(2)) {
                     float ew = h * 0.94f * (earth.bounds.size.x / earth.bounds.size.y);
                     int ei = 0;

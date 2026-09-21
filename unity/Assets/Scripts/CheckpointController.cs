@@ -10,6 +10,7 @@ public class CheckpointController : MonoBehaviour {
         if (p == null) return;
         if (p.maxX >= transform.position.x - 0.1f && !lit) {
             lit = true; // lights up — visual in the art pass
+            if (AudioManager.Instance != null) AudioManager.Instance.Play("checkpoint");
         }
     }
 }

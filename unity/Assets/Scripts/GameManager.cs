@@ -21,9 +21,17 @@ public class GameManager : MonoBehaviour {
 public static class Sfx {
     public enum Clip { Jump, Stomp, Coin, Die, Snitch, CamSmash, DroneDie, Gate, Flag, Portal, Win, Hurt }
     public static void Play(Clip c) {
-        // Stand-in beep system until the WebAudio synth set is ported — logs + AudioSource ping if present
-        var src = Object.FindObjectOfType<AudioSource>();
-        if (src) src.Play();
+        // REAL AUDIO (BudE, Sept 20 "add sound effects and music"): routed through the
+        // AudioManager's pooled AudioSources; legacy gadget/enemy clips map to the forest SFX set.
+        if (AudioManager.Instance != null) {
+            switch (c) {
+                case Clip.Jump: AudioManager.Instance.Play("jump"); return;
+                case Clip.Coin: AudioManager.Instance.Play("token"); return;
+                case Clip.Die: AudioManager.Instance.Play("death"); return;
+                case Clip.Gate: case Clip.Portal: case Clip.Flag: AudioManager.Instance.Play("levelcomplete"); return;
+                default: return; // retired gadget/enemy clips (doctrine: enemies land at M3 with their own SFX)
+            }
+        }
         Debug.Log("[SFX] " + c);
     }
 }

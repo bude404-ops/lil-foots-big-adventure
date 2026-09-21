@@ -176,6 +176,21 @@ public static class LilFootsLevelBuilder {
         cam.tag = "MainCamera";
         var gm = new GameObject("GameManager").AddComponent<GameManager>();
 
+        // ---- AUDIO (BudE, Sept 20: "add sound effects and music") ----
+        // Unity-native: pooled AudioSources on the manager; clips wired from Assets/Audio.
+        var audioGo = new GameObject("AudioManager");
+        var am = audioGo.AddComponent<AudioManager>();
+        am.musicForestLoop = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/music_forest_loop.wav");
+        am.sfxJump         = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_jump.wav");
+        am.sfxToken        = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_token.wav");
+        am.sfxCheckpoint   = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_checkpoint.wav");
+        am.sfxDeath        = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_death.wav");
+        am.sfxLevelComplete= AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_levelcomplete.wav");
+        am.sfxHeart        = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/sfx_heart.wav");
+        Debug.Log("[LilFoots] AudioManager wired: music=" + (am.musicForestLoop != null) +
+                  " sfx(jump/token/cp/die/win/heart)=" + (am.sfxJump != null) + (am.sfxToken != null) +
+                  (am.sfxCheckpoint != null) + (am.sfxDeath != null) + (am.sfxLevelComplete != null) + (am.sfxHeart != null));
+
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         Debug.Log("[LilFoots] Map 001 built: " + plats.Count + " plats, " + hounds.Count + " hounds, "
                   + cams.Count + " cams, " + tokens.Count + " tokens, " + cpList.Count + " checkpoints. Ctrl+S to save the scene.");

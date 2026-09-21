@@ -19,6 +19,7 @@ namespace LilFoots {
             var p = c.GetComponentInParent<PlayerController>();
             if (p == null) return;
             p.lives++;
+            if (AudioManager.Instance != null) AudioManager.Instance.Play("heart");
             Destroy(gameObject);
         }
     }
