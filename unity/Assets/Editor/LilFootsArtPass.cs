@@ -161,7 +161,7 @@ namespace LilFoots.EditorTools
 
             // ---- STREAM WATER (PIECE 4, new PNW stream art pending BudE verdict - old
             // art_water.png deleted in the purge; block no-ops until the new art lands) ----
-            var water = Art("art_water.png");
+            var water = Art("art_stream.png");
             var plats = (List<object>)data["plats"];
             var sorted = plats.Cast<List<object>>()
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })

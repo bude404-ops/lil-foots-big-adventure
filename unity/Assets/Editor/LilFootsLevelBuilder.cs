@@ -122,7 +122,12 @@ public static class LilFootsLevelBuilder {
         // ---- gate ----
         var gate = new GameObject("Gate");
         gate.transform.SetParent(root.transform);
-        gate.transform.position = new Vector3(86f, GY, 0);
+        // TERMINUS LAW (BudE: flag + portal at the course END, not mid-course): the old
+        // hardcoded x=86 put the gate inside long courses (map_r1_1 is 225u wide); place
+        // it from the map's own width instead, a few units before the final edge.
+        var metaW = (System.Collections.Generic.Dictionary<string, object>)data["meta"];
+        float gateX = (float)System.Convert.ToDouble(metaW["width"]) / 100f - 4f;
+        gate.transform.position = new Vector3(gateX, GY, 0);
         var gc = gate.AddComponent<BoxCollider2D>(); gc.isTrigger = true; gc.size = new Vector2(0.8f, 3f);
         gate.AddComponent<GateController>();
 
