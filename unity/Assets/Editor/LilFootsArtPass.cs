@@ -179,11 +179,37 @@ namespace LilFoots.EditorTools
             // Fern Hollow, Old Growth Gate. Each zone backdrop is ONE large painting covering
             // its zone (world-anchored, no parallax so seams stay fixed), stretched to the
             // full 14u frame height. Supersedes the mirrored-tile backdrop approach. ----
+            // ---- LAYER 1.15: STORY PAINTING (BudE, Sept 21 ~2:15 PM ET: 'build a new one
+            // that [is] all one solid map and painting but having the flow of a story as the
+            // character runs and jumps around for that map'): for the story course the ENTIRE
+            // backdrop is ONE continuous painting with the narrative arc baked in left-to-right
+            // (meadow awakening -> fern hollow -> the climb -> old-growth finale). ----
+            var smeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
+            string mapId = smeta != null && smeta.ContainsKey("map") ? (smeta["map"] as string) : "";
+            bool isStory = (mapId == "r1_story");
+            if (isStory) {
+                var storyArt = Art("art_story_r1.png");
+                if (storyArt != null) {
+                    float sw = F(smeta["width"]) / 100f;
+                    var sg = SpriteGo("StoryPainting", storyArt, new Vector3(sw / 2f, 7.0f, 0), sw, -95, map.transform);
+                    var ssr = sg.GetComponent<SpriteRenderer>();
+                    ssr.color = new Color(0.86f, 0.89f, 0.92f, 1f);  // suppressed backdrop doctrine
+                    sg.transform.localScale = new Vector3(sg.transform.localScale.x, (2.22f * 14f) / sw, 1f); // 2.22:1 art fit to the full 14u frame
+                }
+            } else {
+            // [COURSE-SCENE Sept 21] one painting per COURSE (BudE: 'paint each entire
+            // map as it should be to fit lore'): the 225u reel layout is retired - each
+            // course picks ITS OWN full-width zone painting from its map id.
+            // Lore: 1-1 Mossveil=z1 | 1-2 Fern Hollow=z3 | 1-3 Cedar Run=z2 | 1-4 Old Growth=z4
+            var zmeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
+            float zmapW = zmeta != null && zmeta.ContainsKey("width") ? F(zmeta["width"]) / 100f : 62f;
+            string zmid = zmeta != null && zmeta.ContainsKey("map") ? zmeta["map"].ToString() : "r1_1";
+            int zcourse = 0; int zlast = 0;
+            foreach (char zch in zmid) if (char.IsDigit(zch)) zlast = zch - '0';
+            zcourse = zlast;
+            string zoneArt = zcourse == 2 ? "art_zone_3.png" : zcourse == 3 ? "art_zone_2.png" : "art_zone_" + zcourse + ".png";
             var zoneDefs = new (string art, float cx, float w)[] {
-                ("art_zone_1.png", 31f,  62f),   // Mossveil Meadow 0-62
-                ("art_zone_2.png", 86f,  52f),   // Cedar Rise 60-112 (plateau lives here)
-                ("art_zone_3.png", 136f, 52f),   // Fern Hollow 110-162
-                ("art_zone_4.png", 193f, 65f),   // Old Growth Gate 160-225
+                (zoneArt, zmapW / 2f, zmapW),   // ONE painting, full course width, full frame height
             };
             foreach (var zd in zoneDefs) {
                 var zArt = Art(zd.art);
@@ -195,6 +221,7 @@ namespace LilFoots.EditorTools
                 // suppressed-backdrop doctrine: zones sit slightly dim/cool behind the play plane
                 zsr.color = new Color(0.82f, 0.86f, 0.90f, 1f);
             }
+            } // end non-story zone branch
 
             // ---- LAYER 1.5: MIDDLE GROUND (BudE, Sept 21 render verdict: 'the landscape
             // isn't meshing and flowing together... its all just floating in the sky instead
@@ -299,8 +326,21 @@ namespace LilFoots.EditorTools
                     // Long maps keep the plateau placement (94f, 8.2).
                     var meta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
                     float mapW = meta != null && meta.ContainsKey("width") ? F(meta["width"]) / 100f : 225f;
-                    if (mapW < 70f) SpriteGo("CedarGiant", cedar, new Vector3(mapW - 8f, GY + cw / 2f, 0), cw, -50, map.transform);
-                    else SpriteGo("CedarGiant", cedar, new Vector3(94f, 8.2f + cw / 2f, 0), cw, -50, map.transform);
+                    if (mapId == "r1_story") SpriteGo("CedarGiant", cedar, new Vector3(mapW - 2.5f, 11.8f + cw / 2f, 0), cw, -50, map.transform); // STORY MAP: cedar crowns the summit (surface 11.8) at the finale
+                    else {
+                        // [COURSE-SCENE] snap the cedar base to the real ground surface at its x
+                        // (composed courses have no plateau - a hardcoded 8.2 base would float it)
+                        float cedarX = mapW < 70f ? mapW - 8f : 94f;
+                        float cedarBase = GY;
+                        foreach (Transform child in map.transform) {
+                            if (!child.name.StartsWith("Plat_")) continue;
+                            var bcx = child.GetComponent<BoxCollider2D>();
+                            if (bcx == null) continue;
+                            float pl = child.position.x - bcx.size.x / 2f, pr = child.position.x + bcx.size.x / 2f;
+                            if (cedarX >= pl && cedarX <= pr && bcx.size.y >= 400f) { cedarBase = child.position.y + bcx.size.y / 2f; break; }
+                        }
+                        SpriteGo("CedarGiant", cedar, new Vector3(cedarX, cedarBase + cw / 2f, 0), cw, -50, map.transform);
+                    }
                 }
 
                 // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
@@ -388,6 +428,18 @@ namespace LilFoots.EditorTools
                     continue;
                 }
 
+                // ---- STORY TERRAIN (BudE, Sept 21 'one solid map and painting'): on the
+                // story map every ground is a world-anchored slice of ONE continuous painted
+                // band (art_terrain_r1: living moss fringe + rich earth in the same stroke)
+                // - neighboring grounds sample adjoining texture, so the whole course reads
+                // as one solid vein of earth. Cap/edge tiles are retired for this map. ----
+                if (isStory && h >= 2f && L(2)) {
+                    var band = ArtCrop("art_terrain_r1.png", w, h, child.position.x - w / 2f);
+                    if (band != null) {
+                        SpriteGo("StoryTerrain", band, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
+                        continue;                                   // story grounds: band ONLY, no cap/edge tiles
+                    }
+                }
                 if (earth != null && L(2)) {
                     var crop = ArtCrop("art_earth_new.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("Earth", crop, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
