@@ -198,6 +198,7 @@ namespace LilFoots.EditorTools
             // ---- PLATFORM SKINS: real earth body + ground strip top (procedural slabs retired) ----
             var earth = Art("art_earth_new.png"); // NEW world skin (BudE: fresh art with the new building system)
             var strip = Art("art_grass_new.png"); // NEW world skin (BudE: fresh art with the new building system)
+            var hopArt = Art("art_hop.png");       // PIECE 2 HOP BLOCK (BudE: 'Keep' Sept 20) - floating mossy-cedar slabs
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Plat_")) continue;
                 var bc = child.GetComponent<BoxCollider2D>();
@@ -206,6 +207,14 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
+
+                // PIECE 2: hop blocks (floaters ~1u tall) render as ONE stretched mossy-cedar
+                // slab; the wide ground treatment (earth tiles + grass strip) is for tall slabs only.
+                if (hopArt != null && h <= 1.6f) {
+                    // 2.08:1 art on a 2:1 block - uniform scale lands within 3% of the collider
+                    SpriteGo("Hop", hopArt, new Vector3(child.position.x, child.position.y, 0), w * 1.02f, -1, child);
+                    continue;
+                }
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
