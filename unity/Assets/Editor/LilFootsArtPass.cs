@@ -253,6 +253,22 @@ namespace LilFoots.EditorTools
 
             // ---- ENEMY ART: PURGED (see above) ----
 
+            // ---- CHECKPOINT TOTEMS (PIECE 5, BudE 'Keep piece 5' Sept 21): approved mossy cedar
+            // trail totem with glowing footprint emblem. Unlit = dim moss tint; the controller
+            // brightens it to full color when the player claims it.
+            var totem = Art("art_checkpoint.png");
+            if (totem != null) {
+                for (int ci = 0; ci < 64; ci++) {
+                    var cp = GameObject.Find("Checkpoint_" + ci);
+                    if (cp == null) break;
+                    var sr = cp.AddComponent<SpriteRenderer>();
+                    sr.sprite = totem; sr.sortingOrder = 1;
+                    float cf = 1.7f / totem.bounds.size.y;
+                    cp.transform.localScale = new Vector3(cf, cf, 1f);
+                    sr.color = new Color(0.72f, 0.82f, 0.74f, 1f); // dim moss until claimed
+                }
+            }
+
             // ---- TOKENS (footprint Big Token) + secret heart ----
             // COINS BACK ON (Bude, Sept 20: "there are no tokens to collect"): the trail was
             // re-placed along the actual platform path (surface lines + arc bridges over the
