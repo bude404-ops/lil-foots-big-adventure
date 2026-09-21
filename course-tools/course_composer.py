@@ -49,12 +49,16 @@ def rise_h(base, dial):
 GY = 620
 
 def ground(x, w):
-    """Ground slab: [left, y(center), w, h] — same convention as map_m1."""
-    return [x, GY, w, 400]
+    """Ground slab, left-origin call -> emits ENGINE convention [x_center, y_center, w, h].
+    FIX (Sept 20, smoke 'feet: ground y=none'): the Unity builder and the original JS
+    engine both treat plat x as the CENTER, but the composer emitted left-edge x -
+    every composed platform shifted left by half its width and gaps stretched ~2x
+    in-engine. Convert left-origin to center here so composed == played."""
+    return [x + w / 2.0, GY, w, 400]
 
 def hop(x, y_top, w):
-    """Hop block: thin floater stored by CENTER y (canvas), top = y-50."""
-    return [x, y_top + 50, w, 100]
+    """Hop block, left-origin call -> emits ENGINE center-x convention (see ground())."""
+    return [x + w / 2.0, y_top + 50, w, 100]
 
 def tok(x, y, tier=0):
     return {"x": int(x), "y": int(y), "tier": tier}
@@ -238,6 +242,9 @@ def compose(recipe_path, out_path):
     if x < WORLD_END:
         plats.append(ground(x, WORLD_END - x))
         x = WORLD_END
+    # SAFE OPENING (6-phase TEACH law + smoke 'feet on ground'): a 15u opening meadow
+    # under the spawn. Overlaps the first block harmlessly - merged walkable surface.
+    plats.append(ground(-900, 2400))
     for c in [1800, 4000, 6200]:
         if 800 < c < x - 800:
             checkpoints.append(c)
@@ -260,8 +267,8 @@ def compose(recipe_path, out_path):
     return out_path
 
 def _rect(pl):
-    left, y, w, h = pl
-    return (left, left + w, y - h / 2)   # (x0, x1, top) canvas: smaller top = higher
+    cx, y, w, h = pl                     # ENGINE convention: x = center (see ground())
+    return (cx - w / 2.0, cx + w / 2.0, y - h / 2)   # (x0, x1, top) canvas: smaller top = higher
 
 def audit(map_path):
     m = json.load(open(map_path))
@@ -315,6 +322,10 @@ def audit(map_path):
         if c - prev > 2600:
             warns.append(f"checkpoint gap {c-prev:.0f}px before x={c:.0f}")
         prev = c
+
+    # 6) spawn law: a ground slab must cover the spawn zone (camera clamp ~650px)
+    if not any(r[0] <= 600 and r[1] >= 700 for r in rects):
+        fails.append("SPAWN no ground covers the spawn zone (600-700px)")
 
     print(f"AUDIT {map_path}: {'RED' if fails else 'GREEN'} "
           f"({len(fails)} fails, {len(warns)} warns)")
