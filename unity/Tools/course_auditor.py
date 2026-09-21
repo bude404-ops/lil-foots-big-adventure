@@ -55,9 +55,9 @@ def audit(path):
         return False
 
     # ---- reachability: every non-ground plat needs a reachable predecessor ----
-    ground = [p for p in plats if p[1] >= GROUND_TOLERANCE]
+    ground = [p for p in plats if p[3] >= GROUND_TOLERANCE]
     for p in plats:
-        if p[1] >= GROUND_TOLERANCE:  # ground-level: reachable by walking
+        if p[3] >= GROUND_TOLERANCE:  # ground-level: reachable by walking
             continue
         pl, ptop, pr, ph = span(p)
         best = None
@@ -92,12 +92,12 @@ def audit(path):
             warnings.append(f"tight jump onto plat x={(pl+pr)/2:.0f} (cost {best[0]:.0f}px)")
 
     # ---- full traverse: walk the main route left->right at ground level ----
-    grounds = sorted([p for p in plats if p[1] >= GROUND_TOLERANCE], key=lambda p: p[0])
+    grounds = sorted([p for p in plats if p[3] >= GROUND_TOLERANCE], key=lambda p: p[0])
     for a, b in zip(grounds, grounds[1:]):
         al, at, ar, ah = span(a); bl, bt, br, bh = span(b)
         gap = bl - ar
         if gap > MAX_GAP and not any(  # a mid-gap hop block saves it
-            p[1] < GROUND_TOLERANCE and ar <= span(p)[0] and span(p)[2] <= bl + MAX_GAP
+            p[3] < GROUND_TOLERANCE and ar <= span(p)[0] and span(p)[2] <= bl + MAX_GAP
             for p in plats):
             errors.append(f"GAP {gap:.0f}px between ground plats x={ar:.0f}->{bl:.0f} exceeds {MAX_GAP}px")
 
@@ -107,7 +107,7 @@ def audit(path):
         cp_span = cp - prev
         if cp_span > MAX_CP_SPAN:
             errors.append(f"checkpoint gap {cp_span:.0f}px before x={cp} exceeds {MAX_CP_SPAN}px")
-        if not any(span(p)[0] - 10 <= cp <= span(p)[2] + 10 and p[1] >= GROUND_TOLERANCE for p in plats):
+        if not any(span(p)[0] - 10 <= cp <= span(p)[2] + 10 and p[3] >= 200 for p in plats):
             errors.append(f"checkpoint x={cp} floats over a gap")
         prev = cp
     tail = d["meta"]["width"] - prev
@@ -142,7 +142,7 @@ def audit(path):
 
 
 GROUND_Y = lambda d: d["meta"].get("groundY", 620)
-GROUND_TOLERANCE = 600
+GROUND_TOLERANCE = 600  # ground = plat taller than 200px (height, not canvas y)
 
 if __name__ == "__main__":
     audit(sys.argv[1])
