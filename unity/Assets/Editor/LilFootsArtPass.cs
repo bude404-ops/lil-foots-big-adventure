@@ -153,9 +153,16 @@ namespace LilFoots.EditorTools
             // distant ridge wash, camera-pinned (static backdrop law - never scrolls), mirrored
             // x2 so any aspect stays covered. Minimal layers per his verdict: sky + gameplay
             // plane. No middle-ground bands, no foreground props over the playfield. ----
+            var smeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
+            string mapId = smeta != null && smeta.ContainsKey("map") ? (smeta["map"] as string) : "";
+            bool isStory = (mapId == "r1_story");
+            bool isFull = (mapId == "r1_full");   // ONE COMPLETE MAP (BudE Sept 21 ~2:30 PM ET)
+            bool isLong = (mapId == "r1_long");   // FULL-LENGTH 128u variant (Sept 21 verdict: length + depth)
+            bool isEpic = (mapId == "r1_epic");   // 256u FULL JOURNEY (Sept 21 ~4:40 PM ET: 5-minute map + ground-fix verdict)
+            bool isDt = (mapId == "r1_depth_test");   // GEOMETRY-DEPTH TEST map: the 8000x1560 painting IS the world (v12 skin)
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
-            if (cam != null && L(1) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painting is the sky
+            if (cam != null && L(1) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painting is the sky
                 var skySpr = Art("art_sky_new.png");
                 if (skySpr != null) {
                     float skyH = 12f;                 // frame is 7.5 tall - generous bleed top and bottom
@@ -184,12 +191,6 @@ namespace LilFoots.EditorTools
             // character runs and jumps around for that map'): for the story course the ENTIRE
             // backdrop is ONE continuous painting with the narrative arc baked in left-to-right
             // (meadow awakening -> fern hollow -> the climb -> old-growth finale). ----
-            var smeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
-            string mapId = smeta != null && smeta.ContainsKey("map") ? (smeta["map"] as string) : "";
-            bool isStory = (mapId == "r1_story");
-            bool isFull = (mapId == "r1_full");   // ONE COMPLETE MAP (BudE Sept 21 ~2:30 PM ET)
-            bool isLong = (mapId == "r1_long");   // FULL-LENGTH 128u variant (Sept 21 verdict: length + depth)
-            bool isEpic = (mapId == "r1_epic");   // 256u FULL JOURNEY (Sept 21 ~4:40 PM ET: 5-minute map + ground-fix verdict)
             if (isFull) {
                 // ---- ONE COMPLETE FULL NEW MAP (BudE, Sept 21 ~2:30 PM ET: 'stop adding the
                 // blocks and pieces in, its not turning out like im wanting i need to to generate
@@ -291,6 +292,23 @@ namespace LilFoots.EditorTools
                     .transform.localScale = new Vector3(fwfill / 2f, 3.2f / 2f, 1f);
                 }
             }
+            else if (isDt) {
+                // ---- DEPTH TEST (r1_depth_test, BudE Sept 21-22): the ONE painting is the world.
+                // Canvas = world x100 (groundY 620 -> 6.2u, 1560 rows -> 15.6u, bottom row = y 0).
+                // Only Lily, tokens, secret heart and invisible triggers render on top.
+                var dtArt = Art("art_r1dt_skin_render.png");
+                if (dtArt != null) {
+                    float fw = F(smeta["width"]) / 100f;
+                    float ph = 1560f / 100f;
+                    var sg = SpriteGo("DepthTestPainting", dtArt, new Vector3(fw / 2f, ph / 2f, 0), fw, -95, map.transform);
+                    var ssr = sg.GetComponent<SpriteRenderer>();
+                    ssr.color = Color.white;                 // the painting is the world: no suppression tint
+                    float fx = sg.transform.localScale.x;
+                    sg.transform.localScale = new Vector3(fx, ph / dtArt.bounds.size.y, 1f);
+                } else {
+                    Debug.LogError("[ArtPass] art_r1dt_skin_render.png missing - the depth test map IS the art");
+                }
+            }
             else if (isStory) {
                 var storyArt = Art("art_story_r1.png");
                 if (storyArt != null) {
@@ -361,7 +379,7 @@ namespace LilFoots.EditorTools
             // below the streams (y=4.5) so it frames the bottom of the frame without covering
             // standing gameplay. ----
             var fgArt = Art("art_foreground.png");
-            if (fgArt != null && L(4) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painting carries the foreground
+            if (fgArt != null && L(4) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painting carries the foreground
                 int ft = 0;
                 for (float bx = -16f; bx <= 200f; bx += 16f, ft++) {
                     var fg = SpriteGo("Foreground_" + ft, fgArt, new Vector3(bx, 3.0f, 0), 16f, 30, map.transform);
@@ -382,7 +400,7 @@ namespace LilFoots.EditorTools
             var sorted = plats.Cast<List<object>>()
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
                 .OrderBy(a => a[0]).ToList();
-            if (water != null && L(2) && !isLong && !isEpic) {   // [LONG MAP] streams placed manually at the painted waterlines
+            if (water != null && L(2) && !isLong && !isEpic && !isDt) {   // [LONG MAP] streams placed manually at the painted waterlines
                 // MAP v2 (Bude, Sept 20 course redo): hop blocks now float OVER ground, so the
                 // naive consecutive-plat gap can span solid earth. Subtract every ground-level
                 // plat interval from the candidate gap and draw water only in the true pits.
@@ -424,7 +442,7 @@ namespace LilFoots.EditorTools
                 // ---- SET PIECE: Old Growth cedar giant (BudE 'Keep' msg 8870) — the Region 1
                 // signature landmark, standing ON the raised plateau (x=94, surface 8.2). ----
                 var cedar = Art("art_cedar_giant.png");
-                if (cedar != null && L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the cedar is painted into the map
+                if (cedar != null && L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the cedar is painted into the map
                     float cw = 14f;
                     // [COMPACT COURSE FIX] the 62u Mossveil Meadow course has no plateau -
                     // the cedar stands as the terminus landmark behind the flag-gate approach.
@@ -450,7 +468,7 @@ namespace LilFoots.EditorTools
 
                 // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
                 var rays = Art("art_godrays.png");
-                if (rays != null && L(1) && !isFull && !isLong && !isEpic) {   // [FULL MAP] light is baked into the painting
+                if (rays != null && L(1) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] light is baked into the painting
                     // [COMPACT COURSE FIX] rays distribute across the actual map width
                     var rmeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
                     float mw = rmeta != null && rmeta.ContainsKey("width") ? F(rmeta["width"]) / 100f : 225f;
@@ -466,7 +484,7 @@ namespace LilFoots.EditorTools
 
                 // ---- SURFACE LIFE: sparse fern/tuft/stone props ON grass tops, world-x keyed,
                 // never over gaps, edges, checkpoints or hop blocks (BudE: nothing covering gameplay). ----
-                if (L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painted terrain already lives
+                if (L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painted terrain already lives
                     var hopXs = new System.Collections.Generic.List<float>();
                     foreach (var a in sorted) if (a[3] < 400f) hopXs.Add(a[0] / 100f);
                     int pi = 0;
@@ -490,7 +508,7 @@ namespace LilFoots.EditorTools
                 }
 
                 // ---- PIT FRAMING: root/rock lips hanging from both edges of every true pit. ----
-                if (L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] the painted banks frame the pit
+                if (L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painted banks frame the pit
                     var gs2 = sorted.Where(a => a[1] >= 600f || a[3] >= 400f).OrderBy(a => a[0]).ToList();
                     int li = 0;
                     for (int i = 0; i < gs2.Count - 1; i++) {
@@ -523,7 +541,7 @@ namespace LilFoots.EditorTools
                 float top = child.position.y + h / 2f;
                 var oldSr = child.GetComponent<SpriteRenderer>();
                 if (oldSr != null) Object.DestroyImmediate(oldSr); // no placeholder slabs in Unity
-                if (isFull || isLong || isEpic) continue;   // [FULL MAP] colliders are INVISIBLE - the painting is the terrain
+                if (isFull || isLong || isEpic || isDt) continue;   // [FULL MAP] colliders are INVISIBLE - the painting is the terrain
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
@@ -601,7 +619,7 @@ namespace LilFoots.EditorTools
             // trail totem with glowing footprint emblem. Unlit = dim moss tint; the controller
             // brightens it to full color when the player claims it.
             var totem = Art("art_checkpoint.png");
-            if (totem != null) {
+            if (totem != null && !isDt) {
                 for (int ci = 0; ci < 64; ci++) {
                     var cp = GameObject.Find("Checkpoint_" + ci);
                     if (cp == null) break;
@@ -645,7 +663,7 @@ namespace LilFoots.EditorTools
 
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
-            if (gate != null && L(2) && !isFull && !isLong && !isEpic) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
+            if (gate != null && L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
                 var fgArt = Art("art_flaggate.png");
                 if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
                 var portal = Art("art_flagportal.png");
