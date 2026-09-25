@@ -109,8 +109,11 @@ public static class LilFootsTilemapSkin {
     }
 
     /// <summary>Paint every audited ground collider's footprint as tiles (skin only).</summary>
+    static bool _painted;
+
     public static void PaintGrounds(GameObject mapRoot) {
-        if (!Ready()) return;
+        if (!Ready() || _painted) return;   // one union paint per session (loop calls per-plat)
+        _painted = true;
         var grounds = new List<GameObject>();
         foreach (Transform child in mapRoot.transform) {
             var bc = child.GetComponent<BoxCollider2D>();

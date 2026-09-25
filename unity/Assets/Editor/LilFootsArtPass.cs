@@ -1101,12 +1101,12 @@ namespace LilFoots.EditorTools
             // TILEMAP PIVOT (BudE green light Sept 25 2026: geometry-only into a new map,
             // skinned IN UNITY with Tilemap terrain): LILFOOTS_TILEMAP=1 routes the build to
             // the native-terrain builder and skips the old stretched-canvas painting pass.
-            if (System.Environment.GetEnvironmentVariable("LILFOOTS_TILEMAP") == "1") {
-                LilFootsTilemapBuilder.Build();
-            } else {
-                LilFootsLevelBuilder.Build();
-                BuildArt();
-            }
+            // [TAKE 2 Sept 25] the standard LevelBuilder + ArtPass stack builds the FULL art
+            // (props, tokens, totems, gate, portal, character rig) - and BuildArt routes
+            // r1_depth_test terrain to LilFootsTilemapSkin (isTile). The standalone placeholder
+            // TilemapBuilder stays menu-only (Tools > Lil Foots > Build Tilemap Level).
+            LilFootsLevelBuilder.Build();
+            BuildArt();
             BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
             BuildCharacterMenu(GameObject.Find("MainCamera").GetComponent<UnityEngine.Camera>()); // UI PASS: character select at start
             Directory.CreateDirectory("Assets/Scenes");
