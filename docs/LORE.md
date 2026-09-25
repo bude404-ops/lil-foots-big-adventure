@@ -115,7 +115,7 @@ Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md) — *The Frostca
 Five villains have stolen the light of the trail totems, one per region — each a
 tyrant who took what the trails need to stay alive: the Wendigo's endless winter,
 Snowcoil's frozen hoard, Sunsprint's stolen trophies, Mossback's sunken throne,
-Vinewheart's world of vines. The Lil Foots take the light back, course by course,
+Vineheart's world of vines. The Lil Foots take the light back, course by course,
 defeating each big bad and relighting their totems. Light all five regions and the
 world's paths open again — and five very grumpy villains learn to fear footprints.
 
