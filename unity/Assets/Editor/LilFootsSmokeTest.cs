@@ -152,8 +152,30 @@ public static class LilFootsSmokeTest {
         }
         var gate = GameObject.Find("Gate");
         C(gate != null && gate.GetComponent<LilFoots.GateController>() != null, "course: gate + GateController wired");
-        C(gate != null && gate.transform.position.x > (m1 ? 30f : 80f),
-          "course: gate at the terminus (x=" + (gate != null ? gate.transform.position.x.ToString("F1") : "none") + ")");
+        // TERMINUS CHECK (width-relative, run 36162649214 red): the terminus law places the gate
+        // at width-4, so the floor must scale with THIS course - the 80u depth-test course
+        // gates at x=76 (=80-4, correct) and failed the old hardcoded >80 gate.
+        float termMin = m1 ? 30f : 80f;
+        if (!m1) {
+            try {
+                var md = System.Environment.GetEnvironmentVariable("MAP_DATA");
+                if (!string.IsNullOrEmpty(md)) {
+                    var path = md.Contains("/") ? md : "Assets/LevelData/" + md;
+                    if (System.IO.File.Exists(path)) {
+                        var meta = MiniJson.Deserialize(System.IO.File.ReadAllText(path)) as System.Collections.Generic.Dictionary<string, object>;
+                        var m = meta != null && meta.ContainsKey("meta")
+                            ? (System.Collections.Generic.Dictionary<string, object>)meta["meta"] : null;
+                        if (m != null && m.ContainsKey("width")) {
+                            float w = (float)System.Convert.ToDouble(m["width"]) / 100f;
+                            termMin = w - 8f;   // gate must land in the final 8u of its own course
+                        }
+                    }
+                }
+            } catch (Exception) { /* keep the 80u default */ }
+        }
+        C(gate != null && gate.transform.position.x > termMin,
+          "course: gate at the terminus (x=" + (gate != null ? gate.transform.position.x.ToString("F1") : "none") +
+          ", termMin=" + termMin.ToString("0") + ")");
         C(GameObject.Find("FlagGateArt") != null, "course: flag art at the finish");
         C(GameObject.Find("PortalArt") != null, "course: portal art at the finish");
 
