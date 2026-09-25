@@ -88,12 +88,13 @@ Archetypes (Mario-lineage structure, original bodies):
 - **Webwick** (swooper) — a moss spider that swings on dewlines.
 
 **Region boss: THE WENDIGO** — the corrupted heart of Old Growth Deep. The one creature
-the Lil Foots' trail lore says never to follow. *(Boss design + fight TBD.)*
+the Lil Foots' trail lore says never to follow. Full fight design: [BOSS_WENDIGO.md](BOSS_WENDIGO.md).
 
 ### Regions 2–5
 
 Each region gets its own regional big bad and a full biome-native roster, built one
-region at a time, only on BudE's go. *(All TBD.)*
+region at a time, only on BudE's go. The five big bads: [VILLAINS.md](VILLAINS.md).
+Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md).
 
 ---
 
