@@ -681,8 +681,8 @@ namespace LilFoots.EditorTools
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
-                var fgArt = Art("art_flaggate.png");
-                if (fgArt != null) Reskin("FlagGateArt", fgArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
+                var gateArt = Art("art_flaggate.png");   // renamed from fgArt - CS0136 collision with the Layer-4 foreground fgArt (same method scope)
+                if (gateArt != null) Reskin("FlagGateArt", gateArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
                 var portal = Art("art_flagportal.png");
                 if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x + 2.8f, GY + 3.25f, 0), 6.5f, 3, map.transform); // [SCALE LAW Sept 21] 6.5u tall, placed PAST the flag (flag-then-portal flow, was behind the flag at -1.4)
             }
