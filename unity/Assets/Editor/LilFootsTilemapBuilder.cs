@@ -296,7 +296,7 @@ public static class LilFootsTilemapBuilder {
         if (!File.Exists(png)) { File.WriteAllBytes(png, tex.EncodeToPNG()); AssetDatabase.ImportAsset(png); }
         var ti = (TextureImporter)AssetImporter.GetAtPath(png);
         ti.spriteImportMode = SpriteImportMode.Single;
-        ti.spritePixelsPerUnit = 128f;
+        ti.spritePixelsPerUnit = 256f;   // seamless set is 256px quad-mirror - 256px @ 256ppu = 1u = 1 tilemap cell (128ppu would render each tile spanning 2x2 cells)
         ti.filterMode = FilterMode.Bilinear;
         ti.SaveAndReimport();
         var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(png);
