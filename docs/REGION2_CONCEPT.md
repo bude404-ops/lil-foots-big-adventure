@@ -29,7 +29,7 @@ whose trails went cold. Friendly, shaggy, mountain-quiet. Draft trail-keeper:
 - **2-1 Snowline Steps** — the safe opening: teaching the new ice feel on gentle steps.
 - **2-2 Windcarve Shelf** — wind mechanics introduced: gusts push mid-jump, telegraphed by banner direction and powder flowing sideways.
 - **2-3 Icefall Crossing** — climbing tech peaks: ice-wall climbs over open chasms, frost swoopers between shelves.
-- **2-4 The Summit Shiver** — the finale: a storm-veiled glacier descent into FROSTMAW's cozy hollow.
+- **2-4 The Summit Shiver** — the finale: a storm-veiled glacier descent into SNEEZARD's cozy hollow.
 
 ## New Movement Feels (the region's identity)
 
@@ -44,14 +44,14 @@ whose trails went cold. Friendly, shaggy, mountain-quiet. Draft trail-keeper:
 - **GALEHARE** (charger) — a long-eared snow hare that rockets across slicks.
 - **RIMECAP** (turret) — a frost-fungus rooted to ice walls that pops icicle shots.
 
-## Big Bad — FROSTMAW, THE AVALANCHE WYRM
+## Big Bad — SNEEZARD, THE SLEEPY SNOW SERPENT
 
 Full sheet lives in `docs/VILLAINS.md`. In concept: a colossal glacier serpent who
 got woken mid-nap and is VERY grumpy about it — every sneeze is a blizzard. The fight
-ends not with a defeat but with Frostmaw yawning, curling up warm, and snoozing
-happily; the blizzard clears into gold evening light and Frostmaw becomes a big
+ends not with a defeat but with Sneezard yawning, curling up warm, and snoozing
+happily; the blizzard clears into gold evening light and Sneezard becomes a big
 snoring friend of the region. Arena concept: the fight moves —
-Frostmaw dives between snow shelves and re-surfaces around the arena, so the player
+Sneezard dives between snow shelves and re-surfaces around the arena, so the player
 reads the avalanche telegraphs (falling powder columns) and fights on shifting sheets
 of the same slick-ice feel the region taught. Ends, like every region, with the cold
 totem relit and the blizzard breaking into gold evening light.
@@ -68,5 +68,5 @@ totem relit and the blizzard breaking into gold evening light.
 
 ---
 
-*(Course names, creature names, palette anchors, and the Frostmaw fight are all drafts
+*(Course names, creature names, palette anchors, and the Sneezard fight are all drafts
 awaiting BudE's verdict. Nothing here builds until Region 1 ships and he calls it.)*
