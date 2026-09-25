@@ -54,6 +54,20 @@ The world reads like chapters in one journey. Region names follow the format
 
 *(Region display names TBD by BudE — the italicized titles above are drafts.)*
 
+### The lore bible — full doc index
+
+| Doc | What it holds |
+|-----|---------------|
+| LORE.md (this file) | premise, characters, regions, doctrine, story arc, glossary |
+| CHARACTERS.md | the Lil Foots, the Hidden Hollow home/hub, family cast |
+| ITEMS_ABILITIES.md | collectibles, pickups, hearts, the shared moveset |
+| VILLAINS.md | the five big bads — Bowser-tier law |
+| VILLAIN_SHEETS.md | visual design sheets for all five villains |
+| BOSS_WENDIGO.md / BOSS_SNOWCOIL.md / BOSS_SUNSPRINT.md / BOSS_MOSSBACK.md / BOSS_VINEHEART.md | the five boss fights |
+| REGION2_CONCEPT.md / REGION3_CONCEPT.md / REGION4_CONCEPT.md / REGION5_CONCEPT.md | the four untaken regions |
+| MUSIC_STINGS.md | the one-family score + sting doctrine |
+| WORLD_MAP_MENU.md | the diegetic map/menu direction |
+
 ### Region 1 — Pacific Northwest (in production)
 
 The misty forest home of the family. Courses read like a trail map:
