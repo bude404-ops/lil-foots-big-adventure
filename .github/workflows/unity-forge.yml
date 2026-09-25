@@ -46,6 +46,10 @@ on:
         description: 'New playable content ready for Bude (1 = DM the build link, 0 = silent internal pass)'
         required: false
         default: '0'
+      tilemap:
+        description: 'Unity Tilemap terrain skin (1 = native Grid+Tilemap build, geometry skinned in Unity)'
+        required: false
+        default: '0'
 
 permissions:
   contents: read
@@ -69,6 +73,7 @@ jobs:
       SHIP: ${{ inputs.ship || '0' }}
       MAP_SCENE: ${{ inputs.map_scene || 'Map001' }}
       MAP_DATA: ${{ inputs.map_data || 'map001.json' }}
+      LILFOOTS_TILEMAP: ${{ inputs.tilemap || '0' }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -90,7 +95,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG -e MAP_SCENE -e MAP_DATA \
+            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -259,7 +264,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e WEBGL_OUT=/project/unity/Builds/WebGL \
-            -e UUSER -e UPASS -e MAP_SCENE -e MAP_DATA \
+            -e UUSER -e UPASS -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
