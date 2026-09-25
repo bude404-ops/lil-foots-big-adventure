@@ -47,7 +47,7 @@ The world reads like chapters in one journey. Region names follow the format
 | # | Region | Cryptid homeland | Naming vocabulary |
 |---|--------|------------------|-------------------|
 | 1 | Pacific Northwest — *Old Growth* | Bigfoot / Sasquatch | moss, fern, cedar, meadow |
-| 2 | Himalaya — *The High White* | Yeti | snowfield, glacier, icefall |
+| 2 | Himalaya — *The Frostcap Peaks* | Yeti | snowfield, glacier, icefall |
 | 3 | Outback — *The Red Dust* | Yowie | bush, scrub, red desert |
 | 4 | Everglades — *The Still Water* | Skunk Ape | swamp, mangrove, sawgrass |
 | 5 | Amazon — *The Deep Green* | Mapinguari | jungle, river, canopy |
@@ -87,14 +87,14 @@ Archetypes (Mario-lineage structure, original bodies):
 - **Sporepuff** (turret) — a puffball that pops spores at intruders.
 - **Webwick** (swooper) — a moss spider that swings on dewlines.
 
-**Region boss: THE WENDIGO** — the corrupted heart of Old Growth Deep. The one creature
-the Lil Foots' trail lore says never to follow. Full fight design: [BOSS_WENDIGO.md](BOSS_WENDIGO.md).
+**Region boss: THE WENDIGO** — the winter guardian of Old Growth Deep, lost in a
+shiver it can't wake from. The one creature trail lore says never to follow. Full fight design: [BOSS_WENDIGO.md](BOSS_WENDIGO.md).
 
 ### Regions 2–5
 
 Each region gets its own regional big bad and a full biome-native roster, built one
 region at a time, only on BudE's go. The five big bads: [VILLAINS.md](VILLAINS.md).
-Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md).
+Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md) — *The Frostcap Peaks*.
 
 ---
 
@@ -111,7 +111,7 @@ Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md).
 
 ## 6. The Story Arc (draft — BudE to confirm)
 
-The Wendigo's long winter is creeping out of Old Growth Deep. The trails that connect
+A shivery winter is spilling out of Old Growth Deep. The trails that connect
 the cryptid homelands are fading — each region's marker totems going dark, one by one.
 The Lil Foots relight the totems, course by course, and every region's big bad guards
 the reason its trail went cold. Light all five regions and the world's paths open again.

@@ -7,6 +7,8 @@
 
 A hollow cathedral of ancient cedars, deep in Old Growth Deep. Frozen breath-fog drifts
 at floor level. At dead center: **Region 1's cold totem**, frozen in a pillar of ice.
+(Kid-friendly law: the Wendigo isn't hunting anyone — it's the wood's winter guardian
+caught in a shiver it can't shake, and the cold spills off it everywhere it goes.)
 The arena is a single wide gameplay plane (~26 units), snow floor with exposed cedar
 roots, two low branch-hops at the edges. Everything painted into the world per the
 world-prop law — the Wendigo itself is the only moving sprite besides the player.
@@ -51,9 +53,11 @@ Everything faster: stalk gone — it now charges the whole arena width. New tele
 the frozen TOTEM begins to glow faintly gold as the Wendigo weakens (the trail's light
 is coming back). The kill loop: lure a full-width charge over the center; it slams
 into the frozen totem and is stunned ~2s (totem cracks, doesn't break); big hit window.
-Loop twice. On the final hit the Wendigo dissolves into drifting snow, the totem
-RELIGHTS, the frost on the whole grove melts in one painted transition, the flag gate
-drops, and the portal to Region 2 opens in the megalith.
+Loop twice. On the final hit the Wendigo's shiver finally stops — the frost on the whole
+grove melts in one painted transition, it bows low to the relit totem (a gentle
+"thank you"), and drifts back into the deep woods as the region's quiet winter wind —
+a friend now, who waves the family through. The flag gate drops and the portal to
+Region 2 opens in the megalith. Nobody is destroyed; the guardian is freed.
 
 ## Failure & fairness
 

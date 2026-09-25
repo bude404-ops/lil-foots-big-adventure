@@ -1,33 +1,36 @@
-# Region Villains — The Five Big Bads (Draft v1)
+# Region Villains — The Five Big Bads (Draft v1.1 — kid-friendly)
 
-> Every region's trail went cold because its own guardian broke. The villain is always
-> the region's own legend turned inward — never human, never tech. All names are
-> drafts: BudE has final naming on every one.
+> Kid-friendly law: no villain is evil — every big bad is a region guardian **stuck in a
+> bad season**. Bosses never die; winning a fight means helping the guardian shake off
+> its bad season, and afterwards it stays in the region as a friendly presence. All
+> names are drafts: BudE has final naming on every one.
 
-| Region | Homeland | Big Bad (draft name) | What broke | The cold it brings |
-|--------|----------|---------------------|------------|--------------------|
-| 1 Old Growth (PNW) | Bigfoot | **THE WENDIGO** *(locked)* | the heart of the wood grew hungry | creeping winter in the trees |
-| 2 The High White (Himalaya) | Yeti | **FROSTMAW, THE AVALANCHE WYRM** | the glacier's sleeping serpent woke | endless blizzard off the peaks |
-| 3 The Red Dust (Outback) | Yowie | **THE DUSKWRAITH** | the desert's shadow caught fire | a red gale that never sets |
-| 4 The Still Water (Everglades) | Skunk Ape | **STILLMAW, THE BAYOU LEVIATHAN** | the old thing under the black water stopped sleeping | water gone motionless and dead |
-| 5 The Deep Green (Amazon) | Mapinguari | **THE VINEWRAITH** | the great strangler stopped feeding on trees and started on trails | canopy swallowing the paths whole |
+| Region | Homeland | Big Bad (draft name) | What went wrong | The season it brings |
+|--------|----------|---------------------|-----------------|---------------------|
+| 1 Old Growth (PNW) | Bigfoot | **THE WENDIGO** *(locked)* | the wood's winter guardian caught a shiver it couldn't shake — and shivers spread | a shivery frost in the trees |
+| 2 The Frostcap Peaks (Himalaya) | Yeti | **FROSTMAW, THE AVALANCHE WYRM** | a giant glacier serpent got woken mid-nap and is very, very grumpy — it sneezes blizzards | one long grumpy snowstorm |
+| 3 The Red Dust (Outback) | Yowie | **THE DUSKWRAITH** | a playful heat-sprite that turned the desert into an endless game of tag — and never learned losing is okay | a too-hot noon that never ends |
+| 4 The Still Water (Everglades) | Skunk Ape | **STILLMAW, THE BAYOU GRANDPA** | an old grandpa-thing under the black water stopped moving so his back wouldn't ache — and everything went still with him | a sleepy, too-quiet swamp |
+| 5 The Deep Green (Amazon) | Mapinguari | **THE VINEWRAITH** | a lonely ancient vine that collects trails and totems like treasures — and hugs them all too tight | the canopy hugging the paths shut |
 
-## The Pattern (why this roster works)
+## The Pattern (why this roster works for kids)
 
 - Each villain is a **native creature of its own biome** — no imports, no humans, no gadgets.
-- Each embodies a **simple, teachable wrongness** a player can see from the first screen: frost, wind, heat, stillness, growth.
-- Each guards the region's **cold totem** — the boss arena IS the totem site, and the
-  fight ends with the totem relit (one clear win condition, five times).
-- Escalation arc: Wendigo is the tutorial boss; Frostmaw is bigger and moves the whole
-  arena; Duskwraith hides; Stillmaw is fought ON the water; Vinewraith is the finale —
-  the last trail in the world.
+- Each is **misunderstood, not malicious** — a shiver, a sneeze, a sore back, a lonely
+  heart. Kid-legible from the first screen: frost, snow, heat, quiet, hugs.
+- Each guards the region's **cold totem**, and the fight ends with the totem relit AND
+  the guardian feeling better — every defeated boss becomes a region friend who waves
+  when you come back through.
+- Escalation arc for kids: Wendigo is the tutorial boss (gentle); Frostmaw is big and
+  sneezy; Duskwraith plays hide-and-seek; Stillmaw is a wake-up dance; Vinewraith is
+  the finale — the loneliest one, who just needed friends.
 
 ## Boss voice (personality sketches, one line each)
 
-- **Wendigo** — patient hunger. It doesn't chase; it waits on the trail ahead.
-- **Frostmaw** — blind rage of the mountain. It doesn't see you; it feels the warmth.
-- **Duskwraith** — a trickster of heat. It hides as heat-shimmer and laughs in dust devils.
-- **Stillmaw** — total indifference. You are a pebble on its back.
-- **Vinewraith** — ancient greed. It has eaten trails for a thousand years and wants one more.
+- **Wendigo** — shivering in the deep woods. It isn't chasing you; it's trying to hold still till the shiver passes.
+- **Frostmaw** — the sleepiest, sneeziest big bad. Grumpy only because somebody woke it. Would honestly rather be napping.
+- **Duskwraith** — tag champ of the whole desert. Genuinely fun — it just has never lost and doesn't know it's melting everybody's afternoon.
+- **Stillmaw** — a slow, kind grandpa voice. Naps for a hundred years at a time and wakes thinking you're his grandkids.
+- **Vinewraith** — a thousand years of collecting, all alone. Wins the fight? No — it loses, laughs for the first time, and finally lets go.
 
 *(All five personalities + designs TBD by BudE.)*
