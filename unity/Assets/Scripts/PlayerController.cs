@@ -18,7 +18,7 @@ public class PlayerController : MonoBehaviour {
     public float coyoteTime   = 0.12f;
     public float jumpBuffer   = 0.14f;
     public float accelGround  = 34.0f;  // 3400 px/s^2
-    public float accelAir     = 21.0f; // 2100 px/s^2
+    public float accelAir     = 30.0f; // 3000 px/s^2 (BudE Sept 25: 'jumping lags behind' - mid-air control was 2100, felt sluggish; 3000 answers the stick the moment you push it)
     public float stompBounce  = 5.2f;  // -520 px/s
     public int   maxLives     = 3;
 

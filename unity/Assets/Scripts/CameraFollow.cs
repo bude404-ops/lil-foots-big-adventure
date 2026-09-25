@@ -13,7 +13,7 @@ public class CameraFollow : MonoBehaviour {
     public float smoothTime = 0.08f;
     public float yFollow = 0.8f;     // camera rides this above the player (ground framing unchanged)
     public float minX = 6.7f, maxX = 93f;   // level bounds (px/100, half-screen margin)
-    public float minY = 7.0f, maxY = 8.8f;  // vertical bounds: never below the approved ground
+    public float minY = 7.0f, maxY = 9.6f;  // vertical bounds: never below the approved ground (maxY 8.8->9.6 Sept 25: the jump apex hit the clamp, so the camera stopped following mid-jump and the jump READ as laggy)
                                             // framing, never past the highest platform + margin
     Vector3 vel;
 
