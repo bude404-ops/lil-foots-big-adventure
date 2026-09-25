@@ -159,14 +159,11 @@ namespace LilFoots.EditorTools
             bool isFull = (mapId == "r1_full");   // ONE COMPLETE MAP (BudE Sept 21 ~2:30 PM ET)
             bool isLong = (mapId == "r1_long");   // FULL-LENGTH 128u variant (Sept 21 verdict: length + depth)
             bool isEpic = (mapId == "r1_epic");   // 256u FULL JOURNEY (Sept 21 ~4:40 PM ET: 5-minute map + ground-fix verdict)
-            bool isDt = false;   // [TILEMAP PIVOT Sept 25 - Bude verdict: painting not game quality, "build the geometry in Unity and skin it with Unity"]
-            // The one-painting canvas bind is RETIRED: r1_depth_test now uses the standard native stack
-            // (real visible colliders, Unity Tilemap terrain skin, bound props) like every other course.
+            bool isDt = (mapId == "r1_depth_test");   // GEOMETRY-DEPTH TEST map: the 8000x1560 painting IS the world (v12 skin)
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
             if (cam != null && L(1) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painting is the sky
-                var skySpr = Art("art_sky_green.png");   // [GREEN CANON Sept 25] BudE world reference: sage mist
-            if (skySpr == null) skySpr = Art("art_sky_new.png");
+                var skySpr = Art("art_sky_new.png");
                 if (skySpr != null) {
                     float skyH = 12f;                 // frame is 7.5 tall - generous bleed top and bottom
                     float skyW = 12f;                  // square art, mirrored x2 = 24 wide for ultrawide
@@ -567,15 +564,7 @@ namespace LilFoots.EditorTools
                         continue;                                   // story grounds: band ONLY, no cap/edge tiles
                     }
                 }
-                // [TILEMAP PIVOT Sept 25] grounds wear the REAL Unity Tilemap skin (grass-cap row +
-                // dirt fill at 1u cells, green canon) - the stretched band crops retire for tile-skinned
-                // grounds. The grass-edge fringe band below still binds above the walking line.
-                bool tiled = false;
-                if (h >= 2f && LilFootsTilemapSkin.Ready()) {
-                    LilFootsTilemapSkin.PaintGround(child);
-                    tiled = true;
-                }
-                if (earth != null && L(2) && !tiled) {
+                if (earth != null && L(2)) {
                     var crop = ArtCrop("art_earth_new.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("Earth", crop, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
                 }
@@ -585,7 +574,7 @@ namespace LilFoots.EditorTools
                 // the surface and blade tips taper upward). Both tile world-x phased at natural
                 // scale so the pattern flows continuously across the map.
                 var cap = Art("art_ground_cap.png");
-                if (cap != null && L(2) && !tiled) {
+                if (cap != null && L(2)) {
                     float capH = 0.45f;
                     float cw2 = capH * (cap.bounds.size.x / cap.bounds.size.y);
                     float left = child.position.x - w / 2f;
