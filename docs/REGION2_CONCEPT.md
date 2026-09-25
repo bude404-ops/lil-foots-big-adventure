@@ -46,11 +46,11 @@ whose trails went cold. Friendly, shaggy, mountain-quiet. Draft trail-keeper:
 
 ## Big Bad — SNOWCOIL, THE SLEEPING STORM
 
-Full sheet lives in `docs/VILLAINS.md`. In concept: a colossal glacier serpent who
-got woken mid-nap and is VERY grumpy about it — every sneeze is a blizzard. The fight
-ends not with a defeat but with Snowcoil yawning, curling up warm, and snoozing
-happily; the blizzard clears into gold evening light and Snowcoil becomes a big
-snoring friend of the region. Arena concept: the fight moves —
+Full sheet lives in `docs/VILLAINS.md`. In concept: a colossal glacier serpent, the
+self-crowned Frozen King — he froze the yetis' trail totems into his glacier hoard so
+he could keep the whole mountain to himself. Bowser-tier menace: he taunts from his
+coil of stolen totems, every roar whips the blizzard, and the fight ends with him
+beaten, snarling, and slinking into the deep glacier with a grudge. Arena concept: the fight moves —
 Snowcoil dives between snow shelves and re-surfaces around the arena, so the player
 reads the avalanche telegraphs (falling powder columns) and fights on shifting sheets
 of the same slick-ice feel the region taught. Ends, like every region, with the cold
@@ -63,7 +63,7 @@ totem relit and the blizzard breaking into gold evening light.
 | Feel | discovery | mastery under pressure |
 | Floor | moss + streams grip | ice slides, wind pushes |
 | Secrets | hidden groves | storm-covered ledges |
-| Boss | shivery stalker (dodge the line) | sleepy sneezer (dodge the sneeze) |
+| Boss | patient winter king (dodge the line) | frozen hoard-king (dodge the mountain) |
 | Light | morning mist gold | last-hour alpengold |
 
 ---

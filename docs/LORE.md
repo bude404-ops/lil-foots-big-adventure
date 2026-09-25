@@ -87,8 +87,9 @@ Archetypes (Mario-lineage structure, original bodies):
 - **Sporepuff** (turret) — a puffball that pops spores at intruders.
 - **Webwick** (swooper) — a moss spider that swings on dewlines.
 
-**Region boss: THE WENDIGO** — the winter guardian of Old Growth Deep, lost in a
-shiver it can't wake from. The one creature trail lore says never to follow. Full fight design: [BOSS_WENDIGO.md](BOSS_WENDIGO.md).
+**Region boss: THE WENDIGO, Warden of the Long Winter** — the Region 1 tyrant who
+snuffed the totem light to rule a forest that never thaws. The one creature trail
+lore says never to follow. Full fight design: [BOSS_WENDIGO.md](BOSS_WENDIGO.md).
 
 ### Regions 2–5
 
@@ -111,10 +112,12 @@ Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md) — *The Frostca
 
 ## 6. The Story Arc (draft — BudE to confirm)
 
-A shivery winter is spilling out of Old Growth Deep. The trails that connect
-the cryptid homelands are fading — each region's marker totems going dark, one by one.
-The Lil Foots relight the totems, course by course, and every region's big bad guards
-the reason its trail went cold. Light all five regions and the world's paths open again.
+Five villains have stolen the light of the trail totems, one per region — each a
+tyrant who took what the trails need to stay alive: the Wendigo's endless winter,
+Snowcoil's frozen hoard, Sunsprint's stolen trophies, Mossback's sunken throne,
+Vinewheart's world of vines. The Lil Foots take the light back, course by course,
+defeating each big bad and relighting their totems. Light all five regions and the
+world's paths open again — and five very grumpy villains learn to fear footprints.
 
 *(This is a scaffold, not scripture — every beat is BudE's to keep, twist, or toss.)*
 

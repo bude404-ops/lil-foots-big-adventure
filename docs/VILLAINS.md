@@ -1,36 +1,35 @@
-# Region Villains — The Five Big Bads (Draft v1.1 — kid-friendly)
+# Region Villains — The Five Big Bads (Draft v1.2 — Bowser-tier)
 
-> Kid-friendly law: no villain is evil — every big bad is a region guardian **stuck in a
-> bad season**. Bosses never die; winning a fight means helping the guardian shake off
-> its bad season, and afterwards it stays in the region as a friendly presence. All
-> names are drafts: BudE has final naming on every one.
+> The Bowser formula: genuine villains with selfish wants, theatrical menace, iconic
+> fights. Nobody dies and nothing is dark — but nobody gets redeemed into a friend
+> either. When a big bad loses, it stomps off in a huff, holds a grudge, and stays a
+> recurring grump the Lil Foots will cross paths with again. All names TBD by BudE.
 
-| Region | Homeland | Big Bad (draft name) | What went wrong | The season it brings |
-|--------|----------|---------------------|-----------------|---------------------|
-| 1 Old Growth (PNW) | Bigfoot | **THE WENDIGO** *(locked)* | the wood's winter guardian caught a shiver it couldn't shake — and shivers spread | a shivery frost in the trees |
-| 2 The Frostcap Peaks (Himalaya) | Yeti | **SNOWCOIL, THE SLEEPING STORM** | a giant glacier serpent got woken mid-nap and is very, very grumpy — it sneezes blizzards | one long grumpy snowstorm |
-| 3 The Red Dust (Outback) | Yowie | **SUNSPRINT, THE DESERT TAG CHAMP** | a playful heat-sprite that turned the desert into an endless game of tag — and never learned losing is okay | a too-hot noon that never ends |
-| 4 The Still Water (Everglades) | Skunk Ape | **MOSSBACK, THE BAYOU GRANDPA** | an old grandpa-thing under the black water stopped moving so his back wouldn't ache — and everything went still with him | a sleepy, too-quiet swamp |
-| 5 The Deep Green (Amazon) | Mapinguari | **VINEHEART, THE LONELY GIANT** | a lonely ancient vine that collects trails and totems like treasures — and hugs them all too tight | the canopy hugging the paths shut |
+| Region | Homeland | Big Bad (draft name) | The villainous want | What they did |
+|--------|----------|---------------------|---------------------|---------------|
+| 1 Old Growth (PNW) | Bigfoot | **THE WENDIGO, WARDEN OF THE LONG WINTER** *(locked)* | to rule a forest that never thaws | snuffed Region 1's totem light and buried the trails in endless winter |
+| 2 The Frostcap Peaks (Himalaya) | Yeti | **SNOWCOIL, THE FROZEN KING** | the whole mountain to himself | froze the yetis' trail totems into his glacier and crowned himself king of the peaks |
+| 3 The Red Dust (Outback) | Yowie | **SUNSPRINT, THE TAG TYRANT** | to win every game, forever | challenges the whole desert to "tag," cheats, and pockets a totem every time he wins |
+| 4 The Still Water (Everglades) | Skunk Ape | **MOSSBACK, THE STILL KING** | quiet. ALL the quiet | hushed the whole swamp and hauled its totems underwater as throne ornaments |
+| 5 The Deep Green (Amazon) | Mapinguari | **VINEHEART, THE GREAT COLLECTOR** | to own every trail in the world | the oldest villain there is — wraps regions in vines so nothing can ever leave |
 
-## The Pattern (why this roster works for kids)
+## The Pattern (the Bowser formula, five ways)
 
 - Each villain is a **native creature of its own biome** — no imports, no humans, no gadgets.
-- Each is **misunderstood, not malicious** — a shiver, a sneeze, a sore back, a lonely
-  heart. Kid-legible from the first screen: frost, snow, heat, quiet, hugs.
-- Each guards the region's **cold totem**, and the fight ends with the totem relit AND
-  the guardian feeling better — every defeated boss becomes a region friend who waves
-  when you come back through.
-- Escalation arc for kids: Wendigo is the tutorial boss (gentle); Snowcoil is big and
-  sneezy; Sunsprint plays hide-and-seek; Mossback is a wake-up dance; Vineheart is
-  the finale — the loneliest one, who just needed friends.
+- Each has a **clear, kid-legible selfish want** — rule it, keep it, win it, hush it, own it. Menace you can name in one sentence.
+- Each **stole or snuffed its region's totem light** — the boss arena IS the stolen totem site, and the fight ends with the totem relit and the villain driven off, roaring and grumbling.
+- **Defeated ≠ redeemed.** They lose, they stomp off, they hold grudges. Expect one to
+  come slinking back for a rematch or an unwilling team-up someday — classic.
+- Escalation arc: the Wendigo is the tutorial tyrant; Snowcoil moves the whole arena;
+  Sunsprint cheats and toys with you; Mossback barely acknowledges you're there;
+  Vineheart is the finale — the first villain the Lil Foots' trail lore ever named.
 
 ## Boss voice (personality sketches, one line each)
 
-- **Wendigo** — shivering in the deep woods. It isn't chasing you; it's trying to hold still till the shiver passes.
-- **Snowcoil** — the sleepiest, sneeziest big bad. Grumpy only because somebody woke it. Would honestly rather be napping.
-- **Sunsprint** — tag champ of the whole desert. Genuinely fun — it just has never lost and doesn't know it's melting everybody's afternoon.
-- **Mossback** — a slow, kind grandpa voice. Naps for a hundred years at a time and wakes thinking you're his grandkids.
-- **Vineheart** — a thousand years of collecting, all alone. Wins the fight? No — it loses, laughs for the first time, and finally lets go.
+- **Wendigo** — a patient, hungry king of winter. It doesn't chase you; it's already waiting on the trail ahead.
+- **Snowcoil** — a smug frozen monarch coiled on a hoard of stolen totems. "The peaks are MINE."
+- **Sunsprint** — a glittering, cheating show-off who taunts mid-fight and never, ever accepts a loss.
+- **Mossback** — a colossal, gravel-voored old tyrant who considers the fight beneath him — until it isn't.
+- **Vineheart** — ancient and possessive, speaks slowly, takes everything personally. The loneliest villain in the world — and it made that everyone else's problem.
 
 *(All five personalities + designs TBD by BudE.)*
