@@ -103,13 +103,19 @@ public static class LilFootsTilemapBuilder {
             bool openL = !Has(c - 1, r);
             bool openR = !Has(c + 1, r);
             UnityEngine.Tilemaps.TileBase t;
-            var pick = tiles.grassTop[(c & 1) ^ (r & 1)];   // checkerboard variant pick = no visible repetition
-            var pickD = tiles.dirt[(c & 1) ^ (r & 1)];
+            // HASH PICK (BudE Sept 25: "still doesn't look right with the lines"): the old
+            // checkerboard pick (c&1)^(r&1) drew a visible alternating GRID across the terrain.
+            // This deterministic per-cell hash scatters the 4 hand-painted variants naturally.
+            int hc = (c * 73856093) ^ (r * 19349663); hc ^= hc >> 13; hc *= 60493; hc ^= hc >> 11;
+            int pick = ((hc & 0x7fffffff) + r * 7919) % tiles.grassTop.Length;
+            int pickD = ((hc & 0x7fffffff) + c * 104729) % tiles.dirt.Length;
+            UnityEngine.Tilemaps.TileBase tG = tiles.grassTop[pick];
+            UnityEngine.Tilemaps.TileBase tD = tiles.dirt[pickD];
             if (top) {
-                t = openL ? tiles.grassTopL : openR ? tiles.grassTopR : pick;
+                t = openL ? tiles.grassTopL : openR ? tiles.grassTopR : tG;
                 grass++;
             } else {
-                t = openL ? tiles.dirtL : openR ? tiles.dirtR : pickD;
+                t = openL ? tiles.dirtL : openR ? tiles.dirtR : tD;
             }
             tm.SetTile(new Vector3Int(c, r, 0), t);
             painted++;
@@ -252,15 +258,24 @@ public static class LilFootsTilemapBuilder {
 
     static TileSet EnsureTiles() {
         Directory.CreateDirectory("Assets/Art/Tiles");
+        // HAND-PAINTED CANON SET (BudE Sept 25: "doesn't look right with the lines and ground"):
+        // the shipped build painted placeholder TileTex flats with a checkerboard pick - flat
+        // teal lines, no brushwork. The real painted tiles (lf_grass_a..d caps, lf_dirt_a..d
+        // fill, lf_grass_l/r + lf_dirt_l/r organic side lips) were in the repo but never bound.
+        // Tile() generates a canon fallback ONLY if a PNG is missing.
         return new TileSet {
             grassTop  = new UnityEngine.Tilemaps.TileBase[] {
-                Tile("lf_grass_top",   TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
-                Tile("lf_grass_top_2", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)) },
-            grassTopL = Tile("lf_grass_top_l", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), true, false)),
-            grassTopR = Tile("lf_grass_top_r", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, true)),
+                Tile("lf_grass_a", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
+                Tile("lf_grass_b", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
+                Tile("lf_grass_c", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
+                Tile("lf_grass_d", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)) },
+            grassTopL = Tile("lf_grass_l", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), true, false)),
+            grassTopR = Tile("lf_grass_r", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, true)),
             dirt      = new UnityEngine.Tilemaps.TileBase[] {
-                Tile("lf_dirt",   TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
-                Tile("lf_dirt_2", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)) },
+                Tile("lf_dirt_a", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
+                Tile("lf_dirt_b", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
+                Tile("lf_dirt_c", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
+                Tile("lf_dirt_d", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)) },
             dirtL     = Tile("lf_dirt_l", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), true, false)),
             dirtR     = Tile("lf_dirt_r", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, true)),
         };
@@ -274,7 +289,10 @@ public static class LilFootsTilemapBuilder {
         string png = dir + "/" + name + ".png";
         string asset = dir + "/" + name + ".asset";
         var t = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(asset);
-        if (t != null && t.sprite != null) return t;
+        // REBIND LAW (Sept 25): never trust a stale .asset sprite - the shipped build kept
+        // serving the first placeholder sprite after hand-painted PNGs landed at the same
+        // path. Always reimport + rebind so the tile art is whatever the PNG says TODAY.
+
         if (!File.Exists(png)) { File.WriteAllBytes(png, tex.EncodeToPNG()); AssetDatabase.ImportAsset(png); }
         var ti = (TextureImporter)AssetImporter.GetAtPath(png);
         ti.spriteImportMode = SpriteImportMode.Single;

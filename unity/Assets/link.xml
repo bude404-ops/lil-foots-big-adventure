@@ -1,0 +1,11 @@
+<linker>
+  <!-- TILEMAP TERRAIN KEEP-ALIVE (BudE Sept 25: "doesn't look right with the lines and ground"):
+       the forge builds stripped the Tilemap module and the whole tile terrain vanished at
+       runtime. These preserves survive engine-code stripping in APK + WebGL players. -->
+  <assembly fullname="UnityEngine.Tilemaps">
+    <type fullname="UnityEngine.Tilemaps.Tilemap" preserve="all"/>
+    <type fullname="UnityEngine.Tilemaps.TilemapRenderer" preserve="all"/>
+    <type fullname="UnityEngine.Tilemaps.Tile" preserve="all"/>
+    <type fullname="UnityEngine.Tilemaps.TileBase" preserve="all"/>
+  </assembly>
+</linker>

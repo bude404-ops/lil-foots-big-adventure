@@ -2,18 +2,28 @@ using UnityEngine;
 
 namespace LilFoots {
 /// <summary>
-/// GAMEPLAY ANIMATION BRIDGE (Bude, Sept 20: "the characters pose still is the t pose and no
-/// animations"). Sits on each gameplay rig root and keeps the rig's NATIVE Animator honest:
-/// feeds it the player's real state (speed / airborne) so idle <-> walk <-> jump actually play,
-/// and flips the rig to face the run direction. Native Animator + parameters, no custom
-/// skeleton - Unity performs the animation, this only reports the state.
+/// GAMEPLAY ANIMATION BRIDGE (BudE, Sept 20: "the characters pose still is the t pose and no
+/// animations"; Sept 25: "we need to make character animations" + "jumping lags behind").
+/// Sits on each gameplay rig root and keeps the rig's NATIVE Animator honest: feeds it the
+/// player's real state (speed / airborne) so idle <-> walk <-> jump actually play, flips the
+/// rig to face the run direction, and layers the 2.5D PAPER MOTION on top (Sept 25 punch-up):
+/// take-off stretch, landing squash, and a run lean into the travel direction - the character
+/// visibly answers every input, on top of the bone animation.
 /// </summary>
 public class PlayerAnimBridge : MonoBehaviour {
     Animator anim;
     PlayerController pc;
-    float baseScaleX;
+    float baseScaleX, baseScaleY;
 
-    void Awake() { baseScaleX = Mathf.Abs(transform.localScale.x); }
+    // 2.5D paper motion state
+    float squash = 1f;   // 1 = neutral; >1 stretches tall, <1 squashes flat
+    float squashVel;
+    bool wasAir;
+
+    void Awake() {
+        baseScaleX = Mathf.Abs(transform.localScale.x);
+        baseScaleY = transform.localScale.y;
+    }
 
     void Update() {
         if (pc == null) pc = GetComponentInParent<PlayerController>();
@@ -25,17 +35,31 @@ public class PlayerAnimBridge : MonoBehaviour {
         // state -> native Animator parameters (the controller drives idle/walk/jump)
         anim.SetFloat("speed", Mathf.Abs(pc.rb.velocity.x));
         anim.SetBool("air", !pc.onGround);
-        // face the run direction (rig flip, sign-safe off the baked base scale).
-        // ART FACES LEFT NATIVELY (same law as the JS engine: ctx.scale(-player.face*...) -
-        // "art faces left natively -> flip so characters face travel direction"), so moving
-        // RIGHT (facing=+1) needs the MIRRORED scale and moving LEFT needs the baked scale.
-        // (BudE, Sept 20: "the player character faces the wrong direction when going left or
-        // right its reversed" - the old baseScaleX*facing had it backwards.)
-        if (pc.facing != 0) {
-            var sc = transform.localScale;
-            float want = baseScaleX * -pc.facing;
-            if (!Mathf.Approximately(sc.x, want)) { sc.x = want; transform.localScale = sc; }
+
+        // ---- 2.5D PAPER MOTION (Sept 25: take-off must FEEL instant, landing must SELL) ----
+        bool air = !pc.onGround;
+        if (wasAir && !air) {
+            squash = 0.76f; squashVel = 0f;              // LANDING: flat squash pop
+        } else if (!wasAir && air && pc.rb.velocity.y > 0.5f) {
+            squash = 1.16f; squashVel = 0f;               // TAKE-OFF: tall stretch snap
         }
+        wasAir = air;
+        // spring back to neutral (stiff spring, heavy damping - snappy, no wobble)
+        float k = 170f, d = 15f;
+        squashVel += (k * (1f - squash) - d * squashVel) * Time.deltaTime;
+        squash += squashVel * Time.deltaTime;
+        float sq = Mathf.Clamp(squash, 0.72f, 1.24f);
+
+        // ---- facing + paper scale + run lean, composed (flip law unchanged) ----
+        // ART FACES LEFT NATIVELY (same law as the JS engine): moving RIGHT (facing=+1)
+        // needs the MIRRORED scale and moving LEFT needs the baked scale.
+        float speedFrac = Mathf.Clamp01(Mathf.Abs(pc.rb.velocity.x) / pc.runSpeed);
+        var sc = transform.localScale;
+        sc.x = baseScaleX * -pc.facing / Mathf.Sqrt(sq);  // tall+thin when stretched, wide when squashed
+        sc.y = baseScaleY * sq;
+        transform.localScale = sc;
+        // lean into the run (reads as forward momentum; halved mid-air so jumps read clean)
+        transform.localRotation = Quaternion.Euler(0f, 0f, -pc.facing * 6f * speedFrac * (air ? 0.5f : 1f));
     }
 }
 }
