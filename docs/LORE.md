@@ -32,7 +32,7 @@ references — arms down, natural stance):
 - **Buddy** — the heart. Curious, brave, first to leap.
 - **Emma** — the spark. Quick, playful, finds every secret path.
 
-*(One-line personalities above are placeholders — BudE to confirm/rewrite each bio.)*
+Full character + home draft: [CHARACTERS.md](CHARACTERS.md). Items and pickups: [ITEMS_ABILITIES.md](ITEMS_ABILITIES.md).
 
 Each Lil Foot has the same core moves — run, jump, climb — with feel tuned to a single
 standard: responsive, weighty-but-floaty on the apex, no input lag.
@@ -94,7 +94,7 @@ lore says never to follow. Full fight design: [BOSS_WENDIGO.md](BOSS_WENDIGO.md)
 ### Regions 2–5
 
 Each region gets its own regional big bad and a full biome-native roster, built one
-region at a time, only on BudE's go. The five big bads: [VILLAINS.md](VILLAINS.md).
+region at a time, only on BudE's go. The five big bads: [VILLAINS.md](VILLAINS.md) — design sheets for the art passes: [VILLAIN_SHEETS.md](VILLAIN_SHEETS.md).
 Region 2 full concept: [REGION2_CONCEPT.md](REGION2_CONCEPT.md) — *The Frostcap Peaks*.
 
 ---
