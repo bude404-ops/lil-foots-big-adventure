@@ -103,11 +103,13 @@ public static class LilFootsTilemapBuilder {
             bool openL = !Has(c - 1, r);
             bool openR = !Has(c + 1, r);
             UnityEngine.Tilemaps.TileBase t;
+            var pick = tiles.grassTop[(c & 1) ^ (r & 1)];   // checkerboard variant pick = no visible repetition
+            var pickD = tiles.dirt[(c & 1) ^ (r & 1)];
             if (top) {
-                t = openL ? tiles.grassTopL : openR ? tiles.grassTopR : tiles.grassTop;
+                t = openL ? tiles.grassTopL : openR ? tiles.grassTopR : pick;
                 grass++;
             } else {
-                t = openL ? tiles.dirtL : openR ? tiles.dirtR : tiles.dirt;
+                t = openL ? tiles.dirtL : openR ? tiles.dirtR : pickD;
             }
             tm.SetTile(new Vector3Int(c, r, 0), t);
             painted++;
@@ -244,18 +246,23 @@ public static class LilFootsTilemapBuilder {
 
     // ---------------- placeholder tiles (canon-green; reskin by dropping real PNGs) ----------------
     class TileSet {
-        public UnityEngine.Tilemaps.TileBase grassTop, grassTopL, grassTopR, dirt, dirtL, dirtR;
+        public UnityEngine.Tilemaps.TileBase grassTopL, grassTopR, dirtL, dirtR;
+        public UnityEngine.Tilemaps.TileBase[] grassTop, dirt;   // painted variants, hash-picked
     }
 
     static TileSet EnsureTiles() {
         Directory.CreateDirectory("Assets/Art/Tiles");
         return new TileSet {
-            grassTop  = Tile("lf_grass_top",   TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
+            grassTop  = new UnityEngine.Tilemaps.TileBase[] {
+                Tile("lf_grass_top",   TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
+                Tile("lf_grass_top_2", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)) },
             grassTopL = Tile("lf_grass_top_l", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), true, false)),
             grassTopR = Tile("lf_grass_top_r", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, true)),
-            dirt      = Tile("lf_dirt",       TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
-            dirtL     = Tile("lf_dirt_l",     TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), true, false)),
-            dirtR     = Tile("lf_dirt_r",     TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, true)),
+            dirt      = new UnityEngine.Tilemaps.TileBase[] {
+                Tile("lf_dirt",   TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
+                Tile("lf_dirt_2", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)) },
+            dirtL     = Tile("lf_dirt_l", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), true, false)),
+            dirtR     = Tile("lf_dirt_r", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, true)),
         };
     }
 
