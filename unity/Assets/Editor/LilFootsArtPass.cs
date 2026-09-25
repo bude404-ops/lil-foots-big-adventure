@@ -1081,8 +1081,15 @@ namespace LilFoots.EditorTools
             if (System.Environment.GetEnvironmentVariable("LILFOOTS_UI") == "1") { BuildUiOnly(); return; }
 
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            LilFootsLevelBuilder.Build();
-            BuildArt();
+            // TILEMAP PIVOT (BudE green light Sept 25 2026: geometry-only into a new map,
+            // skinned IN UNITY with Tilemap terrain): LILFOOTS_TILEMAP=1 routes the build to
+            // the native-terrain builder and skips the old stretched-canvas painting pass.
+            if (System.Environment.GetEnvironmentVariable("LILFOOTS_TILEMAP") == "1") {
+                LilFootsTilemapBuilder.Build();
+            } else {
+                LilFootsLevelBuilder.Build();
+                BuildArt();
+            }
             BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
             BuildCharacterMenu(GameObject.Find("MainCamera").GetComponent<UnityEngine.Camera>()); // UI PASS: character select at start
             Directory.CreateDirectory("Assets/Scenes");
