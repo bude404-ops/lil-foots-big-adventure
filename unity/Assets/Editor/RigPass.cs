@@ -224,7 +224,7 @@ namespace LilFoots.EditorTools
         /// and wires a FrameAnimator when any frame exists. Missing sets fall back to the
         /// rig's native motion - frame art is optional per character.</summary>
         static void WireFrameAnimator(GameObject root, string charName) {
-            var walk = LoadFrameSet(charName, "walk", 6);
+            var walk = LoadFrameSet(charName, "walk", 8);   // sheet-sliced 8-frame stride cycle
             var jump = LoadFrameSet(charName, "jump", 4);
             var idle = LoadFrameSet(charName, "idle", 2);
             if (walk.Length == 0 && jump.Length == 0 && idle.Length == 0) return;
