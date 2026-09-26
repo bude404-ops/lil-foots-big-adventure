@@ -329,7 +329,8 @@ namespace LilFoots.EditorTools
                     ssr.color = new Color(0.86f, 0.89f, 0.92f, 1f);  // suppressed backdrop doctrine
                     sg.transform.localScale = new Vector3(sg.transform.localScale.x, (2.22f * 14f) / sw, 1f); // 2.22:1 art fit to the full 14u frame
                 }
-            } else {
+            } else if (!isTile) {
+            // [TILEMAP CLEANSE Sept 26] tile maps wear the Unity sky + tile terrain only - painted zone backdrops retired
             // [COURSE-SCENE Sept 21] one painting per COURSE (BudE: 'paint each entire
             // map as it should be to fit lore'): the 225u reel layout is retired - each
             // course picks ITS OWN full-width zone painting from its map id.
@@ -390,7 +391,7 @@ namespace LilFoots.EditorTools
             // below the streams (y=4.5) so it frames the bottom of the frame without covering
             // standing gameplay. ----
             var fgArt = Art("art_foreground.png");
-            if (fgArt != null && L(4) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painting carries the foreground
+            if (fgArt != null && L(4) && !isFull && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] no painted foreground band on tile maps
                 int ft = 0;
                 for (float bx = -16f; bx <= 200f; bx += 16f, ft++) {
                     var fg = SpriteGo("Foreground_" + ft, fgArt, new Vector3(bx, 3.0f, 0), 16f, 30, map.transform);
@@ -411,7 +412,7 @@ namespace LilFoots.EditorTools
             var sorted = plats.Cast<List<object>>()
                 .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
                 .OrderBy(a => a[0]).ToList();
-            if (water != null && L(2) && !isLong && !isEpic && !isDt) {   // [LONG MAP] streams placed manually at the painted waterlines
+            if (water != null && L(2) && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] painted water retired on tile maps
                 // MAP v2 (Bude, Sept 20 course redo): hop blocks now float OVER ground, so the
                 // naive consecutive-plat gap can span solid earth. Subtract every ground-level
                 // plat interval from the candidate gap and draw water only in the true pits.
@@ -453,7 +454,7 @@ namespace LilFoots.EditorTools
                 // ---- SET PIECE: Old Growth cedar giant (BudE 'Keep' msg 8870) — the Region 1
                 // signature landmark, standing ON the raised plateau (x=94, surface 8.2). ----
                 var cedar = Art("art_cedar_giant.png");
-                if (cedar != null && L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the cedar is painted into the map
+                if (cedar != null && L(2) && !isFull && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] painted set pieces retired on tile maps
                     float cw = 14f;
                     // [COMPACT COURSE FIX] the 62u Mossveil Meadow course has no plateau -
                     // the cedar stands as the terminus landmark behind the flag-gate approach.
@@ -479,7 +480,7 @@ namespace LilFoots.EditorTools
 
                 // ---- LIGHT PASS: golden god rays between sky and midground, slow drift. ----
                 var rays = Art("art_godrays.png");
-                if (rays != null && L(1) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] light is baked into the painting
+                if (rays != null && L(1) && !isFull && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] painted god-ray files retired on tile maps
                     // [COMPACT COURSE FIX] rays distribute across the actual map width
                     var rmeta = data.ContainsKey("meta") ? data["meta"] as Dictionary<string, object> : null;
                     float mw = rmeta != null && rmeta.ContainsKey("width") ? F(rmeta["width"]) / 100f : 225f;
@@ -495,7 +496,7 @@ namespace LilFoots.EditorTools
 
                 // ---- SURFACE LIFE: sparse fern/tuft/stone props ON grass tops, world-x keyed,
                 // never over gaps, edges, checkpoints or hop blocks (BudE: nothing covering gameplay). ----
-                if (L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painted terrain already lives
+                if (L(2) && !isFull && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] painted prop stamps retired on tile maps
                     var hopXs = new System.Collections.Generic.List<float>();
                     foreach (var a in sorted) if (a[3] < 400f) hopXs.Add(a[0] / 100f);
                     int pi = 0;
@@ -519,7 +520,7 @@ namespace LilFoots.EditorTools
                 }
 
                 // ---- PIT FRAMING: root/rock lips hanging from both edges of every true pit. ----
-                if (L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painted banks frame the pit
+                if (L(2) && !isFull && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] tile skin exposes its own pit lips
                     var gs2 = sorted.Where(a => a[1] >= 600f || a[3] >= 400f).OrderBy(a => a[0]).ToList();
                     int li = 0;
                     for (int i = 0; i < gs2.Count - 1; i++) {
@@ -556,6 +557,21 @@ namespace LilFoots.EditorTools
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
+                if (isTile && h < 2f) {
+                    // [TILEMAP CLEANSE Sept 26] tile-mode hops: flat Unity quads only (sage cap + flat earth
+                    // body) - zero painted files, matches the flat tilemap canon. Never falls through to the
+                    // painted earth/cap/edge paths.
+                    var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
+                    if (quad != null) {
+                        var hopBody = SpriteGo("HopSlabBody", quad, new Vector3(child.position.x, child.position.y - 0.15f, 0), 1f, -2, child);
+                        hopBody.transform.localScale = new Vector3(w, h - 0.3f, 1f);
+                        hopBody.GetComponent<SpriteRenderer>().color = new Color(0.42f, 0.33f, 0.24f);
+                        var hopCap = SpriteGo("HopSlabCap", quad, new Vector3(child.position.x, child.position.y + h / 2f - 0.15f, 0), 1f, -1, child);
+                        hopCap.transform.localScale = new Vector3(w, 0.3f, 1f);
+                        hopCap.GetComponent<SpriteRenderer>().color = new Color(0.62f, 0.72f, 0.55f);
+                        continue;
+                    }
+                }
                 var hopArt = isTile ? null : Art("art_hopblock.png");   // [UNITY-BUILT Sept 25] tilemap hops wear the Unity slab, not painted art
                 if (hopArt != null && h < 2f) {
                     var crop = ArtCrop("art_hopblock.png", w, h, child.position.x - w / 2f);
@@ -580,7 +596,7 @@ namespace LilFoots.EditorTools
                 // tile-skinned grounds. The grass-edge fringe below still binds above the
                 // walking line, absorbing the 0.2u plateau tile offset organically.
                 bool tiled = (h >= 2f && !isStory);
-                if (earth != null && L(2) && !tiled) {
+                if (earth != null && L(2) && !tiled && !isTile) {   // [TILEMAP CLEANSE Sept 26] tile grounds wear the Unity Tilemap skin
                     var crop = ArtCrop("art_earth_new.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("Earth", crop, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
                 }
@@ -590,7 +606,7 @@ namespace LilFoots.EditorTools
                 // the surface and blade tips taper upward). Both tile world-x phased at natural
                 // scale so the pattern flows continuously across the map.
                 var cap = Art("art_ground_cap.png");
-                if (cap != null && L(2) && !tiled) {
+                if (cap != null && L(2) && !tiled && !isTile) {   // [TILEMAP CLEANSE Sept 26] tile caps are Unity tile caps
                     float capH = 0.45f;
                     float cw2 = capH * (cap.bounds.size.x / cap.bounds.size.y);
                     float left = child.position.x - w / 2f;
@@ -603,7 +619,7 @@ namespace LilFoots.EditorTools
                     }
                 }
                 var edge = Art("art_grass_edge.png");
-                if (edge != null && L(2)) {
+                if (edge != null && L(2) && !tiled && !isTile) {   // [TILEMAP CLEANSE Sept 26] the tile grass cap IS the edge on tile maps
                     float edgeH = 0.35f;
                     float ew = edgeH * (edge.bounds.size.x / edge.bounds.size.y);
                     float left = child.position.x - w / 2f;
@@ -684,10 +700,37 @@ namespace LilFoots.EditorTools
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
+                if (isTile) {
+                    // [TILEMAP CLEANSE Sept 26] tile-mode finish: flat Unity-built flag + portal
+                    // (pole, flag, arch pillars + lintel + veil) - zero painted prop files.
+                    var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
+                    if (quad != null) {
+                        float gx = gate.transform.position.x;
+                        var pole = SpriteGo("UnityFlagPole", quad, new Vector3(gx, GY + 2.4f, 0), 1f, 4, map.transform);
+                        pole.transform.localScale = new Vector3(0.18f, 4.6f, 1f);
+                        pole.GetComponent<SpriteRenderer>().color = new Color(0.38f, 0.28f, 0.19f);
+                        var flag = SpriteGo("UnityFlag", quad, new Vector3(gx - 0.84f, GY + 4.0f, 0), 1f, 5, map.transform);
+                        flag.transform.localScale = new Vector3(1.5f, 0.9f, 1f);
+                        flag.GetComponent<SpriteRenderer>().color = new Color(0.13f, 0.38f, 0.21f);
+                        var archL = SpriteGo("UnityPortalL", quad, new Vector3(gx + 1.6f, GY + 2.75f, 0), 1f, 3, map.transform);
+                        archL.transform.localScale = new Vector3(0.5f, 5.5f, 1f);
+                        archL.GetComponent<SpriteRenderer>().color = new Color(0.45f, 0.52f, 0.42f);
+                        var archR = SpriteGo("UnityPortalR", quad, new Vector3(gx + 5.4f, GY + 2.75f, 0), 1f, 3, map.transform);
+                        archR.transform.localScale = new Vector3(0.5f, 5.5f, 1f);
+                        archR.GetComponent<SpriteRenderer>().color = new Color(0.45f, 0.52f, 0.42f);
+                        var lintel = SpriteGo("UnityPortalTop", quad, new Vector3(gx + 3.5f, GY + 5.75f, 0), 1f, 3, map.transform);
+                        lintel.transform.localScale = new Vector3(4.3f, 0.55f, 1f);
+                        lintel.GetComponent<SpriteRenderer>().color = new Color(0.45f, 0.52f, 0.42f);
+                        var veil = SpriteGo("UnityPortalVeil", quad, new Vector3(gx + 3.5f, GY + 2.95f, 0), 1f, 2, map.transform);
+                        veil.transform.localScale = new Vector3(3.3f, 5.2f, 1f);
+                        veil.GetComponent<SpriteRenderer>().color = new Color(0.35f, 0.78f, 0.55f, 0.35f);
+                    }
+                } else {
                 var gateArt = Art("art_flaggate.png");   // renamed from fgArt - CS0136 collision with the Layer-4 foreground fgArt (same method scope)
                 if (gateArt != null) Reskin("FlagGateArt", gateArt, new Vector3(gate.transform.position.x, GY + 3.0f, 0), 5.5f, 4, map.transform); // [SCALE LAW Sept 21] 6u-tall monumental flagpole (was 2.2) - base on the grass, towers over 0.82u Lily
                 var portal = Art("art_flagportal.png");
                 if (portal != null) Reskin("PortalArt", portal, new Vector3(gate.transform.position.x + 2.8f, GY + 3.25f, 0), 6.5f, 3, map.transform); // [SCALE LAW Sept 21] 6.5u tall, placed PAST the flag (flag-then-portal flow, was behind the flag at -1.4)
+                }
             }
 
             // ---- PLAYER: selected Lil Foot, real art on a child sprite (capsule collider untouched) ----

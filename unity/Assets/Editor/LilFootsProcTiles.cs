@@ -216,6 +216,14 @@ public static class LilFootsProcTiles {
             Texture2D tex;
             if (name == "unity_coin") tex = CoinTex();
             else if (name == "unity_totem") tex = TotemTex();
+            else if (name == "unity_quad") {
+                // [TILEMAP CLEANSE Sept 26] flat white quad: the Unity-native building block for
+                // hop slabs, gate/portal arches - tinted per use, zero painted files.
+                tex = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+                var wp = new Color32[64];
+                for (int i = 0; i < 64; i++) wp[i] = new Color32(255, 255, 255, 255);
+                tex.SetPixels32(wp); tex.Apply();
+            }
             else tex = HeartTex();
             File.WriteAllBytes(path, tex.EncodeToPNG());
         }
