@@ -245,9 +245,13 @@ namespace LilFoots.EditorTools
                         ti.textureType = TextureImporterType.Sprite;
                         ti.spriteImportMode = SpriteImportMode.Single;
                         ti.spritePixelsPerUnit = 100f;
-                        ti.spriteMeshType = SpriteMeshType.FullRect;
                         ti.alphaIsTransparency = true;
                         ti.mipmapEnabled = false;
+                        // spriteMeshType lives on TextureImporterSettings, not TextureImporter
+                        var tis = new TextureImporterSettings();
+                        ti.ReadTextureSettings(tis);
+                        tis.spriteMeshType = SpriteMeshType.FullRect;
+                        ti.SetTextureSettings(tis);
                         ti.SaveAndReimport();
                         sp = AssetDatabase.LoadAssetAtPath<Sprite>(path);
                     }
@@ -492,10 +496,11 @@ namespace LilFoots.EditorTools
                 new { name = "Emma",  file = "whole_emma.png",  x =  3.2f },
             };
             var rigs = new List<CharRig>();
-            foreach (var c in chars)
+            foreach (var c in chars) {
                 var cardRig = BuildRig(c.name, "Assets/Art/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f), StanceFor(c.name));
                 WireFrameAnimator(cardRig.Root, c.name);   // select cards breathe the generated idle frames
                 rigs.Add(cardRig);
+            }
 
             // ---- QC 1: bind pose (native SpriteSkin, rest pose) ----
             cam.Render();
