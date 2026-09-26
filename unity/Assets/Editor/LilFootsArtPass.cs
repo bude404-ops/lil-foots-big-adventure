@@ -1123,6 +1123,9 @@ namespace LilFoots.EditorTools
             LilFootsLevelBuilder.Build();
             BuildArt();
             BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
+            // RUN TIMER (BudE Sept 26: "lets go your recommendation on the incentives") — clock
+            // + medals + best-time panel; GameManager.Win() freezes it at the flag.
+            if (UnityEngine.Object.FindObjectOfType<RunTimer>() == null) new GameObject("RunTimer").AddComponent<RunTimer>();
             BuildCharacterMenu(GameObject.Find("MainCamera").GetComponent<UnityEngine.Camera>()); // UI PASS: character select at start
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/" + (System.Environment.GetEnvironmentVariable("MAP_SCENE") ?? "Map001") + ".unity");

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -13,7 +14,16 @@ public class GameManager : MonoBehaviour {
     public static void Win() {
         Sfx.Play(Sfx.Clip.Win);
         Debug.Log("[LilFoots] LEVEL CLEAR! tokens=" + PlayerController.Instance.tokens);
-        // TODO per doctrine REWARD: objective rating screen (tokens %, secrets, no-damage) before reload
+        // RUN RESULTS (BudE Sept 26 incentive go-ahead): freeze the timer, medal + best time
+        // panel, THEN reload the course. RunTimer medal targets ship per-course.
+        if (RunTimer.Instance != null) RunTimer.Instance.Finish();
+        if (Instance != null) { Instance.StartCoroutine(ResultsThenReload()); return; }
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    static IEnumerator ResultsThenReload() {
+        // the results panel holds the screen ~4.5s (RunTimer.resultUntil), then the course resets
+        yield return new WaitForSeconds(4.6f);
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
