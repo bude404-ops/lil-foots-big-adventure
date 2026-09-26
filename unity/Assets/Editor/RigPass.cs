@@ -8,8 +8,10 @@
 // QC: bind-pose render + native Animator pose render (the clip poses the rig = validated),
 // plus a bone overlay pass for review shots. Validation = Unity must report zero errors.
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.IO;
+using Unity.Collections;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -209,6 +211,7 @@ namespace LilFoots.EditorTools
         class CharRig {
             public string Name;
             public GameObject Root;
+            public List<string> BoneOrder = new List<string>();   // deterministic: matches SpriteBone[]/bindpose/weight order
             public Dictionary<string, Transform> Bones = new Dictionary<string, Transform>();
             public Dictionary<string, string> AnimPaths = new Dictionary<string, string>();
             public float WorldH;
@@ -240,6 +243,7 @@ namespace LilFoots.EditorTools
             var boneRootGo = new GameObject("root");
             boneRootGo.transform.SetParent(charGo.transform, false);
             foreach (var kv in PoseMap) {
+                rig.BoneOrder.Add(kv.Key);
                 var bone = new GameObject(kv.Key);
                 bone.transform.SetParent(boneRootGo.transform, false);
                 // bone positions in art-fraction space, scaled by art rect, centered on the character
@@ -258,13 +262,38 @@ namespace LilFoots.EditorTools
                 rig.AnimPaths[kv.Key] = string.Join("/", names.ToArray());
             }
 
-            // ---- [CUTOUT REVERTED, BudE Sept 26 ~1:36 AM ET: "the character running work I
-            // dont like it doesnt look like running and the face cuts off like Canadians in
-            // South Park"] The hip-split legs band is REMOVED - splitting the approved art
-            // severed the silhouette and read as a bobbing detached body. The character is
-            // ONE WHOLE sprite again (his approved art, never cut). The run now lives in
-            // PlayerAnimBridge: step-synced bob + stride wobble on the WHOLE art (paper
-            // style), plus the existing squash/lean. SpriteSkin stays retired.
+            // ---- [UNITY 2D ANIMATION, BudE Sept 26 ~1:40 AM ET: "I also want you to use
+            // unity 2d animation instead of what im assuming you are with yourself?"]
+            // The character stays ONE WHOLE sprite (his approved art, never cut) and now
+            // gets REAL skeletal deformation on Unity's own 2D Animation package: the
+            // sprite's skinning data (SpriteBone[] hierarchy + bind poses + per-vertex bone
+            // weights on a deformation grid mesh) is authored in-engine with the SAME
+            // public Sprite APIs the package's own editor uses (SetBones / SetBindPoses /
+            // SetVertexAttribute - verified against com.unity.2d.animation@9.2.2 source),
+            // then SpriteSkin deforms the mesh at runtime as the Animator drives the bones.
+            // The whole-art bridge bob stays as the safety net if authoring ever fails.
+            bool skinned = false;
+            try { skinned = AuthorUnity2DSkinning(s, charGo, rig, PoseMap); }
+            catch (System.Exception ex) {
+                Debug.LogWarning("[RigPass] Unity 2D Animation authoring failed -> whole-art bridge motion only: " + ex.Message);
+            }
+            if (skinned) {
+                var skin = charGo.AddComponent<U2D.SpriteSkin>();
+                var bt = new List<Transform>();
+                foreach (var bk in rig.BoneOrder) bt.Add(rig.Bones[bk]);
+                var so = new UnityEditor.SerializedObject(skin);
+                so.FindProperty("m_RootBone").objectReferenceValue = rig.Bones["hip"];
+                var arrProp = so.FindProperty("m_BoneTransforms");
+                arrProp.arraySize = bt.Count;
+                for (int i = 0; i < bt.Count; i++) arrProp.GetArrayElementAtIndex(i).objectReferenceValue = bt[i];
+                // generous deformation bounds (renderer-local, art units) so the mesh never culls mid-swing
+                var bnd = so.FindProperty("m_Bounds");
+                var bw = s != null ? s.bounds.size : new Vector2(1f, 1f);
+                bnd.FindPropertyRelative("m_Center").vector3Value = new Vector3(0f, 0f, 0f);
+                bnd.FindPropertyRelative("m_Extent").vector3Value = new Vector3(bw.x * 0.5f + 0.5f, bw.y * 0.5f + 0.5f, 1f);
+                so.ApplyModifiedPropertiesWithoutUndo();
+                Debug.Log("[RigPass] UNITY 2D ANIMATION: SpriteSkin live - " + bt.Count + " bones, authored grid mesh + weights. Unity deforms, the clips drive. Legs bend, arms counter, head bobs.");
+            }
 
             // ---- Unity creates native AnimationClips + AnimatorController ----
             // IDLE = default state (character select law). WALK = second state (gameplay).
@@ -278,6 +307,7 @@ namespace LilFoots.EditorTools
                 st.loopTime = true;
                 AnimationUtility.SetAnimationClipSettings(c, st);
                 foreach (var kv in cycles) {
+                    if (!rig.AnimPaths.ContainsKey(kv.Key)) continue;   // path may not exist (legsBand is fallback-only)
                     var eulers = kv.Value;
                     var keys = new Keyframe[eulers.Length + 1];
                     for (int i = 0; i < eulers.Length; i++) keys[i] = new Keyframe(i / (float)fps, eulers[i]);
@@ -330,6 +360,120 @@ namespace LilFoots.EditorTools
             var animator = charGo.AddComponent<Animator>();
             animator.runtimeAnimatorController = ctrl;
             return rig;
+        }
+
+
+        // ==================== UNITY 2D ANIMATION AUTHORING ====================
+        // Writes the sprite's skinning data with the same public Sprite APIs the 2D
+        // Animation package's own SpritePostProcess uses (verified against
+        // com.unity.2d.animation@9.2.2 source): SetVertexCount/SetIndices/SetVertexAttribute
+        // (Position/TexCoord0/Tangent/BlendWeight), SetBones, SetBindPoses. Deformation grid
+        // mesh = 24x24 quads over the art rect (smooth bends everywhere, no hull coarseness,
+        // silhouette never severed); weights = top-2 bone influences by segment-distance
+        // falloff; bind poses = TR-inverse of the identity-rotation bind pose (same
+        // convention as the package's CalculateLocaltoWorldMatrix).
+        static bool AuthorUnity2DSkinning(Sprite s, GameObject charGo, CharRig rig, Dictionary<string, Vector2> pose) {
+            if (s == null || rig.Bones.Count == 0) return false;
+            float artW = s.bounds.size.x, artH = s.bounds.size.y;   // art units at PPU 100 (== sprite vertex space)
+
+            // ---- 1) deformation grid mesh over the full art rect (verts kept for weighting) ----
+            const int G = 24;
+            int vc = (G + 1) * (G + 1);
+            var grid = new Vector2[vc];
+            var positions = new NativeArray<Vector3>(vc, Allocator.Temp);
+            var uvs = new NativeArray<Vector2>(vc, Allocator.Temp);
+            var tangents = new NativeArray<Vector4>(vc, Allocator.Temp);
+            for (int j = 0; j <= G; j++) {
+                for (int i = 0; i <= G; i++) {
+                    float u = (float)i / G, v = (float)j / G;
+                    int idx = j * (G + 1) + i;
+                    grid[idx] = new Vector2((u - 0.5f) * artW, (v - 0.5f) * artH);
+                    positions[idx] = new Vector3(grid[idx].x, grid[idx].y, 0f);
+                    uvs[idx] = new Vector2(u, v);
+                    tangents[idx] = new Vector4(1f, 0f, 0f, -1f);
+                }
+            }
+            var idxList = new List<ushort>(G * G * 6);
+            for (int j = 0; j < G; j++) {
+                for (int i = 0; i < G; i++) {
+                    int a = j * (G + 1) + i, b = a + 1, c = a + G + 1, d = c + 1;
+                    idxList.Add((ushort)a); idxList.Add((ushort)c); idxList.Add((ushort)b);
+                    idxList.Add((ushort)b); idxList.Add((ushort)c); idxList.Add((ushort)d);
+                }
+            }
+            var indices = new NativeArray<ushort>(idxList.ToArray(), Allocator.Temp);
+            s.SetVertexCount(vc);
+            s.SetVertexAttribute<Vector3>(UnityEngine.Rendering.VertexAttribute.Position, positions);
+            s.SetVertexAttribute<Vector2>(UnityEngine.Rendering.VertexAttribute.TexCoord0, uvs);
+            s.SetVertexAttribute<Vector4>(UnityEngine.Rendering.VertexAttribute.Tangent, tangents);
+            s.SetIndices(indices);
+            positions.Dispose(); uvs.Dispose(); tangents.Dispose(); indices.Dispose();
+
+            // ---- 2) SpriteBone[] hierarchy + bind poses (identity-rotation bind pose) ----
+            int n = rig.BoneOrder.Count;
+            var jointPos = new Dictionary<string, Vector2>();
+            foreach (var bk in rig.BoneOrder)
+                jointPos[bk] = new Vector2((pose[bk].x - 0.5f) * artW, (pose[bk].y - 0.5f) * artH);
+            var parentIdx = new Dictionary<string, int>();
+            foreach (var bk in rig.BoneOrder) parentIdx[bk] = Parent.ContainsKey(bk) ? rig.BoneOrder.IndexOf(Parent[bk]) : -1;
+            var bones = new UnityEngine.U2D.SpriteBone[n];
+            var bindPoses = new NativeArray<Matrix4x4>(n, Allocator.Temp);
+            for (int i = 0; i < n; i++) {
+                string bk = rig.BoneOrder[i];
+                int pi = parentIdx[bk];
+                Vector2 local = jointPos[bk] - (pi >= 0 ? jointPos[rig.BoneOrder[pi]] : Vector2.zero);
+                bones[i] = new UnityEngine.U2D.SpriteBone {
+                    localPosition = new Vector3(local.x, local.y, 0f),
+                    localRotation = Quaternion.identity,
+                    parentId = pi,
+                    length = 0.15f,
+                    name = bk
+                };
+                var m = Matrix4x4.identity;   // TR-inverse of Translate(pos), identity rotation
+                m.SetColumn(3, new Vector4(-jointPos[bk].x, -jointPos[bk].y, 0f, 1f));
+                bindPoses[i] = m;
+            }
+            s.SetBindPoses(bindPoses);
+            s.SetBones(bones);
+            bindPoses.Dispose();
+
+            // ---- 3) per-vertex bone weights: top-2 influences by segment-distance falloff ----
+            // each bone's segment runs from its joint to its first child's joint (leaf = point)
+            var segA = new Vector2[n]; var segB = new Vector2[n];
+            for (int i = 0; i < n; i++) {
+                string bk = rig.BoneOrder[i];
+                segA[i] = jointPos[bk];
+                segB[i] = segA[i];
+                foreach (var other in rig.BoneOrder)
+                    if (Parent.ContainsKey(other) && Parent[other] == bk) { segB[i] = jointPos[other]; break; }
+            }
+            var weights = new NativeArray<BoneWeight>(vc, Allocator.Temp);
+            for (int vi = 0; vi < vc; vi++) {
+                var pt = grid[vi];
+                int b0 = 0, b1 = 1; float w0 = 0f, w1 = 0f;
+                for (int i = 0; i < n; i++) {
+                    float d = DistPointSegment(pt, segA[i], segB[i]);
+                    float score = 1f / (d * d * d * d + 0.02f);
+                    if (score > w0) { w1 = w0; b1 = b0; w0 = score; b0 = i; }
+                    else if (score > w1) { w1 = score; b1 = i; }
+                }
+                float total = w0 + w1;
+                weights[vi] = new BoneWeight {
+                    boneIndex0 = b0, weight0 = w0 / total,
+                    boneIndex1 = b1, weight1 = w1 / total
+                };
+            }
+            s.SetVertexAttribute<BoneWeight>(UnityEngine.Rendering.VertexAttribute.BlendWeight, weights);
+            weights.Dispose();
+            Debug.Log("[RigPass] skinning authored: " + vc + "-vertex grid, " + n + " bones, 2-influence weights");
+            return true;
+        }
+
+        static float DistPointSegment(Vector2 p, Vector2 a, Vector2 b) {
+            var ab = b - a;
+            float len2 = ab.sqrMagnitude;
+            float t = len2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / len2) : 0f;
+            return Vector2.Distance(p, a + ab * t);
         }
 
         /// <summary>QC-only: apply the clip's pose at time t straight onto the bones

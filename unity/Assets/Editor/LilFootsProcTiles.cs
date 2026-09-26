@@ -16,6 +16,46 @@ namespace LilFoots {
 /// 256px @ 256ppu = 1u = one tilemap cell (the quad-mirror law stays).
 /// </summary>
 public static class LilFootsProcTiles {
+
+    // ---------------- REGION PALETTES (BudE, Sept 26 ~1:40 AM ET: "we need to make sure the
+    // art is created for the actual maps aswell for their region") ----------------
+    // Every region's terrain is generated in ITS OWN biome palette. LILFOOTS_REGION=N
+    // (forge input / env) selects the palette; region > 1 tiles are named r<N>_<tile>
+    // (Region 1 keeps the canon lf_* names). Hand-art reskin hooks work per region the
+    // same way (drop PNGs at the r<N>_ paths and they win).
+    //   1 Old Growth (PNW)  - clean flat sage + crisp edge
+    //   2 The High White     - snowfield white-blue caps + blue-grey glacier rock
+    //   3 The Red Dust       - sun-bleached ochre caps + red-earth fill
+    //   4 The Still Water    - murky swamp green + wet dark muck
+    //   5 The Deep Green     - vivid jungle greens + loam
+    struct Pal { public Color capBody, capEdge, dirtTop, dirtDeep; }
+    static Pal Palette(int r) {
+        switch (r) {
+            case 2: return new Pal {
+                capBody = new Color(0.93f, 0.97f, 1.00f), capEdge = new Color(0.70f, 0.82f, 0.96f),
+                dirtTop = new Color(0.46f, 0.51f, 0.62f),  dirtDeep = new Color(0.22f, 0.26f, 0.36f) };
+            case 3: return new Pal {
+                capBody = new Color(0.86f, 0.62f, 0.38f), capEdge = new Color(0.62f, 0.36f, 0.18f),
+                dirtTop = new Color(0.56f, 0.35f, 0.21f),  dirtDeep = new Color(0.30f, 0.16f, 0.09f) };
+            case 4: return new Pal {
+                capBody = new Color(0.42f, 0.60f, 0.42f), capEdge = new Color(0.22f, 0.38f, 0.24f),
+                dirtTop = new Color(0.31f, 0.27f, 0.17f), dirtDeep = new Color(0.13f, 0.12f, 0.07f) };
+            case 5: return new Pal {
+                capBody = new Color(0.33f, 0.72f, 0.30f), capEdge = new Color(0.14f, 0.42f, 0.16f),
+                dirtTop = new Color(0.38f, 0.31f, 0.16f), dirtDeep = new Color(0.16f, 0.13f, 0.07f) };
+            default: return new Pal {
+                capBody = new Color(0.45f, 0.58f, 0.39f), capEdge = new Color(0.33f, 0.44f, 0.30f),
+                dirtTop = new Color(0.36f, 0.32f, 0.23f), dirtDeep = new Color(0.27f, 0.25f, 0.17f) };
+        }
+    }
+    public static int Region {
+        get {
+            int r;
+            int.TryParse(System.Environment.GetEnvironmentVariable("LILFOOTS_REGION") ?? "1", out r);
+            return (r >= 1 && r <= 5) ? r : 1;
+        }
+    }
+    static string RegionName(string tile) { return Region == 1 ? tile : "r" + Region + "_" + tile; }
     const int N = 256;   // 256px @ 256ppu = 1u per tile
     const string DIR = "Assets/Art/Tiles";
 
@@ -35,8 +75,9 @@ public static class LilFootsProcTiles {
 
     /// <summary>CLEAN grass cap: flat sage body + crisp darker top edge line. No noise.</summary>
     static Texture2D CapTex(int variant, bool lipL, bool lipR) {
-        var body = new Color(0.45f, 0.58f, 0.39f);   // clean flat sage
-        var edge = new Color(0.33f, 0.44f, 0.30f);   // crisp top edge line
+        var pal = Palette(Region);
+        var body = pal.capBody;   // region's flat cap color
+        var edge = pal.capEdge;   // crisp top edge line
         var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
         for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
             var px = (y >= N - 4) ? edge : body;
@@ -50,8 +91,9 @@ public static class LilFootsProcTiles {
 
     /// <summary>CLEAN dirt fill: flat two-stop earth gradient. No strata, no speckles.</summary>
     static Texture2D DirtTex(int variant, bool lipL, bool lipR) {
-        var top  = new Color(0.36f, 0.32f, 0.23f);
-        var deep = new Color(0.27f, 0.25f, 0.17f);
+        var pal = Palette(Region);
+        var top  = pal.dirtTop;
+        var deep = pal.dirtDeep;
         var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
         for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
             var px = Color.Lerp(top, deep, y / (float)N);
@@ -132,7 +174,8 @@ public static class LilFootsProcTiles {
     /// <summary>Generates the PNG if missing (Unity builds it), imports at 256ppu, and
     /// returns a persistent Tile asset. No painted art is loaded - the file at
     /// Assets/Art/Tiles/<name>.png IS the Unity-generated skin.</summary>
-    public static TileBase EnsureTile(string name) {
+    public static TileBase EnsureTile(string tileName) {
+        string name = RegionName(tileName);   // per-region art sets (r2_* snowfield, r3_* red dust, ...)
         Directory.CreateDirectory(DIR);
         string png = DIR + "/" + name + ".png";
         string asset = DIR + "/" + name + ".asset";
