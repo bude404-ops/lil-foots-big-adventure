@@ -258,72 +258,26 @@ public static class LilFootsTilemapBuilder {
 
     static TileSet EnsureTiles() {
         Directory.CreateDirectory("Assets/Art/Tiles");
-        // HAND-PAINTED CANON SET (BudE Sept 25: "doesn't look right with the lines and ground"):
-        // the shipped build painted placeholder TileTex flats with a checkerboard pick - flat
-        // teal lines, no brushwork. The real painted tiles (lf_grass_a..d caps, lf_dirt_a..d
-        // fill, lf_grass_l/r + lf_dirt_l/r organic side lips) were in the repo but never bound.
-        // Tile() generates a canon fallback ONLY if a PNG is missing.
+        // [UNITY-BUILT SKIN, BudE Sept 25 ~11:45 PM ET: "remove ant art work and just have
+        // unity build it for the maps"] The painted lf_*.png set is RETIRED. LilFootsProcTiles
+        // GENERATES every tile texture in Unity (seeded noise moss caps, strata dirt, shaded
+        // lips) - the map skin is built by the engine, not composited from art files.
         return new TileSet {
             grassTop  = new UnityEngine.Tilemaps.TileBase[] {
-                Tile("lf_grass_a", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
-                Tile("lf_grass_b", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
-                Tile("lf_grass_c", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)),
-                Tile("lf_grass_d", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, false)) },
-            grassTopL = Tile("lf_grass_l", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), true, false)),
-            grassTopR = Tile("lf_grass_r", TileTex(new Color(0.35f, 0.55f, 0.35f), new Color(0.55f, 0.75f, 0.55f), false, true)),
+                LilFootsProcTiles.EnsureTile("lf_grass_a"), LilFootsProcTiles.EnsureTile("lf_grass_b"),
+                LilFootsProcTiles.EnsureTile("lf_grass_c"), LilFootsProcTiles.EnsureTile("lf_grass_d") },
+            grassTopL = LilFootsProcTiles.EnsureTile("lf_grass_l"),
+            grassTopR = LilFootsProcTiles.EnsureTile("lf_grass_r"),
             dirt      = new UnityEngine.Tilemaps.TileBase[] {
-                Tile("lf_dirt_a", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
-                Tile("lf_dirt_b", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
-                Tile("lf_dirt_c", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)),
-                Tile("lf_dirt_d", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, false)) },
-            dirtL     = Tile("lf_dirt_l", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), true, false)),
-            dirtR     = Tile("lf_dirt_r", TileTex(new Color(0.14f, 0.18f, 0.12f), new Color(0.22f, 0.28f, 0.18f), false, true)),
+                LilFootsProcTiles.EnsureTile("lf_dirt_a"), LilFootsProcTiles.EnsureTile("lf_dirt_b"),
+                LilFootsProcTiles.EnsureTile("lf_dirt_c"), LilFootsProcTiles.EnsureTile("lf_dirt_d") },
+            dirtL     = LilFootsProcTiles.EnsureTile("lf_dirt_l"),
+            dirtR     = LilFootsProcTiles.EnsureTile("lf_dirt_r"),
         };
     }
 
-    /// <summary>Loads or creates a persistent Tile asset whose sprite lives at
-    /// Assets/Art/Tiles/<name>.png. Drop a hand-painted PNG over that path and the
-    /// whole world reskins on the next import - no code changes.</summary>
-    static UnityEngine.Tilemaps.TileBase Tile(string name, Texture2D tex) {
-        const string dir = "Assets/Art/Tiles";
-        string png = dir + "/" + name + ".png";
-        string asset = dir + "/" + name + ".asset";
-        var t = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(asset);
-        // REBIND LAW (Sept 25): never trust a stale .asset sprite - the shipped build kept
-        // serving the first placeholder sprite after hand-painted PNGs landed at the same
-        // path. Always reimport + rebind so the tile art is whatever the PNG says TODAY.
-
-        if (!File.Exists(png)) { File.WriteAllBytes(png, tex.EncodeToPNG()); AssetDatabase.ImportAsset(png); }
-        var ti = (TextureImporter)AssetImporter.GetAtPath(png);
-        ti.spriteImportMode = SpriteImportMode.Single;
-        ti.spritePixelsPerUnit = 256f;   // seamless set is 256px quad-mirror - 256px @ 256ppu = 1u = 1 tilemap cell (128ppu would render each tile spanning 2x2 cells)
-        ti.filterMode = FilterMode.Bilinear;
-        ti.SaveAndReimport();
-        var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(png);
-        if (t == null) {
-            t = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
-            AssetDatabase.CreateAsset(t, asset);
-        }
-        t.sprite = sprite;
-        EditorUtility.SetDirty(t);
-        return t;
-    }
-
-    static Texture2D TileTex(Color body, Color cap, bool shadeL, bool shadeR) {
-        const int N = 128;
-        var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
-        var rnd = new System.Random(404);
-        for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
-            Color c = y > N - 30 ? cap : body;
-            float n = (rnd.Next() % 1000) / 1000f;
-            c = new Color(c.r * (0.92f + 0.08f * n), c.g * (0.92f + 0.08f * n), c.b * (0.92f + 0.08f * n), 1f);
-            if (shadeL && x < 12) c *= 0.75f;
-            if (shadeR && x > N - 13) c *= 0.75f;
-            tex.SetPixel(x, y, c);
-        }
-        tex.Apply();
-        return tex;
-    }
+    // [RETIRED Sept 25] Tile()/TileTex() placeholder generators removed with the painted
+    // art retirement - LilFootsProcTiles.EnsureTile() is the single tile source now.
 
     static Sprite SlabSprite() {
         if (_slab == null) {

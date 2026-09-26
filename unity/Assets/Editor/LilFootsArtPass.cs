@@ -170,8 +170,11 @@ namespace LilFoots.EditorTools
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
             if (cam != null && L(1) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] the painting is the sky
-                var skySpr = Art(isTile ? "art_sky_tilemap.png" : "art_sky_new.png");   // [GREEN CANON Sept 25] BudE world ref: sage mist sky (tilemap mode)
-                if (skySpr == null) skySpr = Art("art_sky_new.png");
+                // [UNITY-BUILT SKIN Sept 25 ~11:45 PM ET: "remove ant art work and just have
+                // unity build it for the maps"] tilemap maps wear the UNITY-GENERATED sky
+                // (LilFootsProcTiles: sage overcast gradient + forest ridge silhouettes) -
+                // painted sky PNGs are retired from the map build.
+                var skySpr = isTile ? LilFootsProcTiles.EnsureSky() : Art("art_sky_new.png");
                 if (skySpr != null) {
                     float skyH = 12f;                 // frame is 7.5 tall - generous bleed top and bottom
                     float skyW = 12f;                  // square art, mirrored x2 = 24 wide for ultrawide
@@ -553,7 +556,7 @@ namespace LilFoots.EditorTools
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
-                var hopArt = Art("art_hopblock.png");
+                var hopArt = isTile ? null : Art("art_hopblock.png");   // [UNITY-BUILT Sept 25] tilemap hops wear the Unity slab, not painted art
                 if (hopArt != null && h < 2f) {
                     var crop = ArtCrop("art_hopblock.png", w, h, child.position.x - w / 2f);
                     if (crop != null) SpriteGo("HopBlockArt", crop, new Vector3(child.position.x, child.position.y, 0), w, -2, child);
@@ -745,19 +748,30 @@ namespace LilFoots.EditorTools
             var btnR = Art("art_btnR.png"); // dedicated right-button art (BudE, Sept 20: 'missing right button in the art') - the runtime localScale mirror never showed on device
             var btnJ = Art("art_btnJ.png");
             if (btnL != null && btnR != null && btnJ != null) {
-                MakeDeckButton(canvasGo.transform, "BtnLeft",  btnL, false, TouchDeckButton.Kind.Left,
-                    new Vector2(120f, 90f), new Vector2(150f, 150f));
-                MakeDeckButton(canvasGo.transform, "BtnRight", btnR, false, TouchDeckButton.Kind.Right,
-                    new Vector2(300f, 90f), new Vector2(150f, 150f));
+                // [DECK FIX Sept 25 ~11:45 PM ET: BudE "the left and right motion button they
+                // are too close... the character doesnt always go that direction you want"]
+                // (a) LEFT/RIGHT pushed apart + enlarged (centers 230px apart at the 1334 ref,
+                //     ~68pt on a phone - real thumb separation, no accidental cross-taps).
+                // (b) TouchDeckRoot owns the flags now: FRAME-POLLED hit zones (padded,
+                //     bottom-extended, multi-touch + drag-through aware) - uGUI pointer events
+                //     lose drags between buttons (OnPointerExit releases, nothing re-captures),
+                //     which is exactly why the direction died mid-slide. The root never misses.
+                var rL = MakeDeckButton(canvasGo.transform, "BtnLeft",  btnL, false, TouchDeckButton.Kind.Left,
+                    new Vector2(115f, 90f), new Vector2(175f, 175f));
+                var rR = MakeDeckButton(canvasGo.transform, "BtnRight", btnR, false, TouchDeckButton.Kind.Right,
+                    new Vector2(345f, 90f), new Vector2(175f, 175f));
                 // JUMP bigger + pulled inward (Sept 19: "jumping doesn't work" on the phone) -
                 // taps at the extreme screen edge can land on browser chrome, not the canvas.
-                MakeDeckButton(canvasGo.transform, "BtnJump",  btnJ, false, TouchDeckButton.Kind.Jump,
+                var rJ = MakeDeckButton(canvasGo.transform, "BtnJump",  btnJ, false, TouchDeckButton.Kind.Jump,
                     new Vector2(1120f, 100f), new Vector2(230f, 230f));
+                var root = canvasGo.AddComponent<TouchDeckRoot>();
+                root.canvasRect = canvasGo.transform as UnityEngine.RectTransform;
+                root.leftRect = rL; root.rightRect = rR; root.jumpRect = rJ;
             }
-            Debug.Log("[ArtPass] Touch deck built: uGUI LEFT/RIGHT/JUMP wired to TouchDeck.");
+            Debug.Log("[ArtPass] Touch deck built: frame-polled LEFT/RIGHT/JUMP (TouchDeckRoot owns flags).");
         }
 
-        static void MakeDeckButton(Transform parent, string name, Sprite art, bool flip,
+        static UnityEngine.RectTransform MakeDeckButton(Transform parent, string name, Sprite art, bool flip,
                                    TouchDeckButton.Kind kind, Vector2 anchoredPos, Vector2 size) {
             var go = new GameObject(name, typeof(UnityEngine.RectTransform));
             var rt = (UnityEngine.RectTransform)go.transform;
@@ -773,6 +787,7 @@ namespace LilFoots.EditorTools
             if (flip) rt.localScale = new Vector3(-1f, 1f, 1f); // mirror for the right arrow
             var tb = go.AddComponent<TouchDeckButton>();
             tb.kind = kind;
+            return rt;
         }
 
         /// <summary>CI entry: build map 001, dress with art, save scene, render QC shots, exit.</summary>
