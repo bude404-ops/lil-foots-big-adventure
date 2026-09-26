@@ -39,7 +39,11 @@ public class FrameAnimator : MonoBehaviour {
         if (pc == null) {
             if (idle != null && idle.Length > 0) {
                 tIdle += Time.deltaTime * idleFps;
-                sr.sprite = idle[((int)tIdle) % idle.Length];
+                int n = idle.Length;
+                int cycle = (n > 2) ? (2 * n - 2) : n;
+                int idx = ((int)tIdle) % cycle;
+                if (n > 2 && idx >= n) idx = cycle - idx;
+                sr.sprite = idle[idx];
             }
             return;
         }
@@ -66,10 +70,16 @@ public class FrameAnimator : MonoBehaviour {
             return;
         }
 
-        // ---- IDLE: slow breathing pair ----
+        // ---- IDLE: gentle breathing, PING-PONG (BudE Sept 26: "we need to have better
+        // idle animation") - a longer breathing cycle reads in-and-out; with 2 frames it
+        // behaves exactly like the old alternation, with 3+ it breathes without snapping.
         if (idle != null && idle.Length > 0) {
             tIdle += Time.deltaTime * idleFps;
-            sr.sprite = idle[((int)tIdle) % idle.Length];
+            int n = idle.Length;
+            int cycle = (n > 2) ? (2 * n - 2) : n;   // 4 frames -> 0,1,2,3,2,1 ... 2 frames -> 0,1
+            int idx = ((int)tIdle) % cycle;
+            if (n > 2 && idx >= n) idx = cycle - idx;
+            sr.sprite = idle[idx];
         }
     }
 }

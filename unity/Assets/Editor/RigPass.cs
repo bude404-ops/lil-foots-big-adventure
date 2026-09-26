@@ -226,7 +226,7 @@ namespace LilFoots.EditorTools
         static void WireFrameAnimator(GameObject root, string charName) {
             var walk = LoadFrameSet(charName, "walk", 8);   // sheet-sliced 8-frame stride cycle
             var jump = LoadFrameSet(charName, "jump", 4);
-            var idle = LoadFrameSet(charName, "idle", 2);
+            var idle = LoadFrameSet(charName, "idle", 4);   // BudE Sept 26: better idle = 4-panel breathing cycle (falls back to 2 gracefully)
             if (walk.Length == 0 && jump.Length == 0 && idle.Length == 0) return;
             var fa = root.AddComponent<FrameAnimator>();
             fa.idle = idle; fa.walk = walk; fa.jump = jump;
