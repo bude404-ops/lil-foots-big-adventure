@@ -8,7 +8,6 @@
 // QC: bind-pose render + native Animator pose render (the clip poses the rig = validated),
 // plus a bone overlay pass for review shots. Validation = Unity must report zero errors.
 #if UNITY_EDITOR
-using System;
 using System.Collections.Generic;
 using System.IO;
 using Unity.Collections;
@@ -288,7 +287,7 @@ namespace LilFoots.EditorTools
                 for (int i = 0; i < bt.Count; i++) arrProp.GetArrayElementAtIndex(i).objectReferenceValue = bt[i];
                 // generous deformation bounds (renderer-local, art units) so the mesh never culls mid-swing
                 var bnd = so.FindProperty("m_Bounds");
-                var bw = s != null ? s.bounds.size : new Vector2(1f, 1f);
+                var bw = s != null ? s.bounds.size : new Vector3(1f, 1f, 0f);   // Vector3 both sides (CS0172 fix)
                 bnd.FindPropertyRelative("m_Center").vector3Value = new Vector3(0f, 0f, 0f);
                 bnd.FindPropertyRelative("m_Extent").vector3Value = new Vector3(bw.x * 0.5f + 0.5f, bw.y * 0.5f + 0.5f, 1f);
                 so.ApplyModifiedPropertiesWithoutUndo();
@@ -402,11 +401,16 @@ namespace LilFoots.EditorTools
                 }
             }
             var indices = new NativeArray<ushort>(idxList.ToArray(), Allocator.Temp);
-            s.SetVertexCount(vc);
-            s.SetVertexAttribute<Vector3>(UnityEngine.Rendering.VertexAttribute.Position, positions);
-            s.SetVertexAttribute<Vector2>(UnityEngine.Rendering.VertexAttribute.TexCoord0, uvs);
-            s.SetVertexAttribute<Vector4>(UnityEngine.Rendering.VertexAttribute.Tangent, tangents);
-            s.SetIndices(indices);
+            // SetVertexCount/SetVertexAttribute/SetIndices/SetBindPoses/SetBones are INTERNAL
+            // engine methods (the 2D Animation package calls them via InternalsVisibleTo;
+            // user scripts cannot - CS1061 in build 116). We reach them through reflection,
+            // same signature, same call the package's SpritePostProcess makes. Any miss throws
+            // and the rig falls back to the whole-art bridge motion (never a broken build).
+            SpriteApi.SetVertexCount(s, vc);
+            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.Position, positions);
+            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.TexCoord0, uvs);
+            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.Tangent, tangents);
+            SpriteApi.SetIndices(s, indices);
             positions.Dispose(); uvs.Dispose(); tangents.Dispose(); indices.Dispose();
 
             // ---- 2) SpriteBone[] hierarchy + bind poses (identity-rotation bind pose) ----
@@ -423,8 +427,8 @@ namespace LilFoots.EditorTools
                 int pi = parentIdx[bk];
                 Vector2 local = jointPos[bk] - (pi >= 0 ? jointPos[rig.BoneOrder[pi]] : Vector2.zero);
                 bones[i] = new UnityEngine.U2D.SpriteBone {
-                    localPosition = new Vector3(local.x, local.y, 0f),
-                    localRotation = Quaternion.identity,
+                    position = new Vector3(local.x, local.y, 0f),   // engine member names: position/rotation (verified vs package source)
+                    rotation = Quaternion.identity,
                     parentId = pi,
                     length = 0.15f,
                     name = bk
@@ -433,8 +437,8 @@ namespace LilFoots.EditorTools
                 m.SetColumn(3, new Vector4(-jointPos[bk].x, -jointPos[bk].y, 0f, 1f));
                 bindPoses[i] = m;
             }
-            s.SetBindPoses(bindPoses);
-            s.SetBones(bones);
+            SpriteApi.SetBindPoses(s, bindPoses);
+            SpriteApi.SetBones(s, bones);
             bindPoses.Dispose();
 
             // ---- 3) per-vertex bone weights: top-2 influences by segment-distance falloff ----
@@ -463,10 +467,67 @@ namespace LilFoots.EditorTools
                     boneIndex1 = b1, weight1 = w1 / total
                 };
             }
-            s.SetVertexAttribute<BoneWeight>(UnityEngine.Rendering.VertexAttribute.BlendWeight, weights);
+            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.BlendWeight, weights);
             weights.Dispose();
+            // persist the authored skinning data (sprite vertex streams + bone data) into the
+            // asset database so the player build serializes the deformed-capable sprite
+            EditorUtility.SetDirty(s);
+            AssetDatabase.SaveAssets();
             Debug.Log("[RigPass] skinning authored: " + vc + "-vertex grid, " + n + " bones, 2-influence weights");
             return true;
+        }
+
+        // Reflection bridge to the engine's INTERNAL Sprite skinning write APIs (the same
+        // ones com.unity.2d.animation@9.2.2 SpritePostProcess calls - verified in the source
+        // of that package; they are internal to the engine, so package-only by compile, but
+        // callable via reflection from editor scripts. Pinned image: 2022.3.50f1.)
+        static class SpriteApi {
+            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+
+            public static void SetVertexCount(Sprite s, int count) {
+                var mi = typeof(Sprite).GetMethod("SetVertexCount", F);
+                if (mi == null) throw new System.MissingMethodException("Sprite.SetVertexCount");
+                mi.Invoke(s, new object[] { count });
+            }
+
+            public static void SetIndices(Sprite s, NativeArray<ushort> indices) {
+                foreach (var mi in typeof(Sprite).GetMethods(F)) {
+                    if (mi.Name != "SetIndices" || mi.GetParameters().Length != 1) continue;
+                    try { mi.Invoke(s, new object[] { indices }); return; }
+                    catch (System.Reflection.TargetInvocationException) { }
+                }
+                throw new System.MissingMethodException("Sprite.SetIndices");
+            }
+
+            public static void SetBindPoses(Sprite s, NativeArray<Matrix4x4> poses) {
+                foreach (var mi in typeof(Sprite).GetMethods(F)) {
+                    if (mi.Name != "SetBindPoses" || mi.GetParameters().Length != 1) continue;
+                    try { mi.Invoke(s, new object[] { poses }); return; }
+                    catch (System.Reflection.TargetInvocationException) { }
+                }
+                throw new System.MissingMethodException("Sprite.SetBindPoses");
+            }
+
+            public static void SetBones(Sprite s, UnityEngine.U2D.SpriteBone[] bones) {
+                foreach (var mi in typeof(Sprite).GetMethods(F)) {
+                    if (mi.Name != "SetBones" || mi.GetParameters().Length != 1) continue;
+                    try { mi.Invoke(s, new object[] { bones }); return; }
+                    catch (System.Reflection.TargetInvocationException) { }
+                }
+                throw new System.MissingMethodException("Sprite.SetBones");
+            }
+
+            public static void SetVertexAttribute<T>(Sprite s, UnityEngine.Rendering.VertexAttribute attr, NativeArray<T> data) where T : struct {
+                foreach (var mi in typeof(Sprite).GetMethods(F)) {
+                    if (mi.Name != "SetVertexAttribute" || !mi.IsGenericMethodDefinition) continue;
+                    if (mi.GetParameters().Length != 2) continue;
+                    try {
+                        mi.MakeGenericMethod(typeof(T)).Invoke(s, new object[] { attr, data });
+                        return;
+                    } catch (System.Reflection.TargetInvocationException) { }
+                }
+                throw new System.MissingMethodException("Sprite.SetVertexAttribute<" + typeof(T).Name + ">");
+            }
         }
 
         static float DistPointSegment(Vector2 p, Vector2 a, Vector2 b) {
