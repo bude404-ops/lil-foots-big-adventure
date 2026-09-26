@@ -209,12 +209,18 @@ public static class LilFootsTilemapBuilder {
         var psr = portal.AddComponent<SpriteRenderer>(); psr.sprite = slab; psr.sortingOrder = 3;
         psr.drawMode = SpriteDrawMode.Tiled; psr.size = new Vector2(3.2f, 3.2f);
 
-        // ================= 9. PLAYER (spawn-at-clamp framing law) =================
+        // ================= 9. PLAYER (Sept 26 camera law: BudE "the camera needs zoomed out
+        // the very beginning is always cut off and the character can disappear if runs to the
+        // left") - spawn INSIDE the first visible screen near the left edge: the whole opening
+        // of the level is on screen from frame one, and the player's frame bounds (set below)
+        // hold him inside the visible screen at both level edges.
         var player = new GameObject("Lily");
         player.transform.SetParent(root.transform);
-        float viewHalfW0 = 3.75f * (16f / 9f);
-        player.transform.position = new Vector3(viewHalfW0 - 0.15f, GY + 0.1f, 0);
+        float viewHalfW0 = 4.6f * (16f / 9f);
+        player.transform.position = new Vector3(2.2f, GY + 0.1f, 0);
         var pc = player.AddComponent<PlayerController>();
+        pc.boundMinX = 0.45f;                                        // never off-screen left
+        pc.boundMaxX = F(meta["width"]) / 100f - 0.45f;              // never off-screen right
         var pcol = player.AddComponent<CapsuleCollider2D>(); pcol.size = new Vector2(0.44f, 0.7f); pcol.offset = new Vector2(0, 0.35f);
         var prb = player.AddComponent<Rigidbody2D>();
         prb.freezeRotation = true; prb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
@@ -226,8 +232,9 @@ public static class LilFootsTilemapBuilder {
         // ================= 10. CAMERA + MANAGERS =================
         var cam = new GameObject("MainCamera");
         cam.transform.SetParent(root.transform);
-        cam.transform.position = new Vector3(6.7f, 7.0f, -10f);
-        var camc = cam.AddComponent<Camera>(); camc.orthographic = true; camc.orthographicSize = 3.75f;
+        cam.transform.position = new Vector3(8.2f, 7.0f, -10f);       // starts AT the minX clamp: the level opening is framed from world x=0
+        var camc = cam.AddComponent<Camera>(); camc.orthographic = true;
+        camc.orthographicSize = 4.6f;   // [ZOOM OUT Sept 26] 3.75 -> 4.6: BudE "camera needs zoomed out" - the frame breathes
         camc.backgroundColor = new Color(0.78f, 0.83f, 0.82f);
         cam.tag = "MainCamera";
         var cf = cam.AddComponent<CameraFollow>(); cf.target = player.transform;

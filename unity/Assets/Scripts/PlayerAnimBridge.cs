@@ -9,6 +9,11 @@ namespace LilFoots {
 /// rig to face the run direction, and layers the 2.5D PAPER MOTION on top (Sept 25 punch-up):
 /// take-off stretch, landing squash, and a run lean into the travel direction - the character
 /// visibly answers every input, on top of the bone animation.
+/// [RUN CYCLE Sept 26 ~1:36 AM ET - BudE: "the character running... doesnt look like running"
+/// + "the face cuts off like Canadians in South Park"] The art NEVER splits: the approved
+/// sprite stays one whole piece (no hip slice, no cut face). The run reads through motion
+/// ON the whole art: a step-synced vertical bob (a little hop per stride) plus a light
+/// stride wobble, composed with the squash/lean. Paper-cutout life, zero amputation.
 /// </summary>
 public class PlayerAnimBridge : MonoBehaviour {
     Animator anim;
@@ -19,10 +24,13 @@ public class PlayerAnimBridge : MonoBehaviour {
     float squash = 1f;   // 1 = neutral; >1 stretches tall, <1 squashes flat
     float squashVel;
     bool wasAir;
+    float runPhase;              // stride cycle clock
+    Vector3 baseLocalPos;        // feet-anchor offset baked by RigPass - bob rides ON TOP of it
 
     void Awake() {
         baseScaleX = Mathf.Abs(transform.localScale.x);
         baseScaleY = transform.localScale.y;
+        baseLocalPos = transform.localPosition;
     }
 
     void Update() {
@@ -58,8 +66,20 @@ public class PlayerAnimBridge : MonoBehaviour {
         sc.x = baseScaleX * -pc.facing / Mathf.Sqrt(sq);  // tall+thin when stretched, wide when squashed
         sc.y = baseScaleY * sq;
         transform.localScale = sc;
+        // ---- RUN CYCLE (whole-art motion, no cuts): step-synced bob + stride wobble ----
+        float wobble = 0f;
+        if (!air && speedFrac > 0.05f) {
+            runPhase += Time.deltaTime * (8f + 10f * speedFrac);        // stride cadence scales with speed
+            float bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.06f * speedFrac;   // a little hop each step
+            wobble = Mathf.Sin(runPhase * 2f) * 2.2f * speedFrac;              // light stride sway
+            transform.localPosition = baseLocalPos + new Vector3(0f, bob, 0f);
+        } else {
+            runPhase = 0f;
+            transform.localPosition = baseLocalPos;                      // settle back on the anchor
+        }
         // lean into the run (reads as forward momentum; halved mid-air so jumps read clean)
-        transform.localRotation = Quaternion.Euler(0f, 0f, -pc.facing * 6f * speedFrac * (air ? 0.5f : 1f));
+        transform.localRotation = Quaternion.Euler(0f, 0f,
+            -pc.facing * 6f * speedFrac * (air ? 0.5f : 1f) + wobble);
     }
 }
 }

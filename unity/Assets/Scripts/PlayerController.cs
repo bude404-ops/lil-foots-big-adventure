@@ -22,6 +22,9 @@ public class PlayerController : MonoBehaviour {
     public float stompBounce  = 5.2f;  // -520 px/s
     public int   maxLives     = 3;
 
+    [Header("Frame bounds (BudE Sept 26: 'the character can disappear if runs to the left')")]
+    public float boundMinX = -9999f, boundMaxX = 9999f;   // set by the level builder: player stays inside the visible screen at the level edges
+
     [Header("Refs")]
     public Rigidbody2D rb;
     public Collider2D feet;
@@ -91,6 +94,16 @@ public class PlayerController : MonoBehaviour {
         if (target > vx) vx = Mathf.Min(target, vx + accel * Time.deltaTime);
         else if (target < vx) vx = Mathf.Max(target, vx - accel * Time.deltaTime);
         rb.velocity = new Vector2(vx, rb.velocity.y);
+
+        // ---- FRAME BOUNDS (Sept 26): the camera clamps at the level edges, so the player
+        // clamps with it - running off the left/right edge holds you AT the screen edge
+        // instead of letting you vanish out of frame. ----
+        if (boundMinX > -9998f || boundMaxX < 9998f) {
+            var pos = rb.position;
+            if (pos.x < boundMinX) { pos.x = boundMinX; if (rb.velocity.x < 0f) rb.velocity = new Vector2(0f, rb.velocity.y); }
+            if (pos.x > boundMaxX) { pos.x = boundMaxX; if (rb.velocity.x > 0f) rb.velocity = new Vector2(0f, rb.velocity.y); }
+            if (pos != rb.position) rb.position = pos;
+        }
 
         if (invuln > 0) invuln -= Time.deltaTime;
         maxX = Mathf.Max(maxX, transform.position.x);

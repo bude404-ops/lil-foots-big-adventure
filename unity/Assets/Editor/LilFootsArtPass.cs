@@ -638,7 +638,7 @@ namespace LilFoots.EditorTools
             // ---- CHECKPOINT TOTEMS (PIECE 5, BudE 'Keep piece 5' Sept 21): approved mossy cedar
             // trail totem with glowing footprint emblem. Unlit = dim moss tint; the controller
             // brightens it to full color when the player claims it.
-            var totem = Art("art_checkpoint.png");
+            var totem = isTile ? LilFootsProcTiles.EnsureSprite("unity_totem") : Art("art_checkpoint.png");   // [CLEANSE Sept 26 ~1:36 AM ET] tilemap maps wear the clean Unity-built totem
             if (totem != null && !isDt) {
                 for (int ci = 0; ci < 64; ci++) {
                     var cp = GameObject.Find("Checkpoint_" + ci);
@@ -662,14 +662,14 @@ namespace LilFoots.EditorTools
             // COINS BACK ON (Bude, Sept 20: "there are no tokens to collect"): the trail was
             // re-placed along the actual platform path (surface lines + arc bridges over the
             // gaps - no floaters), so the art goes back on at the map-data positions.
-            var token = Art("art_token.png");
+            var token = isTile ? LilFootsProcTiles.EnsureSprite("unity_coin") : Art("art_token.png");   // [CLEANSE Sept 26] tilemap tokens wear the clean Unity-built coin
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Token_")) continue;
                 var oldTa = child.transform.Find("TokenArt");
                 if (oldTa != null) Object.DestroyImmediate(oldTa.gameObject); // no stale floaters
                 if (token != null) ChildSprite(child.gameObject, "TokenArt", token, 0.28f, 5, false, 0.5f); // [SCALE LAW Sept 21] 0.28u - Mario-coin size vs 0.82u Lily
             }
-            var heartArt = Art("art_heart.png");
+            var heartArt = isTile ? LilFootsProcTiles.EnsureSprite("unity_heart") : Art("art_heart.png");   // [CLEANSE Sept 26] tilemap heart is Unity-built
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
             if (sh != null && heartArt != null && L(2)) {
                 var hb = new GameObject("SecretHeart");

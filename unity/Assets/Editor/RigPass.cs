@@ -78,14 +78,12 @@ namespace LilFoots.EditorTools
             {"neck",      new float[]{ 2.0f,  0.0f, -2.0f,  0.0f}},
             {"head",      new float[]{ 1.5f,  0.0f, -1.5f,  0.0f}},
             {"hip",       new float[]{ 1.0f,  0.0f, -1.0f,  0.0f}},
-            {"legsBand",  new float[]{ 0f, 0f, 0f, 0f}},   // feet neutral at rest
         };
 
         // walk cycle for the blue-line skeleton: swing at the hips, arms counter, slight torso/head bob
         static readonly Dictionary<string, float[]> Walk = new Dictionary<string, float[]> {
             {"legL",      new float[]{  30f,  14f,  -6f, -24f}},
             {"legR",      new float[]{ -24f,  -6f,  14f,  30f}},
-            {"legsBand",  new float[]{  26f,   9f,  -9f, -26f}},  // [LEGS CUTOUT Sept 25] the visible feet swing
             {"shoulderL", new float[]{  21f,  0f,  -21f,  0f}},  // counter-swing around the natural arms-down rest
             {"shoulderR", new float[]{  -21f,  0f,  21f,  0f}},
             {"neck",      new float[]{   4f,   2f, -2f,  -4f}},
@@ -96,7 +94,6 @@ namespace LilFoots.EditorTools
         static readonly Dictionary<string, float[]> Jump = new Dictionary<string, float[]> {
             {"legL",      new float[]{ 24f,  20f,  23f,  24f}},
             {"legR",      new float[]{ 34f,  38f,  35f,  34f}},
-            {"legsBand",  new float[]{ 30f,  34f,  32f,  30f}},   // feet tuck mid-air
             {"shoulderL", new float[]{ -24f, -29f,  -26f,  -24f}},
             {"shoulderR", new float[]{  24f,  29f,   26f,   24f}},
             {"neck",      new float[]{ -2.0f, -1.0f, -1.5f, -2.0f}},
@@ -261,53 +258,13 @@ namespace LilFoots.EditorTools
                 rig.AnimPaths[kv.Key] = string.Join("/", names.ToArray());
             }
 
-            // ---- [LEGS CUTOUT, BudE Sept 25 ~11:45 PM ET: "are we able to add leg movement
-            // to theirnfeet for animations?"] The SpriteSkin mesh-deformation path is RETIRED:
-            // it never visibly moved the feet in batch builds (no authored weights). The
-            // PAPER-PUPPET path replaces it, native to the 2.5D paper style: the approved art
-            // splits at the hip into two sub-rect sprites of the SAME texture - Body (above the
-            // hip) and Legs (below). The Legs band hangs under the hip bone, pivot AT the hip,
-            // so the walk/jump clips swing the whole lower body and the FEET VISIBLY STEP and
-            // TUCK. Zero mesh surgery, zero external deps, works in every build context.
-            if (s != null) {
-                float hipFrac = (PoseMap.ContainsKey("hip")) ? PoseMap["hip"].y : 0.42f;
-                hipFrac = Mathf.Clamp(hipFrac, 0.20f, 0.60f);
-                var tr = s.textureRect;
-                var tex = s.texture;
-                int y0 = Mathf.RoundToInt(tr.y);
-                int y1 = Mathf.RoundToInt(tr.yMax);
-                int hipYpx = Mathf.Clamp(Mathf.RoundToInt(tr.y + hipFrac * tr.height), y0 + 1, y1 - 1);
-                var bodySpr = Sprite.Create(tex, new Rect(tr.x, hipYpx, tr.width, tr.yMax - hipYpx),
-                                            new Vector2(0.5f, 0f), 100f, 0, SpriteMeshType.FullRect);
-                var legsSpr = Sprite.Create(tex, new Rect(tr.x, tr.y, tr.width, hipYpx - tr.y),
-                                            new Vector2(0.5f, 1f), 100f, 0, SpriteMeshType.FullRect);
-                bodySpr.name = name + "_body"; legsSpr.name = name + "_legs";
-
-                // Body: bottom edge sits exactly at the hip line (unscaled art units; charGo scale f applies)
-                var bodyGo = new GameObject("BodyArt");
-                bodyGo.transform.SetParent(charGo.transform, false);
-                bodyGo.transform.localPosition = new Vector3(0f, (hipFrac - 0.5f) * hW / f, 0f);
-                var bsr = bodyGo.AddComponent<SpriteRenderer>();
-                bsr.sprite = bodySpr; bsr.sortingOrder = 10;
-
-                // Legs: top edge pinned to the hip bone - the clips swing the band around the hip
-                var legsGo = new GameObject("Legs");
-                legsGo.transform.SetParent(rig.Bones["hip"], false);
-                legsGo.transform.localPosition = Vector3.zero;
-                var lsr = legsGo.AddComponent<SpriteRenderer>();
-                lsr.sprite = legsSpr; lsr.sortingOrder = 10;
-
-                // the full-art ghost goes away: only the two cutout layers render
-                sr.sprite = null;
-
-                // animation path for the legs band (walk swing / jump tuck / idle settle)
-                var lp = new List<string>();
-                var lt = legsGo.transform;
-                while (lt != null && lt != charGo.transform) { lp.Add(lt.name); lt = lt.parent; }
-                lp.Reverse();
-                rig.AnimPaths["legsBand"] = string.Join("/", lp.ToArray());
-                Debug.Log("[RigPass] legs cutout: hip @" + hipFrac.ToString("F2") + " - feet now visibly step");
-            }
+            // ---- [CUTOUT REVERTED, BudE Sept 26 ~1:36 AM ET: "the character running work I
+            // dont like it doesnt look like running and the face cuts off like Canadians in
+            // South Park"] The hip-split legs band is REMOVED - splitting the approved art
+            // severed the silhouette and read as a bobbing detached body. The character is
+            // ONE WHOLE sprite again (his approved art, never cut). The run now lives in
+            // PlayerAnimBridge: step-synced bob + stride wobble on the WHOLE art (paper
+            // style), plus the existing squash/lean. SpriteSkin stays retired.
 
             // ---- Unity creates native AnimationClips + AnimatorController ----
             // IDLE = default state (character select law). WALK = second state (gameplay).
