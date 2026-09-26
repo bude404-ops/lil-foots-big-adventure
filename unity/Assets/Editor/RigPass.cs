@@ -10,7 +10,6 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using System.IO;
-using Unity.Collections;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -203,6 +202,7 @@ namespace LilFoots.EditorTools
                 if (isDefault) active = rig.Root;
                 // flip anchor for PlayerAnimBridge: store the base scale so facing flips are sign-safe
                 rig.Root.AddComponent<PlayerAnimBridge>();
+                WireFrameAnimator(rig.Root, names[i]);   // generated frame sets replace procedural motion when present
             }
             return active;
         }
@@ -219,6 +219,44 @@ namespace LilFoots.EditorTools
         }
 
         // Build the NATIVE rig: SpriteRenderer + Unity bone hierarchy + SpriteSkin + Animator + walk clip.
+        // ==================== FRAME ANIMATION WIRING (BudE Sept 26: generated frame sets) ====================
+        /// <summary>Loads Assets/Art/Frames/&lt;char&gt;_&lt;anim&gt;_N.png (Sprite, PPU 100, FullRect)
+        /// and wires a FrameAnimator when any frame exists. Missing sets fall back to the
+        /// rig's native motion - frame art is optional per character.</summary>
+        static void WireFrameAnimator(GameObject root, string charName) {
+            var walk = LoadFrameSet(charName, "walk", 6);
+            var jump = LoadFrameSet(charName, "jump", 4);
+            var idle = LoadFrameSet(charName, "idle", 2);
+            if (walk.Length == 0 && jump.Length == 0 && idle.Length == 0) return;
+            var fa = root.AddComponent<FrameAnimator>();
+            fa.idle = idle; fa.walk = walk; fa.jump = jump;
+            Debug.Log("[RigPass] FRAME ANIMATION: " + charName + " wired - " + walk.Length + " walk / "
+                      + jump.Length + " jump / " + idle.Length + " idle generated frames");
+        }
+
+        static Sprite[] LoadFrameSet(string charName, string anim, int count) {
+            var list = new List<Sprite>();
+            for (int i = 0; i < count; i++) {
+                string path = "Assets/Art/Frames/" + charName.ToLower() + "_" + anim + "_" + i + ".png";
+                var sp = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (sp == null) {
+                    var ti = AssetImporter.GetAtPath(path) as TextureImporter;
+                    if (ti != null) {
+                        ti.textureType = TextureImporterType.Sprite;
+                        ti.spriteImportMode = SpriteImportMode.Single;
+                        ti.spritePixelsPerUnit = 100f;
+                        ti.spriteMeshType = SpriteMeshType.FullRect;
+                        ti.alphaIsTransparency = true;
+                        ti.mipmapEnabled = false;
+                        ti.SaveAndReimport();
+                        sp = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                    }
+                }
+                if (sp != null) list.Add(sp);
+            }
+            return list.ToArray();
+        }
+
         static CharRig BuildRig(string name, string artPath, float worldH, Vector3 pos,
                                   Dictionary<string, Vector2> poseOverride = null) {
             var rig = new CharRig { WorldH = worldH };
@@ -271,28 +309,16 @@ namespace LilFoots.EditorTools
             // SetVertexAttribute - verified against com.unity.2d.animation@9.2.2 source),
             // then SpriteSkin deforms the mesh at runtime as the Animator drives the bones.
             // The whole-art bridge bob stays as the safety net if authoring ever fails.
-            bool skinned = false;
-            try { skinned = AuthorUnity2DSkinning(s, charGo, rig, PoseMap); }
-            catch (System.Exception ex) {
-                Debug.LogWarning("[RigPass] Unity 2D Animation authoring failed -> whole-art bridge motion only: " + ex.Message);
-            }
-            if (skinned) {
-                var skin = charGo.AddComponent<U2D.SpriteSkin>();
-                var bt = new List<Transform>();
-                foreach (var bk in rig.BoneOrder) bt.Add(rig.Bones[bk]);
-                var so = new UnityEditor.SerializedObject(skin);
-                so.FindProperty("m_RootBone").objectReferenceValue = rig.Bones["hip"];
-                var arrProp = so.FindProperty("m_BoneTransforms");
-                arrProp.arraySize = bt.Count;
-                for (int i = 0; i < bt.Count; i++) arrProp.GetArrayElementAtIndex(i).objectReferenceValue = bt[i];
-                // generous deformation bounds (renderer-local, art units) so the mesh never culls mid-swing
-                var bnd = so.FindProperty("m_Bounds");
-                var bw = s != null ? s.bounds.size : new Vector3(1f, 1f, 0f);   // Vector3 both sides (CS0172 fix)
-                bnd.FindPropertyRelative("m_Center").vector3Value = new Vector3(0f, 0f, 0f);
-                bnd.FindPropertyRelative("m_Extent").vector3Value = new Vector3(bw.x * 0.5f + 0.5f, bw.y * 0.5f + 0.5f, 1f);
-                so.ApplyModifiedPropertiesWithoutUndo();
-                Debug.Log("[RigPass] UNITY 2D ANIMATION: SpriteSkin live - " + bt.Count + " bones, authored grid mesh + weights. Unity deforms, the clips drive. Legs bend, arms counter, head bobs.");
-            }
+            // ---- [FRAME ANIMATION, BudE Sept 26 ~1:44 AM ET: "we need to generate frames and
+            // proper smount of frames needed for the characters and their poses aka walking
+            // jumping etc... that will make the animations better and easier"] The character
+            // animation is now FRAME-BASED (classic sprite animation): generated frame sets
+            // (idle/walk/jump) rendered FROM his approved reference art, normalized to the
+            // same canvas + feet baseline, played by FrameAnimator by player state. The
+            // Unity 2D Animation (SpriteSkin) programmatic-authoring path needs Unity 6000.x
+            // Sprite APIs (SetVertexAttribute/SetBones/SetBindPoses) which do NOT exist in
+            // the 2022.3 forge - it returns when the build image is Unity 6. Until then the
+            // whole-art bridge motion (squash/lean/facing) stays layered on top of frames.
 
             // ---- Unity creates native AnimationClips + AnimatorController ----
             // IDLE = default state (character select law). WALK = second state (gameplay).
@@ -371,171 +397,10 @@ namespace LilFoots.EditorTools
         // silhouette never severed); weights = top-2 bone influences by segment-distance
         // falloff; bind poses = TR-inverse of the identity-rotation bind pose (same
         // convention as the package's CalculateLocaltoWorldMatrix).
-        static bool AuthorUnity2DSkinning(Sprite s, GameObject charGo, CharRig rig, Dictionary<string, Vector2> pose) {
-            if (s == null || rig.Bones.Count == 0) return false;
-            float artW = s.bounds.size.x, artH = s.bounds.size.y;   // art units at PPU 100 (== sprite vertex space)
-
-            // ---- 1) deformation grid mesh over the full art rect (verts kept for weighting) ----
-            const int G = 24;
-            int vc = (G + 1) * (G + 1);
-            var grid = new Vector2[vc];
-            var positions = new NativeArray<Vector3>(vc, Allocator.Temp);
-            var uvs = new NativeArray<Vector2>(vc, Allocator.Temp);
-            var tangents = new NativeArray<Vector4>(vc, Allocator.Temp);
-            for (int j = 0; j <= G; j++) {
-                for (int i = 0; i <= G; i++) {
-                    float u = (float)i / G, v = (float)j / G;
-                    int idx = j * (G + 1) + i;
-                    grid[idx] = new Vector2((u - 0.5f) * artW, (v - 0.5f) * artH);
-                    positions[idx] = new Vector3(grid[idx].x, grid[idx].y, 0f);
-                    uvs[idx] = new Vector2(u, v);
-                    tangents[idx] = new Vector4(1f, 0f, 0f, -1f);
-                }
-            }
-            var idxList = new List<ushort>(G * G * 6);
-            for (int j = 0; j < G; j++) {
-                for (int i = 0; i < G; i++) {
-                    int a = j * (G + 1) + i, b = a + 1, c = a + G + 1, d = c + 1;
-                    idxList.Add((ushort)a); idxList.Add((ushort)c); idxList.Add((ushort)b);
-                    idxList.Add((ushort)b); idxList.Add((ushort)c); idxList.Add((ushort)d);
-                }
-            }
-            var indices = new NativeArray<ushort>(idxList.ToArray(), Allocator.Temp);
-            // SetVertexCount/SetVertexAttribute/SetIndices/SetBindPoses/SetBones are INTERNAL
-            // engine methods (the 2D Animation package calls them via InternalsVisibleTo;
-            // user scripts cannot - CS1061 in build 116). We reach them through reflection,
-            // same signature, same call the package's SpritePostProcess makes. Any miss throws
-            // and the rig falls back to the whole-art bridge motion (never a broken build).
-            SpriteApi.SetVertexCount(s, vc);
-            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.Position, positions);
-            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.TexCoord0, uvs);
-            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.Tangent, tangents);
-            SpriteApi.SetIndices(s, indices);
-            positions.Dispose(); uvs.Dispose(); tangents.Dispose(); indices.Dispose();
-
-            // ---- 2) SpriteBone[] hierarchy + bind poses (identity-rotation bind pose) ----
-            int n = rig.BoneOrder.Count;
-            var jointPos = new Dictionary<string, Vector2>();
-            foreach (var bk in rig.BoneOrder)
-                jointPos[bk] = new Vector2((pose[bk].x - 0.5f) * artW, (pose[bk].y - 0.5f) * artH);
-            var parentIdx = new Dictionary<string, int>();
-            foreach (var bk in rig.BoneOrder) parentIdx[bk] = Parent.ContainsKey(bk) ? rig.BoneOrder.IndexOf(Parent[bk]) : -1;
-            var bones = new UnityEngine.U2D.SpriteBone[n];
-            var bindPoses = new NativeArray<Matrix4x4>(n, Allocator.Temp);
-            for (int i = 0; i < n; i++) {
-                string bk = rig.BoneOrder[i];
-                int pi = parentIdx[bk];
-                Vector2 local = jointPos[bk] - (pi >= 0 ? jointPos[rig.BoneOrder[pi]] : Vector2.zero);
-                bones[i] = new UnityEngine.U2D.SpriteBone {
-                    position = new Vector3(local.x, local.y, 0f),   // engine member names: position/rotation (verified vs package source)
-                    rotation = Quaternion.identity,
-                    parentId = pi,
-                    length = 0.15f,
-                    name = bk
-                };
-                var m = Matrix4x4.identity;   // TR-inverse of Translate(pos), identity rotation
-                m.SetColumn(3, new Vector4(-jointPos[bk].x, -jointPos[bk].y, 0f, 1f));
-                bindPoses[i] = m;
-            }
-            SpriteApi.SetBindPoses(s, bindPoses);
-            SpriteApi.SetBones(s, bones);
-            bindPoses.Dispose();
-
-            // ---- 3) per-vertex bone weights: top-2 influences by segment-distance falloff ----
-            // each bone's segment runs from its joint to its first child's joint (leaf = point)
-            var segA = new Vector2[n]; var segB = new Vector2[n];
-            for (int i = 0; i < n; i++) {
-                string bk = rig.BoneOrder[i];
-                segA[i] = jointPos[bk];
-                segB[i] = segA[i];
-                foreach (var other in rig.BoneOrder)
-                    if (Parent.ContainsKey(other) && Parent[other] == bk) { segB[i] = jointPos[other]; break; }
-            }
-            var weights = new NativeArray<BoneWeight>(vc, Allocator.Temp);
-            for (int vi = 0; vi < vc; vi++) {
-                var pt = grid[vi];
-                int b0 = 0, b1 = 1; float w0 = 0f, w1 = 0f;
-                for (int i = 0; i < n; i++) {
-                    float d = DistPointSegment(pt, segA[i], segB[i]);
-                    float score = 1f / (d * d * d * d + 0.02f);
-                    if (score > w0) { w1 = w0; b1 = b0; w0 = score; b0 = i; }
-                    else if (score > w1) { w1 = score; b1 = i; }
-                }
-                float total = w0 + w1;
-                weights[vi] = new BoneWeight {
-                    boneIndex0 = b0, weight0 = w0 / total,
-                    boneIndex1 = b1, weight1 = w1 / total
-                };
-            }
-            SpriteApi.SetVertexAttribute(s, UnityEngine.Rendering.VertexAttribute.BlendWeight, weights);
-            weights.Dispose();
-            // persist the authored skinning data (sprite vertex streams + bone data) into the
-            // asset database so the player build serializes the deformed-capable sprite
-            EditorUtility.SetDirty(s);
-            AssetDatabase.SaveAssets();
-            Debug.Log("[RigPass] skinning authored: " + vc + "-vertex grid, " + n + " bones, 2-influence weights");
-            return true;
-        }
-
-        // Reflection bridge to the engine's INTERNAL Sprite skinning write APIs (the same
-        // ones com.unity.2d.animation@9.2.2 SpritePostProcess calls - verified in the source
-        // of that package; they are internal to the engine, so package-only by compile, but
-        // callable via reflection from editor scripts. Pinned image: 2022.3.50f1.)
-        static class SpriteApi {
-            const System.Reflection.BindingFlags F = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-
-            public static void SetVertexCount(Sprite s, int count) {
-                var mi = typeof(Sprite).GetMethod("SetVertexCount", F);
-                if (mi == null) throw new System.MissingMethodException("Sprite.SetVertexCount");
-                mi.Invoke(s, new object[] { count });
-            }
-
-            public static void SetIndices(Sprite s, NativeArray<ushort> indices) {
-                foreach (var mi in typeof(Sprite).GetMethods(F)) {
-                    if (mi.Name != "SetIndices" || mi.GetParameters().Length != 1) continue;
-                    try { mi.Invoke(s, new object[] { indices }); return; }
-                    catch (System.Reflection.TargetInvocationException) { }
-                }
-                throw new System.MissingMethodException("Sprite.SetIndices");
-            }
-
-            public static void SetBindPoses(Sprite s, NativeArray<Matrix4x4> poses) {
-                foreach (var mi in typeof(Sprite).GetMethods(F)) {
-                    if (mi.Name != "SetBindPoses" || mi.GetParameters().Length != 1) continue;
-                    try { mi.Invoke(s, new object[] { poses }); return; }
-                    catch (System.Reflection.TargetInvocationException) { }
-                }
-                throw new System.MissingMethodException("Sprite.SetBindPoses");
-            }
-
-            public static void SetBones(Sprite s, UnityEngine.U2D.SpriteBone[] bones) {
-                foreach (var mi in typeof(Sprite).GetMethods(F)) {
-                    if (mi.Name != "SetBones" || mi.GetParameters().Length != 1) continue;
-                    try { mi.Invoke(s, new object[] { bones }); return; }
-                    catch (System.Reflection.TargetInvocationException) { }
-                }
-                throw new System.MissingMethodException("Sprite.SetBones");
-            }
-
-            public static void SetVertexAttribute<T>(Sprite s, UnityEngine.Rendering.VertexAttribute attr, NativeArray<T> data) where T : struct {
-                foreach (var mi in typeof(Sprite).GetMethods(F)) {
-                    if (mi.Name != "SetVertexAttribute" || !mi.IsGenericMethodDefinition) continue;
-                    if (mi.GetParameters().Length != 2) continue;
-                    try {
-                        mi.MakeGenericMethod(typeof(T)).Invoke(s, new object[] { attr, data });
-                        return;
-                    } catch (System.Reflection.TargetInvocationException) { }
-                }
-                throw new System.MissingMethodException("Sprite.SetVertexAttribute<" + typeof(T).Name + ">");
-            }
-        }
-
-        static float DistPointSegment(Vector2 p, Vector2 a, Vector2 b) {
-            var ab = b - a;
-            float len2 = ab.sqrMagnitude;
-            float t = len2 > 1e-6f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / len2) : 0f;
-            return Vector2.Distance(p, a + ab * t);
-        }
+        // [Retired Sept 26] AuthorUnity2DSkinning + DistPointSegment removed: the public
+        // Sprite skinning APIs (SetVertexCount/SetVertexAttribute/SetIndices/SetBones/
+        // SetBindPoses) are Unity 6000.x engine APIs and do not compile on the 2022.3 forge
+        // (build 116 died on CS1061). Frame animation replaces this path; revisit on Unity 6.
 
         /// <summary>QC-only: apply the clip's pose at time t straight onto the bones
         /// (deterministic in headless editor mode). Clip data is the source of truth.</summary>
@@ -628,7 +493,9 @@ namespace LilFoots.EditorTools
             };
             var rigs = new List<CharRig>();
             foreach (var c in chars)
-                rigs.Add(BuildRig(c.name, "Assets/Art/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f), StanceFor(c.name)));
+                var cardRig = BuildRig(c.name, "Assets/Art/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f), StanceFor(c.name));
+                WireFrameAnimator(cardRig.Root, c.name);   // select cards breathe the generated idle frames
+                rigs.Add(cardRig);
 
             // ---- QC 1: bind pose (native SpriteSkin, rest pose) ----
             cam.Render();

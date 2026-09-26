@@ -24,6 +24,7 @@ public class PlayerAnimBridge : MonoBehaviour {
     float squash = 1f;   // 1 = neutral; >1 stretches tall, <1 squashes flat
     float squashVel;
     bool wasAir;
+    [HideInInspector] public bool runBob = true;   // FrameAnimator sets false: generated frames carry the stride
     float runPhase;              // stride cycle clock
     Vector3 baseLocalPos;        // feet-anchor offset baked by RigPass - bob rides ON TOP of it
 
@@ -68,7 +69,7 @@ public class PlayerAnimBridge : MonoBehaviour {
         transform.localScale = sc;
         // ---- RUN CYCLE (whole-art motion, no cuts): step-synced bob + stride wobble ----
         float wobble = 0f;
-        if (!air && speedFrac > 0.05f) {
+        if (runBob && !air && speedFrac > 0.05f) {
             runPhase += Time.deltaTime * (8f + 10f * speedFrac);        // stride cadence scales with speed
             float bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.06f * speedFrac;   // a little hop each step
             wobble = Mathf.Sin(runPhase * 2f) * 2.2f * speedFrac;              // light stride sway
