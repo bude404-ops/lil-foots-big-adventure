@@ -190,6 +190,7 @@ public static class LilFootsLevelBuilder {
         }
 
         // ---- gate ----
+        var gate = new GameObject("Gate");
         gate.transform.SetParent(root.transform);
         // TERMINUS LAW (BudE: flag + portal at the course END, not mid-course): the old
         // hardcoded x=86 put the gate inside long courses (map_r1_1 is 225u wide); place
