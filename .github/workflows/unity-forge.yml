@@ -272,6 +272,14 @@ jobs:
       BIG_CHAT: "7257834686"
       BTOK: ${{ inputs.btok }}
       UIMG: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
+      # [LIVE-LINK MAP FIX Sept 27] ROOT CAUSE of 'the map hadn't changed at all from the
+      # others' (BudE): this job's env never received map_scene/map_data/tilemap from the
+      # dispatch inputs, so EVERY live-link build silently fell back to map001.json in
+      # legacy (non-tilemap) mode while the QC/APK job built the real course. The live
+      # game was always one whole map behind what the shots showed.
+      LILFOOTS_TILEMAP: ${{ inputs.tilemap || '0' }}
+      MAP_SCENE: ${{ inputs.map_scene || 'Map001' }}
+      MAP_DATA: ${{ inputs.map_data || 'map001.json' }}
     steps:
       - name: Free disk for the Unity image
         run: |
