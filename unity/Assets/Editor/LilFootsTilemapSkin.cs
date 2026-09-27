@@ -27,7 +27,7 @@ public static class LilFootsTilemapSkin {
     static TileBase[] _caps, _capsL, _capsR, _dirts, _dirtsL, _dirtsR;
     static bool _ready;
 
-    public static bool Ready() { return _ready || LoadTiles(); }
+    public static bool Ready() { return true; }   // [ONE-PIECE Sept 27] the terrain painter is self-contained
 
     static Tilemap EnsureTilemap(Transform root) {
         if (_tm != null) return _tm;
@@ -135,44 +135,233 @@ public static class LilFootsTilemapSkin {
     static bool _painted;
 
     public static void PaintGrounds(GameObject mapRoot) {
-        if (!Ready() || _painted) return;   // one union paint per session (loop calls per-plat)
-        _painted = true;
+        // [ONE-PIECE ART LAW Sept 27 PM - BudE: 'one large piece should be one large art
+        // piece not blocked together with a bunch to make that size' + 'make sure you are
+        // sizing stuff properly to the tiles'] Every ground body is ONE CONTINUOUS PAINTED
+        // CANVAS sized exactly to its collider - never a row of repeated tiles. The canvas
+        // is painted as a whole (gouache soil cross-section that darkens with depth, wavy
+        // strata, pebbles, roots, a grass cap with organic blade silhouette along the whole
+        // width, mossy curl on exposed lips) in the storybook palette of his verdict-locked
+        // terrain art. Physics stays on the audited BoxCollider2D Plat objects - zero drift.
         var grounds = new List<GameObject>();
         foreach (Transform child in mapRoot.transform) {
             var bc = child.GetComponent<BoxCollider2D>();
             if (bc != null && bc.size.y >= 2f) grounds.Add(child.gameObject);
         }
-        var cells = CollectCells(grounds);
-        bool Has(int c, int r) => cells.Contains(((long)c << 32) ^ (uint)r);
-
-        var tm = EnsureTilemap(mapRoot.transform);
-        int painted = 0, caps = 0, lips = 0;
-        foreach (var key in cells) {
-            int c = (int)(key >> 32); int r = (int)(key & 0xffffffffL);
-            bool top = !Has(c, r + 1);
-            bool openL = !Has(c - 1, r);
-            bool openR = !Has(c + 1, r);
-            TileBase t;
-            if (top) {
-                if (openL && _capsL.Length > 0) { t = _capsL[0]; lips++; }
-                else if (openR && _capsR.Length > 0) { t = _capsR[0]; lips++; }
-                else { t = _caps[Hash(c, r) % _caps.Length]; caps++; }
-            } else {
-                if (openL && _dirtsL.Length > 0) t = _dirtsL[0];
-                else if (openR && _dirtsR.Length > 0) t = _dirtsR[0];
-                else if (_dirts.Length > 0) {
-                    // [STORYBOOK Sept 27 PM] DEPTH-ORDERED soil: the deeper the cell sits
-                    // below the grass cap, the darker its tile variant - the ground reads
-                    // like a storybook earth cross-section instead of a random speckle.
-                    int k = 0; while (Has(c, r + k + 1)) k++;
-                    t = _dirts[Mathf.Min(_dirts.Length - 1, k / 2)];
-                } else t = null;   // no dirt art at all: leave the cell empty (never reached in a healthy run)
-            }
-            tm.SetTile(new Vector3Int(c, r, 0), t);
+        var boxes = new List<Rect>();
+        foreach (var g in grounds) {
+            var bc = g.GetComponent<BoxCollider2D>();
+            boxes.Add(new Rect(bc.bounds.min.x, bc.bounds.min.y, bc.size.x, bc.size.y));
+        }
+        int painted = 0;
+        for (int i = 0; i < grounds.Count; i++) {
+            var bc = grounds[i].GetComponent<BoxCollider2D>();
+            float top = bc.bounds.max.y;
+            // exposed lip: no neighbor ground sharing this side at a similar height
+            bool lipL = !SideCovered(boxes, i, true, top), lipR = !SideCovered(boxes, i, false, top);
+            var sp = EnsureGroundSprite(bc.size.x, bc.size.y, lipL, lipR, i);
+            if (sp == null) continue;
+            var go = new GameObject("GroundArt_" + i);
+            go.transform.SetParent(mapRoot.transform, false);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sp;
+            sr.sortingOrder = -2;                       // same plane the old earth bands drew on
+            go.transform.position = bc.bounds.center;
+            // scale so the art bounds == the collider bounds exactly (sized properly)
+            float fx = bc.size.x / sp.bounds.size.x, fy = bc.size.y / sp.bounds.size.y;
+            go.transform.localScale = new Vector3(fx, fy, 1f);
             painted++;
         }
-        tm.CompressBounds();
-        Debug.Log("[TilemapSkin] painted " + painted + " tiles (" + caps + " grass caps, " + lips + " exposed lips) across " + grounds.Count + " grounds");
+        Debug.Log("[TilemapSkin] ONE-PIECE terrain: " + painted + " continuous ground canvases across " +
+                  grounds.Count + " grounds (sized to colliders, zero tiled repetition)");
+    }
+
+    static bool SideCovered(List<Rect> b, int i, bool left, float top) {
+        float myEdge = left ? b[i].xMin : b[i].xMax;
+        for (int j = 0; j < b.Count; j++) {
+            if (j == i) continue;
+            // vertical overlap and the neighbor's face within 0.4u of my side
+            float vOv = Mathf.Min(b[i].yMax, b[j].yMax) - Mathf.Max(b[i].yMin, b[j].yMin);
+            if (vOv < 0.5f) continue;
+            float theirFace = left ? b[j].xMax : b[j].xMin;
+            if (Mathf.Abs(theirFace - myEdge) < 0.4f) return true;
+        }
+        return false;
+    }
+
+    const int PXU = 96;   // ground art density: ~screen pixel density at ortho 4.6, keeps canvases small
+    static Sprite EnsureGroundSprite(float wU, float hU, bool lipL, bool lipR, int idx) {
+        string key = "ground_" + Mathf.Round(wU * 4) + "x" + Mathf.Round(hU * 4) +
+                     (lipL ? "L" : "") + (lipR ? "R" : "") + "_r" + RegionId();
+        string dir = "Assets/Art/Generated";
+        Directory.CreateDirectory(dir);
+        string path = dir + "/" + key + ".png";
+        if (!File.Exists(path)) {
+            int W = Mathf.Clamp(Mathf.RoundToInt(wU * PXU), 64, 4096);
+            int H = Mathf.Clamp(Mathf.RoundToInt(hU * PXU), 64, 2048);
+            File.WriteAllBytes(path, GroundTex(W, H, lipL, lipR, idx * 7 + 13).EncodeToPNG());
+        }
+        AssetDatabase.Refresh();
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogError("[TilemapSkin] ground importer missing " + path); return null; }
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = PXU;
+        ti.mipmapEnabled = false;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    static int RegionId() { return LilFootsProcTiles.Region; }
+
+    // seeded hash / value noise
+    static float Hsh(int x, int y, int s) {
+        int h = x * 374761393 + y * 668265263 + s * 2246822519;
+        h = (h ^ (h >> 13)) * 1274126177;
+        return ((h ^ (h >> 16)) & 0x7fffffff) / (float)0x7fffffff;
+    }
+    static float Vals(float x, float y, int s) {
+        int xi = Mathf.FloorToInt(x), yi = Mathf.FloorToInt(y);
+        float fx = x - xi, fy = y - yi;
+        float a = Hsh(xi, yi, s), b = Hsh(xi + 1, yi, s), c = Hsh(xi, yi + 1, s), d = Hsh(xi + 1, yi + 1, s);
+        float u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+        return Mathf.Lerp(Mathf.Lerp(a, b, u), Mathf.Lerp(c, d, u), v);
+    }
+
+    /// <summary>ONE continuous storybook canvas for one ground body: gouache soil
+    /// cross-section (depth-darkening, wavy strata, pebbles, roots) + grass cap with an
+    /// organic blade silhouette along the entire width + mossy curl on exposed lips.
+    /// Palette anchors sampled from the verdict-locked storybook terrain art.</summary>
+    static Texture2D GroundTex(int W, int H, bool lipL, bool lipR, int seed) {
+        var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        var px = new Color32[W * H];
+        // palette anchors (sampled from his locked template art)
+        var soilTop = new Color32(76, 54, 34, 255);
+        var soilDeep = new Color32(41, 27, 16, 255);
+        var capLight = new Color32(90, 114, 62, 255);
+        var capMid = new Color32(70, 93, 57, 255);
+        var capDeep = new Color32(52, 72, 43, 255);
+        var mossLite = new Color32(118, 140, 82, 255);
+        int capH = Mathf.Clamp(Mathf.RoundToInt(H * 0.16f), 40, 96);   // grass band
+        int peek = 12;                                                  // blades peek above the collider line
+        for (int y = 0; y < H; y++) {
+            float ty = y / (float)H;
+            for (int x = 0; x < W; x++) {
+                Color32 c;
+                if (y >= H - capH - peek) {
+                    // ---- GRASS CAP: gradient light->deep + blade silhouette + tufts ----
+                    float g = Mathf.Clamp01((float)(y - (H - capH - peek)) / (capH + peek));
+                    float blade = 0f;
+                    // organic blade edge: clusters of tall blades every ~14-30px
+                    float bx = Vals(x / 34f, 0.3f, seed + 5);
+                    float ph = Vals(x / 11f, 0.7f, seed + 9);
+                    if (ph > 0.72f && y < H - capH - peek + Mathf.Lerp(4, 22, bx)) blade = 1f;
+                    if (blade > 0f && y < H - capH - peek) { c = Color32.Lerp(capMid, capLight, bx); }
+                    else {
+                        c = Color32.Lerp(capLight, capDeep, g * g);
+                        float tuft = Vals(x / 7f, y / 7f, seed + 21);
+                        if (tuft > 0.86f && y > H - capH) c = Color32.Lerp(c, mossLite, 0.45f);
+                        // under-cap shade line where grass meets soil
+                        if (y > H - capH && y < H - capH + 7) c = Color32.Lerp(c, capDeep, 0.55f);
+                    }
+                } else {
+                    // ---- SOIL: depth ramp + wavy strata + pebbles/roots + speckle ----
+                    float d = Mathf.Clamp01(1f - ty);
+                    c = Color32.Lerp(soilDeep, soilTop, d * d * 0.9f + 0.1f);
+                    float strata = 0.5f + 0.5f * Mathf.Sin(y * 0.11f + Vals(x / 26f, y / 26f, seed + 3) * 6f);
+                    if (strata > 0.78f) c = Color32.Lerp(c, soilDeep, 0.25f * (strata - 0.78f) / 0.22f);
+                    float grain = Vals(x / 5f, y / 5f, seed + 31);
+                    if (grain > 0.88f) c = Color32.Lerp(c, soilTop, 0.35f);
+                    // pebbles: sparse rounded blobs
+                    float pxn = Vals(x / 18f, y / 18f, seed + 41);
+                    if (pxn > 0.93f && Vals(x / 4f, y / 4f, seed + 43) > 0.35f)
+                        c = Color32.Lerp(c, new Color32(55, 40, 27, 255), 0.6f);
+                    // fine speckle (gouache tooth)
+                    float sp = Hsh(x, y, seed + 55);
+                    if (sp > 0.5f) c = Color32.Lerp(c, soilDeep, 0.06f); else c = Color32.Lerp(c, soilTop, 0.05f);
+                }
+                // ---- exposed LIPS: mossy curl highlight at the crest + vertical shade ----
+                int E = 26;
+                if (lipL && x < E) {
+                    float f = 1f - x / (float)(E - 1);
+                    c = Color32.Lerp(c, soilDeep, 0.20f * f);
+                    if (y > H - capH - peek - 6) c = Color32.Lerp(c, mossLite, 0.22f * f);
+                }
+                if (lipR && x >= W - E) {
+                    float f = (x - (W - E)) / (float)(E - 1);
+                    c = Color32.Lerp(c, soilDeep, 0.20f * f);
+                    if (y > H - capH - peek - 6) c = Color32.Lerp(c, mossLite, 0.22f * f);
+                }
+                px[y * W + x] = c;
+            }
+        }
+        tex.SetPixels32(px);
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>ONE continuous hop-slab face: carved cedar slab the full size of the
+    /// collider - wood grain running the LENGTH (not repeated per unit), mossy top cap,
+    /// a single gold footprint emblem centered, rounded dark outline. One piece, any size.</summary>
+    public static Sprite HopFace(float wU, float hU) {
+        string key = "hopface_" + Mathf.Round(wU * 4) + "x" + Mathf.Round(hU * 4) + "_r" + RegionId();
+        string dir = "Assets/Art/Generated";
+        Directory.CreateDirectory(dir);
+        string path = dir + "/" + key + ".png";
+        if (!File.Exists(path)) {
+            int W = Mathf.Clamp(Mathf.RoundToInt(wU * PXU), 64, 2048);
+            int H = Mathf.Clamp(Mathf.RoundToInt(hU * PXU), 48, 1024);
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+            var px = new Color32[W * H];
+            var wood = new Color32(112, 86, 55, 255);
+            var woodD = new Color32(82, 62, 38, 255);
+            var moss = new Color32(84, 108, 58, 255);
+            var gold = new Color32(242, 199, 82, 255);
+            int r = Mathf.RoundToInt(Mathf.Min(W, H) * 0.16f) + 4;    // corner radius
+            for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
+                Color32 c = Color.clear;
+                // rounded-rect body
+                float dx = Mathf.Max(0f, Mathf.Abs(x - W / 2f + 0.5f) - (W / 2f - r));
+                float dy = Mathf.Max(0f, Mathf.Abs(y - H / 2f + 0.5f) - (H / 2f - r));
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                if (d <= r * 0.75f) {
+                    float fy = y / (float)H;
+                    c = Color32.Lerp(wood, woodD, fy * 0.7f);                        // cedar, darker at base
+                    float grain = 0.5f + 0.5f * Mathf.Sin(x * 0.06f + Vals(x / 40f, y / 6f, 77) * 7f);
+                    c = Color32.Lerp(c, woodD, 0.22f * grain);                       // grain runs the length
+                    if (fy > 0.86f) c = Color32.Lerp(c, moss, 0.85f);                // mossy top cap
+                    float edge = Mathf.Clamp01((r * 0.75f - d) / (r * 0.3f));
+                    if (edge < 1f) c = Color32.Lerp(new Color32(40, 30, 18, 255), c, edge);  // outline
+                    // ONE gold footprint emblem, centered, only on wide-enough slabs
+                    if (W >= 120) {
+                        float ex = (x - W / 2f) / (W * 0.055f), ey = (y - H * 0.42f) / (H * 0.16f);
+                        bool toe = false;
+                        for (int t = 0; t < 5; t++) {
+                            float ang = (t - 2f) * 0.42f;
+                            float tx = x - (W / 2f + Mathf.Sin(ang) * W * 0.062f);
+                            float ty = y - (H * 0.24f + (2 - Mathf.Abs(t - 2)) * H * 0.05f);
+                            toe = toe || (tx * tx + ty * ty * 1.3f < (H * 0.045f) * (H * 0.045f));
+                        }
+                        if (ex * ex + ey * ey < 1f || toe) c = Color32.Lerp(gold, c, 0.08f);
+                    }
+                    // moss fringe bumps along the top edge
+                    float bump = Vals(x / 9f, 0.2f, 99);
+                    if (y < H * 0.05f + bump * 4f && d < r * 0.7f) c = Color32.Lerp(c, moss, 0.7f);
+                }
+                px[y * W + x] = c;
+            }
+            tex.SetPixels32(px); tex.Apply();
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+        }
+        AssetDatabase.Refresh();
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) return null;
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = PXU;
+        ti.mipmapEnabled = false;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
 }
 }

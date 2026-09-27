@@ -639,22 +639,13 @@ namespace LilFoots.EditorTools
                     // (mossy cedar + gold footprint emblem), tiled one 1x1 face per unit of
                     // width like a Mario block row - no flat tinted quads anywhere. The dark
                     // rim quad stays behind the faces so the slab reads on any background.
-                    var hopFace = LilFootsProcTiles.EnsureSprite("unity_hopface");
+                    // [ONE-PIECE ART LAW Sept 27 PM - BudE: 'one large piece should be one
+                    // large art piece not blocked together'] the hop slab is ONE continuous
+                    // cedar face sized to the whole slab (grain runs the full length, ONE
+                    // centered emblem) - never tiled per-unit blocks.
+                    var hopFace = LilFootsTilemapSkin.HopFace(w, h);
                     if (hopFace != null) {
-                        var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
-                        if (quad != null) {
-                            var hopRim = SpriteGo("HopSlabRim", quad, new Vector3(child.position.x, child.position.y, 0), 1f, -3, child);
-                            hopRim.transform.localScale = new Vector3(w + 0.14f, h + 0.14f, 1f);
-                            hopRim.GetComponent<SpriteRenderer>().color = new Color(0.13f, 0.17f, 0.11f);
-                        }
-                        float cursor = child.position.x - w / 2f;
-                        int i = 0;
-                        while (cursor < child.position.x + w / 2f - 0.001f) {
-                            float cw = Mathf.Min(1f, child.position.x + w / 2f - cursor);
-                            var face = SpriteGo("HopFace" + i, hopFace, new Vector3(cursor + cw / 2f, child.position.y, 0), 1f, -2, child);
-                            face.transform.localScale = new Vector3(cw, h, 1f);   // 1 face per unit; last face squeezes the remainder
-                            cursor += cw; i++;
-                        }
+                        SpriteGo("HopFace", hopFace, new Vector3(child.position.x, child.position.y, 0), w, -2, child);
                         continue;
                     }
                 }
