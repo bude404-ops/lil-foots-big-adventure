@@ -166,7 +166,7 @@ public static class LilFootsTilemapSkin {
                     // like a storybook earth cross-section instead of a random speckle.
                     int k = 0; while (Has(c, r + k + 1)) k++;
                     t = _dirts[Mathf.Min(_dirts.Length - 1, k / 2)];
-                }
+                } else t = null;   // no dirt art at all: leave the cell empty (never reached in a healthy run)
             }
             tm.SetTile(new Vector3Int(c, r, 0), t);
             painted++;
