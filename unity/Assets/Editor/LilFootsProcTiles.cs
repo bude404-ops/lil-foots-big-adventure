@@ -227,7 +227,13 @@ public static class LilFootsProcTiles {
             else tex = HeartTex();
             File.WriteAllBytes(path, tex.EncodeToPNG());
         }
+        // [FRESH-RUNNER FIX Sept 26 PM] a file written this session is INVISIBLE to
+        // AssetImporter until the database refreshes - GetAtPath returned null and killed
+        // the whole forge run (36283818694, NRE at the sky bind). Refresh FIRST, and
+        // never dereference a null importer.
+        AssetDatabase.Refresh();
         var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogError("[ProcTiles] importer missing for " + path + " - refresh failed"); return null; }
         ti.textureType = TextureImporterType.Sprite;
         ti.spriteImportMode = SpriteImportMode.Single;
         ti.spritePixelsPerUnit = 100f;
@@ -240,7 +246,11 @@ public static class LilFootsProcTiles {
         const string path = "Assets/Art/Generated/unity_sky_v2.png";   // v2 = clean flat cleanse (no stale textured sky)
         Directory.CreateDirectory("Assets/Art/Generated");
         if (!File.Exists(path)) File.WriteAllBytes(path, SkyTex().EncodeToPNG());
+        // [FRESH-RUNNER FIX Sept 26 PM] see EnsureSprite: refresh before GetAtPath,
+        // null-guard the importer. This exact line NRE'd run 36283818694's WebGL job.
+        AssetDatabase.Refresh();
         var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogError("[ProcTiles] sky importer missing for " + path); return null; }
         ti.textureType = TextureImporterType.Sprite;
         ti.spriteImportMode = SpriteImportMode.Single;
         ti.spritePixelsPerUnit = 100f;

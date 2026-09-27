@@ -191,7 +191,20 @@ namespace LilFoots.EditorTools
                         if (i % 2 == 1) sk.GetComponent<SpriteRenderer>().flipX = true;
                     }
                 } else {
-                    Debug.LogError("[ArtPass] art_sky_new.png missing - fresh world skin art required");
+                    // [NO-CRASH SKY FALLBACK Sept 26 PM] a missing sprite can NEVER kill a
+                    // ship: the sky degrades to a runtime-generated flat gradient quad - still
+                    // 100% Unity-built (cleanse doctrine), just simpler. Log it loudly so the
+                    // forge knows the full sky art skipped.
+                    var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
+                    if (quad != null) {
+                        var sky = SpriteGo("SkyBackdropFallback", quad, new Vector3(0f, 4.5f, 10f), 40f, -100, cam.transform);
+                        sky.transform.localScale = new Vector3(48f, 14f, 1f);
+                        var g = sky.GetComponent<SpriteRenderer>();
+                        g.color = new Color(0.44f, 0.56f, 0.47f);   // flat sage overcast, same palette as ProcTiles sky
+                        Debug.LogWarning("[ArtPass] sky sprite unavailable - shipped flat Unity gradient sky instead");
+                    } else {
+                        Debug.LogError("[ArtPass] sky sprite AND fallback quad unavailable");
+                    }
                 }
             }
 
