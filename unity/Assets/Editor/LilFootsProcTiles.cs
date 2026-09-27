@@ -279,12 +279,45 @@ public static class LilFootsProcTiles {
     /// brightness jitter so treads never read as a photocopied grid. Null when absent.</summary>
     static Texture2D _paintGrass, _paintDirt;
     static int _capTopRow = -1;   // detected grass-cap edge in paint_grass.png
+    static Texture2D LoadTex(string path) {
+        var t = new Texture2D(2, 2);
+        t.LoadImage(System.IO.File.ReadAllBytes(path));
+        return t;
+    }
+
+    /// <summary>[WHITE-MARGIN GUARD Sept 27 PM - BudE: 'make sure the white backgrounds
+    /// arent in it'] generated tile art sometimes arrives on white paper margins. Every
+    /// painted source is trimmed to its inked content BEFORE any tile is cut, so a white
+    /// frame can never bleed into the map. No margins found = texture returned untouched.</summary>
+    static Texture2D TrimWhite(Texture2D t) {
+        try {
+            int W = t.width, H = t.height;
+            var px = t.GetPixels32();
+            bool NearWhite(float r, float g, float b) { return (r + g + b) > 700f; }
+            int RowState(int y) { int n = 0; for (int x = 0; x < W; x += 24) { var c = px[y * W + x]; if (NearWhite(c.r, c.g, c.b)) n++; } return n * 24 >= W ? 1 : 0; }
+            int ColState(int x) { int n = 0; for (int y = 0; y < H; y += 24) { var c = px[y * W + x]; if (NearWhite(c.r, c.g, c.b)) n++; } return n * 24 >= H ? 1 : 0; }
+            int top = 0; while (top < H - 1 && RowState(top) == 1) top++;
+            int bot = H - 1; while (bot > top && RowState(bot) == 1) bot--;
+            int left = 0; while (left < W - 1 && ColState(left) == 1) left++;
+            int right = W - 1; while (right > left && ColState(right) == 1) right--;
+            int nh = bot - top + 1, nw = right - left + 1;
+            if (top == 0 && bot == H - 1 && left == 0 && right == W - 1) return t;  // clean already
+            if (nw < 64 || nh < 64) return t;                                      // degenerate guard
+            var trimmed = new Texture2D(nw, nh, TextureFormat.RGBA32, false);
+            var dst = new Color32[nw * nh];
+            for (int y = 0; y < nh; y++) for (int x = 0; x < nw; x++) dst[y * nw + x] = px[(top + y) * W + (left + x)];
+            trimmed.SetPixels32(dst); trimmed.Apply();
+            Debug.Log($"[ProcTiles] white margins stripped: {W}x{H} -> {nw}x{nh}");
+            return trimmed;
+        } catch { return t; }
+    }
+
     static Texture2D PaintedTileTex(bool dirt, int variant, bool lipL = false, bool lipR = false) {
         try {
             if (dirt && _paintDirt == null && System.IO.File.Exists("Assets/Art/paint_dirt.png"))
-                { _paintDirt = new Texture2D(2, 2); _paintDirt.LoadImage(System.IO.File.ReadAllBytes("Assets/Art/paint_dirt.png")); }
+                { _paintDirt = TrimWhite(LoadTex("Assets/Art/paint_dirt.png")); }
             if (!dirt && _paintGrass == null && System.IO.File.Exists("Assets/Art/paint_grass.png"))
-                { _paintGrass = new Texture2D(2, 2); _paintGrass.LoadImage(System.IO.File.ReadAllBytes("Assets/Art/paint_grass.png")); }
+                { _paintGrass = TrimWhite(LoadTex("Assets/Art/paint_grass.png")); }
             var srcTex = dirt ? _paintDirt : _paintGrass;
             if (srcTex == null) return null;
             int W = srcTex.width, H = srcTex.height, T = 256;
