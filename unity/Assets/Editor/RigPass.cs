@@ -230,6 +230,15 @@ namespace LilFoots.EditorTools
             if (walk.Length == 0 && jump.Length == 0 && idle.Length == 0) return;
             var fa = root.AddComponent<FrameAnimator>();
             fa.idle = idle; fa.walk = walk; fa.jump = jump;
+            // [CHARACTER-SPECIFIC IDLE Sept 26 PM: BudE "the idle should be character specific
+            // for each character"] each Lil Foot breathes at their own cadence: Lily graceful
+            // and slow, Buddy quick and bouncy, Emma calm and deep. The 4-panel idle sheets
+            // (tools/gen_idle_sheets.py) carry the per-character motion; the fps carries the
+            // personality of the rhythm.
+            string cn = charName.ToLower();
+            if (cn == "lily") fa.idleFps = 1.8f;        // graceful slow breath
+            else if (cn == "buddy") fa.idleFps = 3.0f;  // energetic bounce
+            else if (cn == "emma") fa.idleFps = 1.5f;   // calm deep breath
             Debug.Log("[RigPass] FRAME ANIMATION: " + charName + " wired - " + walk.Length + " walk / "
                       + jump.Length + " jump / " + idle.Length + " idle generated frames");
         }

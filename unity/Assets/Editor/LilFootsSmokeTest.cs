@@ -79,6 +79,43 @@ public static class LilFootsSmokeTest {
         var art = lily != null ? lily.GetComponentInChildren<SpriteRenderer>() : null;
         C(art != null, "player: sprite art present");
 
+        // [JUMP FACING Sept 26 PM: BudE "the jump is still one directional"] the flip law is
+        // now GATED IN CI: the bridge must mirror the rig for right (scale.x < 0) and show the
+        // left-native art for left (scale.x > 0). The frames are canonical left-native
+        // (tools/normalize_facing.py), the bridge is the single flip authority.
+        if (lily != null) {
+            var fa = lily.GetComponentInChildren<LilFoots.FrameAnimator>();
+            C(fa != null, "anim: FrameAnimator wired on the player rig");
+            C(fa != null && fa.idle != null && fa.idle.Length >= 4,
+              "anim: 4-panel CHARACTER-SPECIFIC idle set wired (found " + (fa != null && fa.idle != null ? fa.idle.Length : 0) + ")");
+            C(fa != null && fa.jump != null && fa.jump.Length >= 4,
+              "anim: 4-frame jump set wired (found " + (fa != null && fa.jump != null ? fa.jump.Length : 0) + ")");
+            var bridge = lily.GetComponentInChildren<LilFoots.PlayerAnimBridge>();
+            if (bridge != null && pc != null) {
+                var rigRoot = bridge.transform;
+                float baseX = System.Math.Abs(rigRoot.localScale.x) > 0.001f
+                              ? System.Math.Abs(rigRoot.localScale.x) : 0.82f;
+                var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                try {
+                    bridge.GetType().GetMethod("Awake", flags)?.Invoke(bridge, null);
+                    int savedFacing = pc.facing;
+                    pc.facing = 1; bridge.GetType().GetMethod("Update", flags)?.Invoke(bridge, null);
+                    bool rightMirrors = rigRoot.localScale.x < 0f;
+                    pc.facing = -1; bridge.GetType().GetMethod("Update", flags)?.Invoke(bridge, null);
+                    bool leftNative = rigRoot.localScale.x > 0f;
+                    pc.facing = savedFacing;
+                    bridge.GetType().GetMethod("Update", flags)?.Invoke(bridge, null);   // restore pose
+                    C(rightMirrors && leftNative,
+                      "facing: rig mirrors BOTH directions (right " + (rightMirrors ? "mirrored" : "BROKEN") +
+                      ", left " + (leftNative ? "left-native" : "BROKEN") + ")");
+                } catch (System.Exception e) {
+                    C(false, "facing: flip check failed to run [" + e.Message + "]");
+                }
+            } else {
+                C(bridge != null, "facing: PlayerAnimBridge present on the player rig");
+            }
+        }
+
         // FROZEN CORE GATE — the feel constants Bude play-tested. Drift here = the core was touched.
         C(pc != null
           && Math.Abs(pc.runSpeed - 4.6f) < 0.01f

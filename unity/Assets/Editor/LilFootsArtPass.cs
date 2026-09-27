@@ -165,7 +165,12 @@ namespace LilFoots.EditorTools
             // STANDARD native stack (real colliders, Unity Tilemap terrain skin via
             // LilFootsTilemapSkin, bound props/tokens/character) like every other course. LILFOOTS_TILEMAP=0
             // restores the retired v12 painting bind.
-            bool isTile = isDt && (System.Environment.GetEnvironmentVariable("LILFOOTS_TILEMAP") ?? "1") != "0";
+            // [UNITY-BUILD FIX Sept 26 PM: BudE "the maps are still rendering or using the old
+            // art references not unity building it itself"] ROOT CAUSE: isTile was gated on isDt
+            // (the r1_depth_test id), so the spine map (r1_1) fell through to the painted-art
+            // paths. The Unity-built skin is now the DEFAULT for EVERY map - LILFOOTS_TILEMAP=0
+            // opts a map back into the retired painting bind.
+            bool isTile = (System.Environment.GetEnvironmentVariable("LILFOOTS_TILEMAP") ?? "1") != "0";
             if (isTile) isDt = false;
             var camGo = GameObject.Find("MainCamera");
             var cam = camGo != null ? camGo.GetComponent<UnityEngine.Camera>() : null;
@@ -202,7 +207,7 @@ namespace LilFoots.EditorTools
             // character runs and jumps around for that map'): for the story course the ENTIRE
             // backdrop is ONE continuous painting with the narrative arc baked in left-to-right
             // (meadow awakening -> fern hollow -> the climb -> old-growth finale). ----
-            if (isFull) {
+            if (isFull && !isTile) {   // [UNITY-BUILD FIX Sept 26] retired painting binds never run when Unity builds the skin
                 // ---- ONE COMPLETE FULL NEW MAP (BudE, Sept 21 ~2:30 PM ET: 'stop adding the
                 // blocks and pieces in, its not turning out like im wanting i need to to generate
                 // one comlete full new map'): the ENTIRE level is ONE generated painting
@@ -584,7 +589,7 @@ namespace LilFoots.EditorTools
                 // band (art_terrain_r1: living moss fringe + rich earth in the same stroke)
                 // - neighboring grounds sample adjoining texture, so the whole course reads
                 // as one solid vein of earth. Cap/edge tiles are retired for this map. ----
-                if (isStory && h >= 2f && L(2)) {
+                if (isStory && h >= 2f && L(2) && !isTile) {   // [UNITY-BUILD FIX Sept 26] painted story bands retire on Unity-built maps
                     var band = ArtCrop("art_terrain_r1.png", w, h, child.position.x - w / 2f);
                     if (band != null) {
                         SpriteGo("StoryTerrain", band, new Vector3(child.position.x, top - h / 2f, 0), w, -2, child);
