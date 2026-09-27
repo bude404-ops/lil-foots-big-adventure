@@ -73,14 +73,40 @@ public static class LilFootsProcTiles {
         return Mathf.Lerp(Mathf.Lerp(a, b, u), Mathf.Lerp(c, d, u), v);
     }
 
-    /// <summary>CLEAN grass cap: flat sage body + crisp darker top edge line. No noise.</summary>
+    /// <summary>[DETAIL PASS Sept 27 - BudE: "maps are just basic colors of brown and green
+    /// so we need to actually start getting real details nd art in there"] The grass cap
+    /// keeps the clean readable silhouette but gains REAL detail, all Unity-generated:
+    /// dappled light (large value-noise), an undulating crisp top edge, scattered grass
+    /// blades, tiny leaf specks and the occasional two-petal forest flower.</summary>
     static Texture2D CapTex(int variant, bool lipL, bool lipR) {
         var pal = Palette(Region);
-        var body = pal.capBody;   // region's flat cap color
-        var edge = pal.capEdge;   // crisp top edge line
         var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+        int seed = 100 + Region * 10 + variant * 7;
         for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
-            var px = (y >= N - 4) ? edge : body;
+            // 1) dappled light over the flat body (two-tone, no brushwork)
+            float dapple = VNoise(x / 46f, y / 46f, seed);
+            Color body = Color.Lerp(pal.capBody * 0.94f, pal.capBody * 1.07f, dapple);
+            // 2) undulating crisp top edge (3-7px, follows slow noise)
+            float edgeWave = VNoise(x / 26f, 0.5f, seed + 5);
+            int edgeH = 3 + (int)(edgeWave * 4.5f);
+            Color px = body;
+            if (y >= N - edgeH) px = pal.capEdge;
+            // 3) grass blades just under the edge line (short vertical strokes, 2 green tones)
+            float bladeCol = Hash(x, 0, seed + 11);
+            if (bladeCol > 0.42f && (bladeCol < 0.46f || bladeCol < 0.50f && Hash(x, 1, seed + 12) > 0.5f)) {
+                int bladeH = 6 + (int)(Hash(x, 2, seed + 13) * 9f);   // 6-14px tall
+                int bladeTop = N - edgeH - bladeH;
+                if (y >= bladeTop && y < N - edgeH - 1)
+                    px = (Hash(x, 3, seed + 14) > 0.5f) ? pal.capBody * 1.18f : pal.capBody * 0.82f;
+            }
+            // 4) tiny leaf specks + rare forest flowers sprinkled through the body
+            float speck = Hash(x, y, seed + 21);
+            if (speck > 0.9965f && y < N - edgeH - 10) px = pal.capBody * 1.22f;      // light fleck
+            else if (speck < 0.0025f && y < N - edgeH - 10) px = pal.capBody * 0.78f;  // dark fleck
+            else if (speck > 0.9993f && y < N - edgeH - 14 && y > 20) {               // two-petal flower
+                bool petal = (x % 4 < 2) != (y % 4 < 2);
+                px = petal ? new Color(0.92f, 0.86f, 0.60f) : new Color(0.86f, 0.55f, 0.62f);
+            }
             if (lipL && x < 16)  px *= (x < 3) ? 1.06f : 0.80f;
             if (lipR && x > N - 17) px *= (x > N - 4) ? 1.06f : 0.80f;
             tex.SetPixel(x, y, px);
@@ -89,14 +115,33 @@ public static class LilFootsProcTiles {
         return tex;
     }
 
-    /// <summary>CLEAN dirt fill: flat two-stop earth gradient. No strata, no speckles.</summary>
+    /// <summary>[DETAIL PASS Sept 27] The dirt keeps the earthy two-stop base but gains
+    /// REAL underground detail, all Unity-generated: soft wavy strata bands, scattered
+    /// pebbles with highlights, a thin wandering root strand, faint moisture streaks.</summary>
     static Texture2D DirtTex(int variant, bool lipL, bool lipR) {
         var pal = Palette(Region);
-        var top  = pal.dirtTop;
-        var deep = pal.dirtDeep;
         var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+        int seed = 300 + Region * 10 + variant * 7;
         for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
-            var px = Color.Lerp(top, deep, y / (float)N);
+            float fy = y / (float)N;
+            // 1) wavy strata: the base gradient warped by slow horizontal noise
+            float warp = VNoise(x / 30f, y / 30f, seed) * 0.22f;
+            Color px = Color.Lerp(pal.dirtTop, pal.dirtDeep, Mathf.Clamp01(fy + warp - 0.11f));
+            // 2) soft strata bands (lighter/darker seams)
+            float band = VNoise(x / 22f, (y + warp * 60f) / 16f, seed + 3);
+            px *= 0.92f + 0.15f * band;
+            // 3) pebbles: small ellipse blobs with an upper-left highlight
+            float peb = Hash(x, y, seed + 31);
+            if (peb > 0.9975f) {
+                float hi = Hash(x, y, seed + 32);
+                px = (hi > 0.5f) ? px * 1.35f : px * 0.70f;
+            }
+            // 4) one wandering root strand per tile (thin dark sine curve, deterministic)
+            float rootPhase = VNoise(0.3f, fy * 3f, seed + 41) * 26f;
+            float rootX = N * 0.5f + Mathf.Sin(fy * 7f + rootPhase) * 40f + (variant - 1.5f) * 30f;
+            if (Mathf.Abs(x - rootX) < 1.6f && fy > 0.06f && fy < 0.9f) px *= 0.62f;
+            // 5) faint vertical moisture streaks
+            px *= 1f - 0.05f * VNoise(x / 8f, y / 40f, seed + 55);
             if (lipL && x < 16)  px *= (x < 3) ? 1.05f : 0.80f;
             if (lipR && x > N - 17) px *= (x > N - 4) ? 1.05f : 0.80f;
             tex.SetPixel(x, y, px);
@@ -105,14 +150,35 @@ public static class LilFootsProcTiles {
         return tex;
     }
 
-    /// <summary>CLEAN sky: soft flat sage-to-mist gradient, nothing else.</summary>
+    /// <summary>[DETAIL PASS Sept 27 - BudE: "blank sky"] The sky gains REAL atmosphere,
+    /// all Unity-generated: a three-stop mist gradient, soft drifting clouds (two noise
+    /// octaves, alpha-stretched horizontally), a warm morning sun glow high right, and a
+    /// low horizon mist band. Still painterly-quiet, never busy.</summary>
     public static Texture2D SkyTex() {
-        const int W = 512, H = 256;
+        const int W = 1024, H = 512;
         var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
-        for (int y = 0; y < H; y++) {
+        var top = new Color(0.55f, 0.68f, 0.66f);
+        var mid = new Color(0.74f, 0.80f, 0.76f);
+        var mist = new Color(0.88f, 0.92f, 0.89f);
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
             float fy = y / (float)H;
-            var c = Color.Lerp(new Color(0.74f, 0.80f, 0.76f), new Color(0.88f, 0.92f, 0.89f), Mathf.Pow(fy, 1.3f));
-            for (int x = 0; x < W; x++) tex.SetPixel(x, y, c);
+            Color c = fy < 0.5f ? Color.Lerp(top, mid, fy / 0.5f) : Color.Lerp(mid, mist, (fy - 0.5f) / 0.5f);
+            // clouds: two stretched noise octaves -> soft white bodies with lit tops
+            float n1 = VNoise(x / 130f, y / 52f, 71);
+            float n2 = VNoise(x / 46f, y / 30f, 72);
+            float cloud = Mathf.SmoothStep(0.52f, 0.78f, n1 * 0.65f + n2 * 0.35f);
+            if (cloud > 0f) {
+                float lit = Mathf.Clamp01(n2 * 1.2f);
+                Color cloudC = Color.Lerp(new Color(0.90f, 0.93f, 0.92f), new Color(0.98f, 0.98f, 0.96f), lit);
+                c = Color.Lerp(c, cloudC, cloud * 0.75f);
+            }
+            // warm sun glow, high right
+            float dx = (x - W * 0.78f) / (W * 0.30f), dy = (y - H * 0.24f) / (H * 0.30f);
+            float d = Mathf.Sqrt(dx * dx + dy * dy);
+            c = Color.Lerp(c, new Color(1.00f, 0.95f, 0.80f), 0.35f * Mathf.Exp(-d * d * 2.2f));
+            // low horizon mist band
+            c = Color.Lerp(c, mist, Mathf.Pow(Mathf.Clamp01((fy - 0.82f) / 0.18f), 2f) * 0.6f);
+            tex.SetPixel(x, y, c);
         }
         tex.Apply();
         return tex;
@@ -248,6 +314,105 @@ public static class LilFootsProcTiles {
         AssetDatabase.Refresh();
         var ti = (TextureImporter)AssetImporter.GetAtPath(path);
         if (ti == null) { Debug.LogError("[ProcTiles] importer missing for " + path + " - refresh failed"); return null; }
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = 100f;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    // ==================== [DETAIL PASS Sept 27] CHARACTER-SELECT BACKDROP + CARD PANEL
+    // (BudE Sept 27: "the character select menu is still the same messed up background")
+    // The old painted story file (art_story_r1.png) and cedar panels are RETIRED from the
+    // select screen per the full-cleanse law - the menu gets its own clean Unity-built
+    // forest backdrop: deep pine gradient, layered cedar silhouettes, soft light shafts.
+
+    /// <summary>Select-screen backdrop: deep pine top, mist glow floor, three layers of
+    /// cedar silhouettes (classic stacked-frond triangles), diagonal light shafts.</summary>
+    public static Texture2D MenuBackdropTex() {
+        const int W = 1334, H = 750;
+        var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        var deep = new Color(0.10f, 0.20f, 0.16f);
+        var mid = new Color(0.22f, 0.36f, 0.28f);
+        var mist = new Color(0.62f, 0.72f, 0.64f);
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
+            float fy = y / (float)H;
+            Color c = fy < 0.55f ? Color.Lerp(deep, mid, fy / 0.55f) : Color.Lerp(mid, mist, (fy - 0.55f) / 0.45f);
+            // layered cedar silhouettes: far (light haze), mid, near (darkest)
+            for (int layer = 0; layer < 3; layer++) {
+                float baseY = 0.38f + layer * 0.13f;                    // silhouette bases
+                int period = 90 + layer * 46;                          // tree spacing tightens near
+                int tx = (x + layer * 37) % period;
+                float th = 0.16f + layer * 0.07f;                       // tree height fraction
+                float treeFrac = (fy - (baseY - th)) / th;
+                if (treeFrac < 0f || treeFrac > 1f) continue;
+                // stacked fronds: triangle wave narrows with height
+                float frond = Mathf.Abs(((tx / (float)period) * 2f - 1f)) * (1f - treeFrac * 0.55f);
+                if (frond < 0.22f - treeFrac * 0.10f) {
+                    Color tone = layer == 0 ? new Color(0.40f, 0.52f, 0.44f)
+                               : layer == 1 ? new Color(0.26f, 0.40f, 0.31f)
+                               : new Color(0.14f, 0.26f, 0.20f);
+                    c = Color.Lerp(c, tone, 0.9f);
+                }
+            }
+            // soft diagonal light shafts (two, top-left to mid-right)
+            float shaft = Mathf.Sin((x + y * 1.45f) / 260f);
+            if (shaft > 0.82f) c = Color.Lerp(c, new Color(0.98f, 0.95f, 0.82f), (shaft - 0.82f) * 1.2f);
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>Clean Unity-built card backing: rounded moss-dark panel with a lighter
+    /// cedar rim - replaces the painted art_panel*.png on the select cards.</summary>
+    public static Texture2D PanelTex() {
+        const int S = 256, R = 34;
+        var body = new Color(0.16f, 0.26f, 0.19f);
+        var rim = new Color(0.55f, 0.44f, 0.28f);
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+            // rounded-rect distance
+            float dx = Mathf.Max(0f, Mathf.Abs(x - S / 2f) - (S / 2f - R));
+            float dy = Mathf.Max(0f, Mathf.Abs(y - S / 2f) - (S / 2f - R));
+            float d = Mathf.Sqrt(dx * dx + dy * dy);
+            Color c = Color.clear;
+            if (d <= R) {
+                c = body;
+                float edge = Mathf.Clamp01((R - d) / 9f);          // inner rim band
+                if (edge < 1f) c = Color.Lerp(rim, body, edge);
+                float soft = 0.9f + 0.1f * VNoise(x / 36f, y / 36f, 91);   // faint texture
+                c *= soft;
+            }
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>Menu backdrop as a loadable Sprite (fresh-runner-safe: refresh + guard).</summary>
+    public static Sprite EnsureMenuBackdrop() {
+        const string path = "Assets/Art/Generated/unity_menu_backdrop.png";
+        Directory.CreateDirectory("Assets/Art/Generated");
+        if (!File.Exists(path)) File.WriteAllBytes(path, MenuBackdropTex().EncodeToPNG());
+        AssetDatabase.Refresh();
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogError("[ProcTiles] menu backdrop importer missing for " + path); return null; }
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = 100f;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    /// <summary>Card panel as a loadable Sprite (fresh-runner-safe: refresh + guard).</summary>
+    public static Sprite EnsurePanel() {
+        const string path = "Assets/Art/Generated/unity_panel.png";
+        Directory.CreateDirectory("Assets/Art/Generated");
+        if (!File.Exists(path)) File.WriteAllBytes(path, PanelTex().EncodeToPNG());
+        AssetDatabase.Refresh();
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogError("[ProcTiles] panel importer missing for " + path); return null; }
         ti.textureType = TextureImporterType.Sprite;
         ti.spriteImportMode = SpriteImportMode.Single;
         ti.spritePixelsPerUnit = 100f;
