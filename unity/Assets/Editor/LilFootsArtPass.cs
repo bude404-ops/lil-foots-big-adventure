@@ -209,6 +209,61 @@ namespace LilFoots.EditorTools
             }
 
 
+            // ---- LAYER 1.2: CINEMATIC DEPTH BANDS (BudE Sept 27 PM: "is it properly
+            // layering the maps like background middle etc?") The tile cleanse had left the
+            // course as two planes (sky + gameplay). Depth returns as Unity-generated bands
+            // in the SAME cinematic language as the select vista - region-toned via the
+            // Vista() palette, mirror-flip tiled so seams never show:
+            //   FAR ridge band  (sorting -80): mist-washed mountain crests with snow tops,
+            //                    drifting at 0.35x camera speed
+            //   MID ridge band  (sorting -70): nearer, darker ridge with tiny crest cedars,
+            //                    drifting at 0.55x
+            //   FOREST FRINGE   (sorting +30): dark scalloped foliage along the bottom edge,
+            //                    sweeping 1.3x so the near-field reads close - top sits at
+            //                    y=3.5, below the streams, never over standing gameplay
+            // Supersedes the Sept 20 'no middle ground' rule the same way the Sept 21
+            // verdict did - but as generated biome bands, not pasted paintings. ----
+            if (isTile && L(1)) {
+                float bandMapW = (smeta != null && smeta.ContainsKey("width")) ? F(smeta["width"]) / 100f : 62f;
+                var farBand = LilFootsProcTiles.EnsureRidgeBand(0);
+                if (farBand != null) {
+                    int bt = 0;
+                    for (float bx = -12f; bx <= bandMapW + 12f; bx += 22f, bt++) {
+                        var gb = SpriteGo("DepthRidgeFar_" + bt, farBand, new Vector3(bx, 4.5f, 0), 22f, -80, map.transform);
+                        float gby = 5.0f / farBand.bounds.size.y ;
+                        gb.transform.localScale = new Vector3(gb.transform.localScale.x, gby, 1f);
+                        var gsr = gb.GetComponent<SpriteRenderer>();
+                        if (bt % 2 == 1) gsr.flipX = true;   // mirror tiling = seamless
+                        gb.AddComponent<ParallaxProp>().factor = 0.35f;
+                    }
+                }
+                var midBand = LilFootsProcTiles.EnsureRidgeBand(1);
+                if (midBand != null) {
+                    int mt2 = 0;
+                    for (float bx = -10f; bx <= bandMapW + 10f; bx += 19f, mt2++) {
+                        var gb = SpriteGo("DepthRidgeMid_" + mt2, midBand, new Vector3(bx, 3.3f, 0), 19f, -70, map.transform);
+                        float gby = 4.2f / midBand.bounds.size.y;
+                        gb.transform.localScale = new Vector3(gb.transform.localScale.x, gby, 1f);
+                        var gsr = gb.GetComponent<SpriteRenderer>();
+                        if (mt2 % 2 == 1) gsr.flipX = true;
+                        gb.AddComponent<ParallaxProp>().factor = 0.55f;
+                    }
+                }
+                var fringe = LilFootsProcTiles.EnsureFringe();
+                if (fringe != null) {
+                    int ft2 = 0;
+                    for (float bx = -12f; bx <= bandMapW + 12f; bx += 14f, ft2++) {
+                        var gb = SpriteGo("DepthFringe_" + ft2, fringe, new Vector3(bx, 2.2f, 0), 14f, 30, map.transform);
+                        float gby = 2.6f / fringe.bounds.size.y;
+                        gb.transform.localScale = new Vector3(gb.transform.localScale.x, gby, 1f);
+                        var gsr = gb.GetComponent<SpriteRenderer>();
+                        if (ft2 % 2 == 1) gsr.flipX = true;
+                        gb.AddComponent<ParallaxProp>().factor = 1.3f;
+                    }
+                }
+                Debug.Log("[ArtPass] CINEMATIC DEPTH BANDS: far ridge 0.35x, mid ridge 0.55x, fringe 1.3x (region " + LilFootsProcTiles.Region + ")");
+            }
+
             // ---- LAYER 1.1: ZONE BACKDROPS (BudE, Sept 21 ~1:30 PM ET verdict: 'it just all
             // so cut and pasted in and as a long reel instead of a real map feel'): the map
             // reads as FOUR PAINTED SCENES, not tiled strips - Mossveil Meadow, Cedar Rise,

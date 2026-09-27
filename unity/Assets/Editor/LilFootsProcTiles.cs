@@ -583,7 +583,7 @@ public static class LilFootsProcTiles {
 
     /// <summary>Menu backdrop as a loadable Sprite (fresh-runner-safe: refresh + guard).</summary>
     public static Sprite EnsureMenuBackdrop() {
-        const string path = "Assets/Art/Generated/unity_menu_backdrop_cinematic_r" + Region + ".png";
+        string path = "Assets/Art/Generated/unity_menu_backdrop_cinematic_r" + Region + ".png";
         Directory.CreateDirectory("Assets/Art/Generated");
         if (!File.Exists(path)) File.WriteAllBytes(path, MenuBackdropTex().EncodeToPNG());
         AssetDatabase.Refresh();
@@ -610,6 +610,93 @@ public static class LilFootsProcTiles {
         ti.SaveAndReimport();
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }
+
+    // ---------------- DEPTH BANDS (BudE Sept 27 PM: "is it properly layering the maps
+    // like background middle etc?") The tile cleanse left the course as TWO planes (sky +
+    // gameplay). Depth returns as Unity-generated bands in the SAME cinematic language as
+    // the select vista, region-toned via Vista(): a mist-washed FAR ridge band drifting at
+    // 0.35x camera speed, a nearer MID ridge band with cedar silhouettes at 0.55x, and a
+    // dark FOREST FRINGE sweeping 1.3x along the bottom. Mirror-flip tiling = seamless.
+    // No painted PNGs (cleanse law) - the ridges ARE the biome, not stickers.
+
+    /// <summary>Far ridge band: sky-washed mountain crests with tiny crest cedars.</summary>
+    public static Texture2D RidgeBandTex(int layer) {   // layer 0 = far (mistiest), 1 = mid
+        const int W = 1024, H = 256;
+        var v = Vista(Region);
+        var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        float haze = layer == 0 ? 0.52f : 0.28f;
+        Color tone = Color.Lerp(v.ridge[layer == 0 ? 0 : 2], v.ridge[layer == 0 ? 1 : 3], 0.55f);
+        for (int x = 0; x < W; x++) {
+            // ridge profile: same ridged-noise crests as the select vista
+            float n = 0.62f * VNoise(x / 130f, layer * 17.3f, 420 + Region * 7 + layer)
+                    + 0.38f * VNoise(x / 46f, layer * 41.1f, 430 + Region * 7 + layer);
+            float crest = Mathf.Pow(1f - Mathf.Abs(2f * n - 1f), 1.2f);
+            float ry = H * (0.72f - 0.40f * crest * (layer == 0 ? 1f : 0.8f));
+            for (int y = 0; y < H; y++) {
+                Color c;
+                if (y >= ry) {
+                    c = Color.Lerp(tone, v.skyMist, haze * Mathf.Clamp01((y - ry) / (0.35f * H)));
+                    // snow caps on the highest crests
+                    float crestFrac = Mathf.Clamp01(1f - (ry / H - 0.30f) / 0.14f);
+                    if (crestFrac > 0.45f && (y - ry) < 4f + 7f * crestFrac)
+                        c = Color.Lerp(c, new Color(0.93f, 0.95f, 0.93f), 0.45f * crestFrac);
+                    // tiny cedars riding the mid band crest line
+                    if (layer == 1) {
+                        float cn = VNoise(x / 9f, 77f, 480 + Region);
+                        if (cn > 0.86f && (y - ry) > 4f && (y - ry) < 16f + 14f * (cn - 0.86f))
+                            c = Color.Lerp(c, Color.Lerp(v.treeC, tone, 0.3f), 0.85f);
+                    }
+                } else {
+                    c = Color.clear;   // transparent sky above the ridge
+                }
+                tex.SetPixel(x, y, c);
+            }
+        }
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>Foreground fringe: dark scalloped forest-floor foliage along the bottom
+    /// edge, transparent above - frames the near-field without covering standing gameplay.</summary>
+    public static Texture2D FringeTex() {
+        const int W = 1024, H = 192;
+        var v = Vista(Region);
+        var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        for (int x = 0; x < W; x++) {
+            // scalloped silhouette: two noise octaves, taller clumps + dips
+            float n1 = VNoise(x / 120f, 5f, 910 + Region);
+            float n2 = VNoise(x / 34f, 9f, 911 + Region);
+            float edge = H * (0.62f - 0.38f * n1 - 0.14f * n2);
+            for (int y = 0; y < H; y++) {
+                if (y >= edge) {
+                    Color c = Color.Lerp(v.treeC, v.treeC * 1.35f, 0.22f * VNoise(x / 26f, y / 22f, 912));
+                    c.a = 0.94f;
+                    tex.SetPixel(x, y, c);
+                } else tex.SetPixel(x, y, Color.clear);
+            }
+        }
+        tex.Apply();
+        return tex;
+    }
+
+    static Sprite EnsureGeneratedTex(string name, System.Func<Texture2D> paint) {
+        string path = "Assets/Art/Generated/" + name + ".png";
+        Directory.CreateDirectory("Assets/Art/Generated");
+        if (!File.Exists(path)) File.WriteAllBytes(path, paint().EncodeToPNG());
+        AssetDatabase.Refresh();
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogError("[ProcTiles] " + name + " importer missing"); return null; }
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = 100f;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+    public static Sprite EnsureRidgeBand(int layer) {
+        return EnsureGeneratedTex("unity_ridge_" + (layer == 0 ? "far" : "mid") + "_r" + Region,
+                                  () => RidgeBandTex(layer));
+    }
+    public static Sprite EnsureFringe() { return EnsureGeneratedTex("unity_fringe_r" + Region, FringeTex); }
 
     /// <summary>The Unity-generated sky as a loadable Sprite (camera-pinned backdrop).</summary>
     public static Sprite EnsureSky() {

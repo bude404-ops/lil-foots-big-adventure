@@ -78,6 +78,11 @@ public static class LilFootsSmokeTest {
         C(lily != null && lily.GetComponent<CapsuleCollider2D>() != null, "player: capsule collider present");
         var art = lily != null ? lily.GetComponentInChildren<SpriteRenderer>() : null;
         C(art != null, "player: sprite art present");
+        // [DEPTH BANDS Sept 27 PM - BudE "is it properly layering the maps like background
+        // middle etc?"] the course must own its depth stack: far/mid ridges + bottom fringe.
+        C(UnityEngine.GameObject.Find("DepthRidgeFar_0") != null, "depth: far ridge band present");
+        C(UnityEngine.GameObject.Find("DepthRidgeMid_0") != null, "depth: mid ridge band present");
+        C(UnityEngine.GameObject.Find("DepthFringe_0") != null, "depth: foreground fringe present");
 
         // [JUMP FACING Sept 26 PM: BudE "the jump is still one directional"] the flip law is
         // now GATED IN CI: the bridge must mirror the rig for right (scale.x < 0) and show the
