@@ -209,7 +209,7 @@ jobs:
                 -F "document=@unity/Builds/LilFoots.apk" \
                 -F "caption=New playable APK build of Lil Foots — after download: allow installs from unknown sources, then open the file." || true
             else
-              curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" -F "text=Lil Foots APK built ($SZ bytes) — over Telegram's 50MB send cap, it's in the run artifact." || true
+              echo "APK over Telegram's 50MB send cap - direct download URL gets DM'd by the release step below."
             fi
           fi
           # No failure DM to Bude (his call: only send the new stuff). Failures watched internally.
@@ -226,6 +226,36 @@ jobs:
             smoke-report.json
             unity-forge.log
           retention-days: 14
+      # [Sept 27 - BudE: "How do we make so downloadable if hitting the telegram send cap?"]
+      # Big APKs bypass Telegram's 50MB send cap entirely: the APK is published as a
+      # release asset on the PUBLIC live repo (2GB ceiling) and Bude gets the direct
+      # browser-download URL - no GitHub login, no artifacts page, no cap.
+      - name: Publish downloadable APK (Telegram cap bypass)
+        if: ${{ inputs.ship == '1' && hashFiles('unity/Builds/LilFoots.apk') != '' }}
+        env:
+          GTOK: ${{ inputs.gtok }}
+          BIG_CHAT: "7257834686"
+          BTOK: ${{ inputs.btok }}
+        run: |
+          APK="unity/Builds/LilFoots.apk"
+          if [ ! -f "$APK" ]; then echo "no APK this run"; exit 0; fi
+          export GH_TOKEN="$GTOK"
+          LIVE_REPO="mcontwitter-glitch/lil-foots-live"
+          # refresh the stable apk-latest release (same tag every build -> same URL every time)
+          gh release delete apk-latest --repo "$LIVE_REPO" --yes --cleanup-tag 2>/dev/null || true
+          gh release create apk-latest "$APK#LilFoots.apk" \
+            --repo "$LIVE_REPO" \
+            --title "Lil Foots — latest playable APK" \
+            --notes "Auto-published latest build. Download LilFoots.apk, allow installs from unknown sources, then open the file."
+          URL=$(gh release view apk-latest --repo "$LIVE_REPO" --json assets --jq '.assets[0].browser_download_url')
+          echo "APK direct URL: $URL"
+          SZ=$(stat -c%s "$APK")
+          if [ "$SZ" -ge 49000000 ]; then
+            curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
+              -F "chat_id=${BIG_CHAT}" \
+              -F "text=Lil Foots APK is over Telegram's 50MB send cap, so here's the direct download: ${URL} — after download: allow installs from unknown sources, then open the file." || true
+          fi
+
       - name: Fail flag
         if: steps.forge.outputs.forge_exit != '0'
         run: echo "FORGE FAILED"; exit 1
