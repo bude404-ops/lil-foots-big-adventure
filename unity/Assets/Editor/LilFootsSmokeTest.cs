@@ -261,9 +261,6 @@ public static class LilFootsSmokeTest {
         //   (c) a hop slab with no SpriteRenderer under it reads as an invisible block.
         // A map failing any of these can never ship again.
         try {
-            var tmGo = GameObject.Find("TerrainTiles");
-            var tm = tmGo != null ? tmGo.GetComponent<Tilemap>() : null;
-            C(tm != null, "geometry: Terrain Tilemap present");
             var plats = UnityEngine.Object.FindObjectsOfType<Transform>()
                 .Where(t => t.name.StartsWith("Plat_") && t.GetComponent<BoxCollider2D>() != null)
                 .Select(t => { var b = t.GetComponent<BoxCollider2D>();
@@ -272,9 +269,31 @@ public static class LilFootsSmokeTest {
                 .OrderBy(p => p.x0).ToList();
             C(plats.Count >= 10, "geometry: platform colliders present (" + plats.Count + ")");
 
-            // (a) TOP COVERAGE — sample every 0.4u along each ground's top; a bare stretch
-            // over the walk surface is exactly "walking on invisible ground".
-            if (tm != null && plats.Count >= 10) {
+            // (a) ONE-PIECE ART COVERAGE (Sept 27 PM: 'one large piece should be one large
+            // art piece' + the invisible-ground bug): every ground collider must wear a
+            // continuous GroundArt canvas whose bounds match the collider — the canvas
+            // paints the top AND the side faces, so a matching art piece covers BOTH
+            // invisible ground and invisible walls in one assertion.
+            {
+                var arts = UnityEngine.Object.FindObjectsOfType<SpriteRenderer>()
+                    .Where(s => s.gameObject.name.StartsWith("GroundArt") && s.sprite != null).ToList();
+                var bare = new List<string>(); float worst = 0f;
+                foreach (var p in plats) {
+                    if (p.h < 2f) continue;
+                    var ctr = new Vector3((p.x0 + p.x1) / 2f, p.top - p.h / 2f, 0f);
+                    var sr = arts.OrderBy(a => Vector3.Distance(a.bounds.center, ctr)).FirstOrDefault();
+                    if (sr == null || Vector3.Distance(sr.bounds.center, ctr) > 0.08f) {
+                        bare.Add(p.go.name + "@" + p.x0.ToString("F0") + "u"); continue;
+                    }
+                    worst = Mathf.Max(worst,
+                        Mathf.Max(Mathf.Abs(sr.bounds.size.x - (p.x1 - p.x0)),
+                                  Mathf.Abs(sr.bounds.size.y - p.h)));
+                }
+                C(bare.Count == 0, "geometry: no invisible ground/walls (" + bare.Count + " bare colliders" +
+                  (bare.Count > 0 ? " e.g. " + string.Join(", ", bare.Take(3)) : "") + ")");
+                C(worst < 0.06f, "geometry: ground art sized to collider (worst delta " + worst.ToString("F3") + ")");
+            }
+            if (plats.Count >= 10) {
                 var badTop = new List<string>();
                 foreach (var p in plats) {
                     if (p.h < 2f) continue;   // hop slabs wear sprite art, not tilemap cells
@@ -288,28 +307,6 @@ public static class LilFootsSmokeTest {
                 }
                 C(badTop.Count == 0, "geometry: no invisible ground (" + badTop.Count + " bare tops" +
                   (badTop.Count > 0 ? " e.g. " + string.Join(", ", badTop.Take(3)) : "") + ")");
-
-                // (a2) FACE COVERAGE — an exposed side face with zero painted cells is a wall
-                // the player can hit but never see.
-                var badFace = new List<string>();
-                foreach (var p in plats) {
-                    if (p.h < 2f) continue;
-                    foreach (int side in new int[] { -1, 1 }) {
-                        float fx = side < 0 ? p.x0 - 0.06f : p.x1 + 0.06f;
-                        bool exposed = true;
-                        foreach (var q in plats) {
-                            if (q.h < 2f || ReferenceEquals(q, p)) continue;
-                            if (fx >= q.x0 - 0.15f && fx <= q.x1 + 0.15f &&
-                                (p.top - 0.7f) >= q.y0 - 0.15f && (p.top - 0.7f) <= q.top + 0.15f) { exposed = false; break; }
-                        }
-                        if (!exposed) continue;
-                        bool painted = tm.HasTile(tm.WorldToCell(new Vector3(fx, p.top - 0.3f, 0f))) ||
-                                       tm.HasTile(tm.WorldToCell(new Vector3(fx, p.top - 1.0f, 0f)));
-                        if (!painted) badFace.Add(p.go.name + "@" + (side < 0 ? "left" : "right") + " x=" + p.x0.ToString("F0"));
-                    }
-                }
-                C(badFace.Count == 0, "geometry: no invisible walls (" + badFace.Count + " bare faces" +
-                  (badFace.Count > 0 ? " e.g. " + string.Join(", ", badFace.Take(3)) : "") + ")");
 
                 // (b) REACHABILITY — BFS across platform tops with the real jump arc.
                 float spawnX = lily != null ? lily.transform.position.x : 2.2f;
@@ -376,89 +373,6 @@ public static class LilFootsSmokeTest {
             C(bareHops == 0, "geometry: no invisible hop blocks (" + bareHops + " bare slabs)");
         } catch (Exception e) { C(false, "geometry: audit ran without crashing (" + e.Message + ")"); }
 
-        // 5.5) GEOMETRY AUDIT (BudE Sept 27: 'make sure to do a check on the actual geometric
-        // of the map to make sure they are playable i kept hitting invisible walls and walking
-        // on invisible grounds') - two gates, both in CI from now on:
-        //  (a) COLLIDER <-> ART: every ground collider must carry a one-piece GroundArt sprite
-        //      whose bounds match the collider - invisible ground is impossible by gate.
-        //  (b) REACHABILITY: BFS over ground tops with the REAL jump physics (runSpeed 4.6,
-        //      jumpVelocity 9, gravityScale 2.446 -> max climb ~1.8u, max gap ~3.6u). The gate,
-        //      every hop slab, and every token must be reachable from spawn.
-        {
-            var pl = new List<Platform>();
-            foreach (var go in UnityEngine.Object.FindObjectsOfType<GameObject>()) {
-                var bc = go.GetComponent<BoxCollider2D>();
-                if (bc == null || !go.name.StartsWith("Plat_") || bc.size.y < 2f) continue;
-                pl.Add(new Platform {
-                    xMin = bc.bounds.min.x, xMax = bc.bounds.max.x,
-                    top = bc.bounds.max.y, isHop = false, go = go
-                });
-            }
-            foreach (var go in UnityEngine.Object.FindObjectsOfType<GameObject>()) {
-                var bc = go.GetComponent<BoxCollider2D>();
-                if (bc == null || !go.name.StartsWith("Plat_") || bc.size.y >= 2f) continue;
-                pl.Add(new Platform {
-                    xMin = bc.bounds.min.x, xMax = bc.bounds.max.x,
-                    top = bc.bounds.max.y, isHop = true, go = go
-                });
-            }
-            C(pl.Count > 0, "geom: ground colliders present (" + pl.Count + ")");
-            // (a) every ground collider has one-piece art sized to it (art lives beside the
-            // Plat_ objects under the map root - match by center, then assert size)
-            var arts = UnityEngine.Object.FindObjectsOfType<SpriteRenderer>()
-                .Where(s => s.gameObject.name.StartsWith("GroundArt")).ToList();
-            int bare = 0; float worst = 0f;
-            foreach (var g in pl) {
-                if (g.isHop) continue;
-                var ctr = new Vector3((g.xMin + g.xMax) / 2f,
-                                      g.top - (g.go.GetComponent<BoxCollider2D>()).size.y / 2f, 0f);
-                var sr = arts.OrderBy(a => Vector3.Distance(a.bounds.center, ctr)).FirstOrDefault();
-                if (sr == null || Vector3.Distance(sr.bounds.center, ctr) > 0.08f) { bare++; continue; }
-                float dx = Mathf.Abs(sr.bounds.size.x - (g.xMax - g.xMin));
-                float dy = Mathf.Abs(sr.bounds.size.y - (g.go.GetComponent<BoxCollider2D>()).size.y);
-                worst = Mathf.Max(worst, Mathf.Max(dx, dy));
-            }
-            C(bare == 0, "geom: every ground collider wears one-piece art (" + bare + " bare)");
-            C(worst < 0.06f, "geom: ground art sized to collider (worst delta " + worst.ToString("F3") + ")");
-            // (b) reachability BFS with the player's real jump physics
-            float jumpH = 1.8f, jumpD = 3.6f;
-            var spawn = pl.OrderBy(q => Mathf.Abs(q.xMin - 2.2f)).First();
-            var reach = new HashSet<Platform>(); reach.Add(spawn);
-            var q = new Queue<Platform>(); q.Enqueue(spawn);
-            while (q.Count > 0) {
-                var a = q.Dequeue();
-                foreach (var b in pl) {
-                    if (reach.Contains(b)) continue;
-                    if (b.top > a.top + jumpH) continue;                     // too high to jump onto
-                    float gap = Mathf.Max(a.xMin - b.xMax, b.xMin - a.xMax); // open air between them
-                    bool overlap = !(b.xMin > a.xMax || b.xMax < a.xMin);
-                    bool below = b.top < a.top - 0.6f;                       // drop down: always fine
-                    if (overlap || gap <= jumpD || below) { reach.Add(b); q.Enqueue(b); }
-                }
-            }
-            float reachFrac = pl.Count > 0 ? (float)reach.Count / pl.Count : 0f;
-            C(reachFrac > 0.995f,
-              "geom: every platform reachable from spawn (" + reach.Count + "/" + pl.Count + ")");
-            var hops = pl.Where(x => x.isHop).ToList();
-            C(hops.Count == 0 || hops.All(x => reach.Contains(x)),
-              "geom: all hop slabs reachable (" + hops.Count(h => !reach.Contains(h)) + " stranded)");
-            var toks = UnityEngine.Object.FindObjectsOfType<LilFoots.TokenCollectible>();
-            int stranded = 0;
-            foreach (var t in toks) {
-                var pos = t.transform.position;
-                bool ok = pl.Any(g => reach.Contains(g) && pos.x >= g.xMin - 1.2f && pos.x <= g.xMax + 1.2f
-                          && pos.y >= g.top - 0.4f && pos.y <= g.top + 2.4f);
-                if (!ok) stranded++;
-            }
-            C(stranded == 0, "geom: every token sits on a reachable surface (" + stranded + " stranded)");
-            if (gate != null) {
-                var gp = gate.transform.position;
-                bool gateOk = pl.Any(g => reach.Contains(g) && gp.x >= g.xMin - 1.5f && gp.x <= g.xMax + 1.5f
-                             && gp.y <= g.top + 2.5f);
-                C(gateOk, "geom: the flag gate is reachable from spawn");
-            }
-        }
-
         // 6) REPORT
         bool allPass = fail.Count == 0;
         var sb = new StringBuilder();
@@ -472,7 +386,6 @@ public static class LilFootsSmokeTest {
     }
 
     
-    struct Platform { public float xMin, xMax, top; public bool isHop; public GameObject go; }
 
     /// Standalone CI entry: -executeMethod LilFoots.EditorTools.LilFootsSmokeTest.RunAndExit: -executeMethod LilFoots.EditorTools.LilFootsSmokeTest.RunAndExit
     public static void RunAndExit() {
