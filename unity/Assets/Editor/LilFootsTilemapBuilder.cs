@@ -62,7 +62,40 @@ public static class LilFootsTilemapBuilder {
         var hops    = plats.Where(p => !(p.y >= 600f || p.w >= 400f)).ToList();
 
         // ================= 1. EXACT PHYSICS: every audited collider, unchanged =================
-        foreach (var p in plats) {
+        // [ROOT CAUSE Sept 27 PM - BUD-E: "hidden or invisible boxes" + "issues with the hit
+        // box"] the map JSON plat x is CENTER-based (course_auditor.py span(): "x is
+        // center-based") and the LevelBuilder physics below centers on x/100 - CORRECT.
+        // But the TILE painter + gate surface + hop slab visuals treated x as a LEFT EDGE,
+        // shifting the whole visible terrain half-width RIGHT of the physics: you walk on
+        // air over the right half of every visible ground and hit invisible ledges on the
+        // left. Everything below now uses the center convention end-to-end.
+        // Same-height overlapping grounds ALSO leave internal seams the capsule catches on -
+        // welded into one collider (union shape identical, seams gone).
+        var welds = new List<List<Vector4>>();
+        foreach (var g in grounds.OrderBy(g => g.y).ThenBy(g => g.x)) {
+            List<Vector4> row = null;
+            for (int i = welds.Count - 1; i >= 0; i--) {
+                var w = welds[i];
+                float lastRight = (w[w.Count - 1].x + w[w.Count - 1].z / 2f) / 100f;
+                float gLeft = (g.x - g.z / 2f) / 100f;
+                if (Mathf.Abs(w[0].y - g.y) < 0.5f && gLeft <= lastRight + 0.02f) { row = w; break; }
+            }
+            if (row == null) { row = new List<Vector4>(); welds.Add(row); }
+            row.Add(g);
+        }
+        foreach (var w in welds) {
+            if (w.Count == 1) continue;
+            float l = w.Min(s => s.x - s.z / 2f), r = w.Max(s => s.x + s.z / 2f);
+            float yTop = w[0].y, depth = w.Max(s => s.w);
+            var go = new GameObject("PlatWeld_" + l);
+            go.transform.SetParent(root.transform);
+            go.transform.position = new Vector3((l + r) / 2f / 100f, 2f * GY - yTop / 100f - (depth / 100f) / 2f, 0);
+            var bc = go.AddComponent<BoxCollider2D>();
+            bc.size = new Vector2((r - l) / 100f, depth / 100f);
+            go.layer = ground;
+        }
+        var welded = new HashSet<Vector4>(welds.Where(w => w.Count > 1).SelectMany(w => w));
+        foreach (var p in plats.Where(p => !welded.Contains(p))) {
             var go = new GameObject("Plat_" + p.x);
             go.transform.SetParent(root.transform);
             go.transform.position = new Vector3(p.x / 100f, 2f * GY - p.y / 100f - (p.w / 100f) / 2f, 0);
@@ -72,7 +105,11 @@ public static class LilFootsTilemapBuilder {
         }
 
         // ================= 2. TILEMAP TERRAIN (the skin layer) =================
-        var tiles = EnsureTiles();
+        // SINGLE SOURCE: when the Unity tile skin pass is active (LILFOOTS_TILEMAP, the
+        // default) LilFootsTilemapSkin.PaintGrounds paints the terrain FROM THE COLLIDERS -
+        // always convention-correct. This builder-side tilemap is the no-skin fallback only.
+        bool skinActive = (System.Environment.GetEnvironmentVariable("LILFOOTS_TILEMAP") ?? "1") != "0";
+        var tiles = skinActive ? null : EnsureTiles();
         var gridGo = new GameObject("TerrainGrid");
         gridGo.transform.SetParent(root.transform);
         gridGo.transform.position = new Vector3(0f, GRID_Y_OFF, 0f);
@@ -86,8 +123,8 @@ public static class LilFootsTilemapBuilder {
         // solid-cell set: grounds -> tiles, filled down to bedrock
         var solid = new HashSet<long>();
         foreach (var p in grounds) {
-            int c0 = (int)Mathf.Floor(p.x / 100f);
-            int c1 = (int)Mathf.Floor((p.x + p.z - 1f) / 100f);
+            int c0 = (int)Mathf.Floor((p.x - p.z / 2f) / 100f);            // CENTER-based (see physics note)
+            int c1 = (int)Mathf.Floor((p.x + p.z / 2f - 1f) / 100f);
             float su = 2f * GY - p.y / 100f;                         // surface unity y
             int rTop = (int)Mathf.Floor(su - GRID_Y_OFF + 0.0001f);  // tile row whose top edge = surface
             for (int c = c0; c <= c1; c++)
@@ -97,7 +134,7 @@ public static class LilFootsTilemapBuilder {
         bool Has(int c, int r) { return solid.Contains(((long)(uint)c << 32) ^ (uint)r); }
 
         int painted = 0, grass = 0;
-        foreach (var key in solid) {
+        foreach (var key in (tiles == null ? new HashSet<long>() : solid)) {
             int c = (int)(key >> 32); int r = (int)(key & 0xffffffffL);
             bool top = !Has(c, r + 1);
             bool openL = !Has(c - 1, r);
@@ -128,7 +165,7 @@ public static class LilFootsTilemapBuilder {
             var go = new GameObject("PlatArt_" + p.x);
             go.transform.SetParent(root.transform);
             float cy = 2f * GY - p.y / 100f - (p.w / 100f) / 2f;
-            go.transform.position = new Vector3(p.x / 100f + p.z / 200f, cy, 0f);
+            go.transform.position = new Vector3(p.x / 100f, cy, 0f);   // CENTER-based: x IS the slab center
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = slab; sr.sortingOrder = 1;
             sr.drawMode = SpriteDrawMode.Tiled;
@@ -189,7 +226,7 @@ public static class LilFootsTilemapBuilder {
         float gateX = F(gateData["x"]) / 100f;
         float gateSurf = GY;
         foreach (var p in grounds) {
-            float l0 = p.x / 100f, r0 = (p.x + p.z) / 100f;
+            float l0 = (p.x - p.z / 2f) / 100f, r0 = (p.x + p.z / 2f) / 100f;   // CENTER-based
             if (gateX >= l0 && gateX <= r0) {
                 float s0 = 2f * GY - p.y / 100f; if (s0 > gateSurf) gateSurf = s0;
             }
@@ -289,11 +326,20 @@ public static class LilFootsTilemapBuilder {
     static Sprite SlabSprite() {
         if (_slab == null) {
             var tex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            // [BUD-E Sept 27: "hidden or invisible boxes"] the old flat-green slab vanished
+            // against the terrain caps and pale sky - colliders with no readable visual.
+            // Bolder: dark bark outline, mossy body gradient, bright lit top band, shadow base.
             for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++) {
-                float r = Mathf.Max(Mathf.Abs(x - 31.5f) / 30f, Mathf.Abs(y - 31.5f) / 30f);
-                bool inside = r < 1f;
-                var c = new Color(0.35f, 0.55f, 0.35f, inside ? 1f : 0f);
-                if (y > 52 && inside) c = new Color(0.55f, 0.75f, 0.55f, 1f);
+                bool inside = y >= 1 && y < 63;   // slab fills the tiling cell horizontally
+                var c = Color.clear;
+                if (inside) {
+                    float fy = y / 63f;
+                    c = Color.Lerp(new Color(0.24f, 0.34f, 0.22f), new Color(0.36f, 0.50f, 0.28f), fy);
+                    if (y > 56) c = new Color(0.62f, 0.78f, 0.50f);           // lit moss top band
+                    if (y < 4)  c = new Color(0.14f, 0.20f, 0.13f);            // shadowed base
+                    if (y == 1 || y == 62) c = new Color(0.12f, 0.18f, 0.11f); // dark rim
+                    if ((x * 7 + y * 13) % 23 == 0 && y < 56) c *= 1.18f;      // bark speckle
+                }
                 tex.SetPixel(x, y, c);
             }
             tex.Apply();

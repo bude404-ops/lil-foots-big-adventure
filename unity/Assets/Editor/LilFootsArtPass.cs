@@ -581,12 +581,22 @@ namespace LilFoots.EditorTools
                     // painted earth/cap/edge paths.
                     var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
                     if (quad != null) {
+                        // [BUD-E Sept 27: "hidden or invisible boxes"] a flat brown/sage slab
+                        // with no outline VANISHES against the terrain caps and pale sky -
+                        // colliders the eye can't see. Added: dark rim outline behind the body
+                        // (reads on any background) + brighter mossy cap + dark base shadow.
+                        var hopRim = SpriteGo("HopSlabRim", quad, new Vector3(child.position.x, child.position.y, 0), 1f, -3, child);
+                        hopRim.transform.localScale = new Vector3(w + 0.14f, h + 0.14f, 1f);
+                        hopRim.GetComponent<SpriteRenderer>().color = new Color(0.13f, 0.17f, 0.11f);
                         var hopBody = SpriteGo("HopSlabBody", quad, new Vector3(child.position.x, child.position.y - 0.15f, 0), 1f, -2, child);
                         hopBody.transform.localScale = new Vector3(w, h - 0.3f, 1f);
                         hopBody.GetComponent<SpriteRenderer>().color = new Color(0.42f, 0.33f, 0.24f);
                         var hopCap = SpriteGo("HopSlabCap", quad, new Vector3(child.position.x, child.position.y + h / 2f - 0.15f, 0), 1f, -1, child);
                         hopCap.transform.localScale = new Vector3(w, 0.3f, 1f);
-                        hopCap.GetComponent<SpriteRenderer>().color = new Color(0.62f, 0.72f, 0.55f);
+                        hopCap.GetComponent<SpriteRenderer>().color = new Color(0.71f, 0.82f, 0.56f);
+                        var hopBase = SpriteGo("HopSlabBase", quad, new Vector3(child.position.x, child.position.y - h / 2f + 0.06f, 0), 1f, -1, child);
+                        hopBase.transform.localScale = new Vector3(w - 0.05f, 0.12f, 1f);
+                        hopBase.GetComponent<SpriteRenderer>().color = new Color(0.20f, 0.15f, 0.11f);
                         continue;
                     }
                 }

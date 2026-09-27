@@ -37,8 +37,39 @@ public static class LilFootsLevelBuilder {
 
         // ---- ground platforms ----
         var plats = (System.Collections.Generic.List<object>)data["plats"];
+        var smallSegs = new System.Collections.Generic.List<float[]>();
+        // [BUD-E Sept 27: "issues with the hit box" + "hidden or invisible boxes"] same-height
+        // grounds that OVERLAP leave internal vertical seams the player capsule catches on
+        // mid-run, and micro-gaps (<0.6u) between same-height segments read as invisible
+        // snags/pits. Weld same-height overlapping/near-touching grounds into ONE collider:
+        // union shape identical to the audited geometry - only the seams disappear.
+        var groundSegs = new System.Collections.Generic.List<System.Collections.Generic.List<float[]>>();
         foreach (var po in plats.Cast<System.Collections.Generic.List<object>>()) {
             float x = F(po[0]), y = F(po[1]), w = F(po[2]), h = F(po[3]);
+            if (!(y >= 600f || w >= 400f) || h < 200f) { smallSegs.Add(new float[]{x,y,w,h}); continue; }
+            System.Collections.Generic.List<float[]> row = null;
+            foreach (var rw in groundSegs) {
+                if (Mathf.Abs(rw[0][1] - y) < 0.5f && (x - w / 2f) / 100f <= rw[rw.Count-1][4] + 0.6f) { row = rw; break; }
+            }
+            if (row == null) { row = new System.Collections.Generic.List<float[]>(); groundSegs.Add(row); }
+            row.Add(new float[]{x, y, w, h, (x + w / 2f) / 100f});
+        }
+        foreach (var rw in groundSegs) {
+            if (rw.Count == 1) continue;
+            float l = rw.Min(s => (s[0] - s[2] / 2f) / 100f), r = rw.Max(s => (s[0] + s[2] / 2f) / 100f);
+            float yTop = rw[0][1], depth = rw.Max(s => s[3]);
+            var weld = new GameObject("PlatWeld_" + (int)(l * 100f));
+            weld.transform.SetParent(root.transform);
+            weld.transform.position = new Vector3((l + r) / 2f, 2f * GY - yTop / 100f - (depth / 100f) / 2f, 0);
+            var wbc = weld.AddComponent<BoxCollider2D>();
+            wbc.size = new Vector2(r - l, depth / 100f);
+            weld.layer = ground;
+        }
+        var weldedX = new System.Collections.Generic.HashSet<float>(
+            groundSegs.Where(rw => rw.Count > 1).SelectMany(rw => rw.Select(s => s[0])));
+        foreach (var po in plats.Cast<System.Collections.Generic.List<object>>()) {
+            float x = F(po[0]), y = F(po[1]), w = F(po[2]), h = F(po[3]);
+            if (weldedX.Contains(x)) continue;
             var go = new GameObject("Plat_" + x);
             go.transform.SetParent(root.transform);
             // CANVAS-Y FLIP (found Sept 20, root cause of Bude's 'random floating objects' +

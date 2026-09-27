@@ -16,9 +16,25 @@ public class CameraFollow : MonoBehaviour {
     public float minY = 7.0f, maxY = 9.6f;  // vertical bounds: never below the approved ground (maxY 8.8->9.6 Sept 25: the jump apex hit the clamp, so the camera stopped following mid-jump and the jump READ as laggy)
                                             // framing, never past the highest platform + margin
     Vector3 vel;
+    PlayerController pc;
+    Camera cam;
+
+    void Awake() {
+        cam = GetComponent<Camera>();
+    }
 
     void LateUpdate() {
         if (!target) return;
+        // [BUD-E Sept 27: "if you run to the left you cant see the character"] the builder's
+        // fixed boundMinX assumed the editor aspect; on a phone the camera's visible left
+        // edge sits further right and the player walked out of frame at the level start.
+        // Bind the player's left wall to the CAMERA's actual visible edge every frame.
+        if (cam == null) cam = GetComponent<Camera>();
+        if (pc == null) pc = target.GetComponentInParent<PlayerController>();
+        if (pc != null && cam != null) {
+            float halfW = cam.orthographicSize * cam.aspect;
+            pc.boundMinX = transform.position.x - halfW + 0.55f;
+        }
         Vector3 want = new Vector3(target.position.x + lookAhead,
                                    target.position.y + yFollow,
                                    transform.position.z);

@@ -82,30 +82,45 @@ public static class LilFootsProcTiles {
         var pal = Palette(Region);
         var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
         int seed = 100 + Region * 10 + variant * 7;
+        // deterministic daisy centers (4-6 per tile, away from the edges)
+        int flowerN = 4 + (int)(Hash(0, 0, seed + 91) * 3f);
+        var flowerCenters = new Vector2[flowerN];
+        for (int i = 0; i < flowerN; i++)
+            flowerCenters[i] = new Vector2(
+                30f + Hash(i, 1, seed + 92) * (N - 60f),
+                26f + Hash(i, 2, seed + 93) * (N - 70f));
         for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
             // 1) dappled light over the flat body (two-tone, no brushwork)
-            float dapple = VNoise(x / 46f, y / 46f, seed);
-            Color body = Color.Lerp(pal.capBody * 0.94f, pal.capBody * 1.07f, dapple);
-            // 2) undulating crisp top edge (3-7px, follows slow noise)
+            // [BOLD PASS Sept 27 PM - BudE: "the map was the same"] the AM detail was
+            // 6-14px on a 256px tile that renders ~81px on screen - invisible at game
+            // zoom. Everything below is 3-4x larger so it READS while playing.
+            float dapple = VNoise(x / 110f, y / 110f, seed);
+            Color body = Color.Lerp(pal.capBody * 0.86f, pal.capBody * 1.14f, dapple);
+            // 2) undulating crisp top edge (6-14px, follows slow noise)
             float edgeWave = VNoise(x / 26f, 0.5f, seed + 5);
-            int edgeH = 3 + (int)(edgeWave * 4.5f);
+            int edgeH = 6 + (int)(edgeWave * 8f);
             Color px = body;
             if (y >= N - edgeH) px = pal.capEdge;
-            // 3) grass blades just under the edge line (short vertical strokes, 2 green tones)
+            // 3) grass blades under the edge line - TALL clumps (18-44px), two tones
             float bladeCol = Hash(x, 0, seed + 11);
-            if (bladeCol > 0.42f && (bladeCol < 0.46f || bladeCol < 0.50f && Hash(x, 1, seed + 12) > 0.5f)) {
-                int bladeH = 6 + (int)(Hash(x, 2, seed + 13) * 9f);   // 6-14px tall
+            if (bladeCol > 0.34f && (bladeCol < 0.44f || bladeCol < 0.52f && Hash(x, 1, seed + 12) > 0.5f)) {
+                int bladeH = 18 + (int)(Hash(x, 2, seed + 13) * 26f);   // 18-44px tall
                 int bladeTop = N - edgeH - bladeH;
                 if (y >= bladeTop && y < N - edgeH - 1)
-                    px = (Hash(x, 3, seed + 14) > 0.5f) ? pal.capBody * 1.18f : pal.capBody * 0.82f;
+                    px = (Hash(x, 3, seed + 14) > 0.5f) ? pal.capBody * 1.30f : pal.capBody * 0.68f;
             }
-            // 4) tiny leaf specks + rare forest flowers sprinkled through the body
+            // 4) leaf specks + REAL daisies (petal discs ~13px, 4-6 per tile)
             float speck = Hash(x, y, seed + 21);
-            if (speck > 0.9965f && y < N - edgeH - 10) px = pal.capBody * 1.22f;      // light fleck
-            else if (speck < 0.0025f && y < N - edgeH - 10) px = pal.capBody * 0.78f;  // dark fleck
-            else if (speck > 0.9993f && y < N - edgeH - 14 && y > 20) {               // two-petal flower
-                bool petal = (x % 4 < 2) != (y % 4 < 2);
-                px = petal ? new Color(0.92f, 0.86f, 0.60f) : new Color(0.86f, 0.55f, 0.62f);
+            if (speck > 0.992f && y < N - edgeH - 10) px = pal.capBody * 1.32f;      // light fleck
+            else if (speck < 0.006f && y < N - edgeH - 10) px = pal.capBody * 0.68f; // dark fleck
+            for (int fi = 0; fi < flowerCenters.Length; fi++) {
+                float fdx = x - flowerCenters[fi].x, fdy = y - flowerCenters[fi].y;
+                float fd = Mathf.Sqrt(fdx * fdx + fdy * fdy);
+                if (fd <= 6.5f && fdy > -6f) {                       // warm face
+                    px = new Color(0.95f, 0.83f, 0.42f);
+                    if (fd > 4.6f) px = new Color(0.97f, 0.96f, 0.92f);   // white petal ring
+                    if (fd > 5.6f) px *= 0.92f;                            // soft petal edge
+                }
             }
             if (lipL && x < 16)  px *= (x < 3) ? 1.06f : 0.80f;
             if (lipR && x > N - 17) px *= (x > N - 4) ? 1.06f : 0.80f;
@@ -122,24 +137,42 @@ public static class LilFootsProcTiles {
         var pal = Palette(Region);
         var tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
         int seed = 300 + Region * 10 + variant * 7;
+        // deterministic pebbles (6-10 per tile)
+        int pebN = 6 + (int)(Hash(0, 0, seed + 61) * 5f);
+        var pebbleCenters = new Vector2[pebN];
+        var pebbleRadii = new float[pebN];
+        for (int i = 0; i < pebN; i++) {
+            pebbleCenters[i] = new Vector2(
+                22f + Hash(i, 1, seed + 62) * (N - 44f),
+                20f + Hash(i, 2, seed + 63) * (N - 40f));
+            pebbleRadii[i] = 5f + Hash(i, 3, seed + 64) * 4.5f;
+        }
         for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) {
             float fy = y / (float)N;
             // 1) wavy strata: the base gradient warped by slow horizontal noise
             float warp = VNoise(x / 30f, y / 30f, seed) * 0.22f;
             Color px = Color.Lerp(pal.dirtTop, pal.dirtDeep, Mathf.Clamp01(fy + warp - 0.11f));
-            // 2) soft strata bands (lighter/darker seams)
-            float band = VNoise(x / 22f, (y + warp * 60f) / 16f, seed + 3);
-            px *= 0.92f + 0.15f * band;
-            // 3) pebbles: small ellipse blobs with an upper-left highlight
-            float peb = Hash(x, y, seed + 31);
-            if (peb > 0.9975f) {
-                float hi = Hash(x, y, seed + 32);
-                px = (hi > 0.5f) ? px * 1.35f : px * 0.70f;
+            // 2) BOLD strata bands (lighter/darker seams) - [BOLD PASS Sept 27 PM]
+            float band = VNoise(x / 48f, (y + warp * 60f) / 28f, seed + 3);
+            px *= 0.84f + 0.30f * band;
+            // 3) pebbles: REAL stones (radius 5-9px, 6-10 per tile) with highlight + rim
+            for (int pi = 0; pi < pebbleCenters.Length; pi++) {
+                float pdx = x - pebbleCenters[pi].x, pdy = y - pebbleCenters[pi].y;
+                float pd = Mathf.Sqrt(pdx * pdx + pdy * pdy);
+                float pr = pebbleRadii[pi];
+                if (pd <= pr) {
+                    px = px * 1.06f + new Color(0.05f, 0.04f, 0.03f, 0f);           // stone body
+                    if (pdy < -pr * 0.25f && pdx < pr * 0.3f) px = px * 1.35f + new Color(0.09f, 0.08f, 0.06f, 0f);  // lit top-left
+                    if (pd > pr - 2.2f) px *= 0.58f;                                // dark rim
+                }
             }
-            // 4) one wandering root strand per tile (thin dark sine curve, deterministic)
+            // 4) one wandering root strand per tile (thick dark sine curve, deterministic)
             float rootPhase = VNoise(0.3f, fy * 3f, seed + 41) * 26f;
             float rootX = N * 0.5f + Mathf.Sin(fy * 7f + rootPhase) * 40f + (variant - 1.5f) * 30f;
-            if (Mathf.Abs(x - rootX) < 1.6f && fy > 0.06f && fy < 0.9f) px *= 0.62f;
+            if (Mathf.Abs(x - rootX) < 3.4f && fy > 0.06f && fy < 0.9f) {
+                px *= 0.45f;
+                if (Mathf.Abs(x - rootX) > 2.0f) px *= 1.5f;   // lit edge beside the root
+            }
             // 5) faint vertical moisture streaks
             px *= 1f - 0.05f * VNoise(x / 8f, y / 40f, seed + 55);
             if (lipL && x < 16)  px *= (x < 3) ? 1.05f : 0.80f;
@@ -166,16 +199,18 @@ public static class LilFootsProcTiles {
             // clouds: two stretched noise octaves -> soft white bodies with lit tops
             float n1 = VNoise(x / 130f, y / 52f, 71);
             float n2 = VNoise(x / 46f, y / 30f, 72);
-            float cloud = Mathf.SmoothStep(0.52f, 0.78f, n1 * 0.65f + n2 * 0.35f);
+            // [BOLD PASS Sept 27 PM] lower threshold + higher alpha: clouds actually
+            // register at phone zoom (were subpixel-faint before)
+            float cloud = Mathf.SmoothStep(0.46f, 0.72f, n1 * 0.65f + n2 * 0.35f);
             if (cloud > 0f) {
                 float lit = Mathf.Clamp01(n2 * 1.2f);
-                Color cloudC = Color.Lerp(new Color(0.90f, 0.93f, 0.92f), new Color(0.98f, 0.98f, 0.96f), lit);
-                c = Color.Lerp(c, cloudC, cloud * 0.75f);
+                Color cloudC = Color.Lerp(new Color(0.92f, 0.95f, 0.94f), new Color(1.00f, 0.99f, 0.97f), lit);
+                c = Color.Lerp(c, cloudC, cloud * 0.88f);
             }
             // warm sun glow, high right
             float dx = (x - W * 0.78f) / (W * 0.30f), dy = (y - H * 0.24f) / (H * 0.30f);
             float d = Mathf.Sqrt(dx * dx + dy * dy);
-            c = Color.Lerp(c, new Color(1.00f, 0.95f, 0.80f), 0.35f * Mathf.Exp(-d * d * 2.2f));
+            c = Color.Lerp(c, new Color(1.00f, 0.94f, 0.76f), 0.52f * Mathf.Exp(-d * d * 2.2f));
             // low horizon mist band
             c = Color.Lerp(c, mist, Mathf.Pow(Mathf.Clamp01((fy - 0.82f) / 0.18f), 2f) * 0.6f);
             tex.SetPixel(x, y, c);
