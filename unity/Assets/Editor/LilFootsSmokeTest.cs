@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 using UnityEngine.UI;
 
 namespace LilFoots.EditorTools {
@@ -246,6 +247,134 @@ public static class LilFootsSmokeTest {
           ", termMin=" + termMin.ToString("0") + ")");
         C(GameObject.Find("FlagGateArt") != null, "course: flag art at the finish");
         C(GameObject.Find("PortalArt") != null, "course: portal art at the finish");
+
+        // 5b) GEOMETRY GATE (BudE Sept 27 PM: "do a check on the actual geometric of the
+        // map to make sure they are playable i kept hitting invisible walls and walking on
+        // invisible grounds"). Three audits against the EXACT shipping scene:
+        //   (a) every ground collider's TOP edge must be covered by painted Tilemap art —
+        //       a collider with no art over it IS the invisible-ground bug;
+        //   (a2) every EXPOSED vertical face of a ground must be painted — a bare face IS
+        //       the invisible-wall bug;
+        //   (b) reachability BFS with the REAL jump physics (runSpeed 4.6 u/s, jumpV 9.0,
+        //       gravity 9.81*2.446, 0.9 hold factor -> max rise ~1.9u, gap ~3.7u): the flag
+        //       gate and every Big Token must be reachable from spawn;
+        //   (c) a hop slab with no SpriteRenderer under it reads as an invisible block.
+        // A map failing any of these can never ship again.
+        try {
+            var tmGo = GameObject.Find("TerrainTiles");
+            var tm = tmGo != null ? tmGo.GetComponent<Tilemap>() : null;
+            C(tm != null, "geometry: Terrain Tilemap present");
+            var plats = UnityEngine.Object.FindObjectsOfType<Transform>()
+                .Where(t => t.name.StartsWith("Plat_") && t.GetComponent<BoxCollider2D>() != null)
+                .Select(t => { var b = t.GetComponent<BoxCollider2D>();
+                              return new { go = t.gameObject, x0 = b.bounds.min.x, x1 = b.bounds.max.x,
+                                           y0 = b.bounds.min.y, top = b.bounds.max.y, h = b.bounds.size.y }; })
+                .OrderBy(p => p.x0).ToList();
+            C(plats.Count >= 10, "geometry: platform colliders present (" + plats.Count + ")");
+
+            // (a) TOP COVERAGE — sample every 0.4u along each ground's top; a bare stretch
+            // over the walk surface is exactly "walking on invisible ground".
+            if (tm != null && plats.Count >= 10) {
+                var badTop = new List<string>();
+                foreach (var p in plats) {
+                    if (p.h < 2f) continue;   // hop slabs wear sprite art, not tilemap cells
+                    int samples = Mathf.Max(2, (int)((p.x1 - p.x0) / 0.4f));
+                    int hits = 0;
+                    for (int i = 0; i < samples; i++) {
+                        float sx = p.x0 + (p.x1 - p.x0) * (samples == 1 ? 0.5f : i / (float)(samples - 1));
+                        if (tm.HasTile(tm.WorldToCell(new Vector3(sx, p.top - 0.05f, 0f)))) hits++;
+                    }
+                    if (hits < samples - 1) badTop.Add(p.go.name + "@" + p.x0.ToString("F0") + "u (" + hits + "/" + samples + ")");
+                }
+                C(badTop.Count == 0, "geometry: no invisible ground (" + badTop.Count + " bare tops" +
+                  (badTop.Count > 0 ? " e.g. " + string.Join(", ", badTop.Take(3)) : "") + ")");
+
+                // (a2) FACE COVERAGE — an exposed side face with zero painted cells is a wall
+                // the player can hit but never see.
+                var badFace = new List<string>();
+                foreach (var p in plats) {
+                    if (p.h < 2f) continue;
+                    foreach (int side in new int[] { -1, 1 }) {
+                        float fx = side < 0 ? p.x0 - 0.06f : p.x1 + 0.06f;
+                        bool exposed = true;
+                        foreach (var q in plats) {
+                            if (q.h < 2f || ReferenceEquals(q, p)) continue;
+                            if (fx >= q.x0 - 0.15f && fx <= q.x1 + 0.15f &&
+                                (p.top - 0.7f) >= q.y0 - 0.15f && (p.top - 0.7f) <= q.top + 0.15f) { exposed = false; break; }
+                        }
+                        if (!exposed) continue;
+                        bool painted = tm.HasTile(tm.WorldToCell(new Vector3(fx, p.top - 0.3f, 0f))) ||
+                                       tm.HasTile(tm.WorldToCell(new Vector3(fx, p.top - 1.0f, 0f)));
+                        if (!painted) badFace.Add(p.go.name + "@" + (side < 0 ? "left" : "right") + " x=" + p.x0.ToString("F0"));
+                    }
+                }
+                C(badFace.Count == 0, "geometry: no invisible walls (" + badFace.Count + " bare faces" +
+                  (badFace.Count > 0 ? " e.g. " + string.Join(", ", badFace.Take(3)) : "") + ")");
+
+                // (b) REACHABILITY — BFS across platform tops with the real jump arc.
+                float spawnX = lily != null ? lily.transform.position.x : 2.2f;
+                int si = -1; float bestTop = -9999f;
+                for (int i = 0; i < plats.Count; i++) {
+                    var p = plats[i];
+                    if (spawnX >= p.x0 - 0.6f && spawnX <= p.x1 + 0.6f && p.top > bestTop) { bestTop = p.top; si = i; }
+                }
+                C(si >= 0, "geometry: spawn stands on a platform");
+                if (si >= 0) {
+                    bool[] reach = new bool[plats.Count]; reach[si] = true;
+                    var q2 = new Queue<int>(); q2.Enqueue(si);
+                    while (q2.Count > 0) {
+                        int ai = q2.Dequeue(); var a = plats[ai];
+                        for (int bi = 0; bi < plats.Count; bi++) {
+                            if (reach[bi]) continue;
+                            var b = plats[bi];
+                            float rise = b.top - a.top;
+                            if (rise > 1.95f) continue;                    // above the jump arc
+                            float gap = b.x0 > a.x1 ? b.x0 - a.x1 : (a.x0 > b.x1 ? a.x0 - b.x1 : 0f);
+                            if (gap <= 3.7f - Mathf.Max(0f, rise) * 0.9f) { reach[bi] = true; q2.Enqueue(bi); }
+                        }
+                    }
+                    bool gateOk = false;
+                    if (gate != null) {
+                        for (int i = 0; i < plats.Count; i++)
+                            if (reach[i] && gate.transform.position.x >= plats[i].x0 - 1f && gate.transform.position.x <= plats[i].x1 + 1f) { gateOk = true; break; }
+                    }
+                    C(gateOk, "geometry: flag gate reachable with real jump physics");
+                    int orphan = 0; var orphanWhere = new List<string>();
+                    for (int t2 = 0; t2 < tokens.Length; t2++) {
+                        var tp = tokens[t2].transform.position; bool ok2 = false;
+                        for (int i = 0; i < plats.Count && !ok2; i++) {
+                            if (!reach[i]) continue;
+                            var p = plats[i];
+                            if (tp.x >= p.x0 - 1.5f && tp.x <= p.x1 + 1.5f && tp.y - p.top > -1.2f && tp.y - p.top < 3.6f) ok2 = true;
+                        }
+                        if (!ok2) {   // straddling a gap between two reachable plats is also fine
+                            for (int i = 0; i < plats.Count && !ok2; i++) {
+                                if (!reach[i]) continue;
+                                var p = plats[i];
+                                if (tp.x > p.x1 && tp.x - p.x1 <= 2.2f && tp.y - p.top > -1.2f && tp.y - p.top < 3.2f) {
+                                    for (int j = 0; j < plats.Count && !ok2; j++) {
+                                        if (!reach[j] || j == i) continue;
+                                        var r2 = plats[j];
+                                        if (r2.x0 > tp.x && r2.x0 - tp.x <= 2.2f) ok2 = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (!ok2) { orphan++; if (orphanWhere.Count < 3) orphanWhere.Add("tok@" + tp.x.ToString("F0") + "," + tp.y.ToString("F1")); }
+                    }
+                    C(orphan == 0, "geometry: all tokens reachable (" + orphan + " orphans" +
+                      (orphan > 0 ? " e.g. " + string.Join(", ", orphanWhere) : "") + ")");
+                }
+            }
+
+            // (c) HOP SLABS — bare colliders read as invisible blocks mid-air.
+            int bareHops = 0;
+            foreach (var p in plats) {
+                if (p.h >= 2f) continue;
+                if (!p.go.GetComponentsInChildren<SpriteRenderer>(true).Any(sr => sr.sprite != null)) bareHops++;
+            }
+            C(bareHops == 0, "geometry: no invisible hop blocks (" + bareHops + " bare slabs)");
+        } catch (Exception e) { C(false, "geometry: audit ran without crashing (" + e.Message + ")"); }
 
         // 6) REPORT
         bool allPass = fail.Count == 0;

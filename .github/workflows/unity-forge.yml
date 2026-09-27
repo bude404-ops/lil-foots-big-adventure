@@ -402,11 +402,14 @@ jobs:
             sleep 15
           done
           echo "Pages not 200 yet after 5 min"; exit 1
-      - name: Relay live link to Bude
+      - name: Playtest gate — NO auto DM
         if: success() && inputs.ship == '1'
-        # ship=0 = silent internal pass (Bude's no-ping law): the site still updates,
-        # the link DM only goes out on a ship run or after manual verification.
+        # [PLAYTEST GATE Sept 27 PM] BudE: "before you send me a link to play it do a play
+        # test your self if you can" — after hitting invisible walls and invisible ground.
+        # This step used to DM the link the moment Pages served 200. It no longer DMs at
+        # all: the agent loads the live build in a real browser, runs/jumps/hits blocks,
+        # verifies the geometry gate report AND the live build, and only then DMs the link
+        # with the playtest verdict. A build can publish to the site silently (ship=1
+        # included) and the DM only goes out after the agent's playtest passes.
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
-            -F "chat_id=${BIG_CHAT}" \
-            -F "text=NEW PLAYABLE IS LIVE: ${URL} — build ${{ github.sha }} (run-${{ github.run_number }}), map ${{ inputs.map_data || 'map001.json' }}, play-test green. The version stamp bottom-right on the menu shows the same, so you can always confirm you're on the newest one. Open in CHROME (Telegram's built-in browser blocks WebGL). On-screen LEFT/RIGHT/JUMP buttons, also works with a mouse." || true
+          echo "PLAYTEST PENDING — build ${{ github.sha }} (run-${{ github.run_number }}), map ${{ inputs.map_data || 'map001.json' }} published. Agent playtests https://mcontwitter-glitch.github.io/lil-foots-v2-live/ before any DM."
