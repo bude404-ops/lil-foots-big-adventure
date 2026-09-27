@@ -33,6 +33,9 @@ public class PlayerController : MonoBehaviour {
     public static PlayerController Instance { get; private set; }
 
     [HideInInspector] public int tokens;
+    [Header("CEDAR BARK HIDE (BudE approved Sept 27 PM): one free hit")]
+    [HideInInspector] public int bark = 0;   // 1 = shield held (gold rim glow); enemy pass calls TakeHit()
+    Transform barkGlow;
     [HideInInspector] public int lives = 3;
     [HideInInspector] public float prevY;      // for swept stomp checks
     [HideInInspector] public bool onGround;
@@ -113,6 +116,57 @@ public class PlayerController : MonoBehaviour {
         // respawns at the last checkpoint (classic). Before this, falling into a pit was an
         // infinite fall with no consequence - a softlock.
         if (transform.position.y < 1.0f && LivesManager.Instance != null) LivesManager.Instance.Die();
+    }
+
+    /// <summary>Damage entry point (enemy pass wires this to contact damage): the Cedar
+    /// Bark Hide pops FIRST - glow shatters, brief invuln, no footprint lost. No hide
+    /// held = classic death (lose a footprint from the trail, respawn at checkpoint).</summary>
+    public void TakeHit() {
+        if (bark > 0) {
+            bark = 0;
+            invuln = 1.2f;
+            Sfx.Play(Sfx.Clip.Coin);   // acquired-item pop until the enemy pass gives it its own shatter SFX
+        } else if (LivesManager.Instance != null) {
+            LivesManager.Instance.Die();
+        }
+    }
+
+    void LateUpdate() {
+        // gold rim glow while the bark hide is held
+        if (bark > 0 && barkGlow == null) {
+            var g = new GameObject("BarkGlow");
+            g.transform.SetParent(transform, false);
+            var sr = g.AddComponent<SpriteRenderer>();
+            sr.sprite = BarkRingSprite();
+            sr.sortingOrder = 2;   // behind the character art: reads as a rim halo
+            if (sr.sprite != null) {
+                float f = 1.15f / sr.sprite.bounds.size.y;
+                g.transform.localScale = new Vector3(f, f, 1f);
+            }
+            barkGlow = g.transform;
+        } else if (bark <= 0 && barkGlow != null) {
+            Destroy(barkGlow.gameObject);
+            barkGlow = null;
+        }
+    }
+
+    static Sprite BarkRingSprite() {
+        const int S = 48;
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+            float nx = (x - S / 2f + 0.5f) / (S / 2f), ny = (y - S / 2f + 0.5f) / (S / 2f);
+            float d = Mathf.Sqrt(nx * nx + ny * ny);
+            Color c = Color.clear;
+            if (d > 0.72f && d < 1f) {           // soft gold ring band
+                float band = Mathf.Clamp01(1f - Mathf.Abs(d - 0.86f) / 0.14f);
+                c = new Color(1f, 0.88f, 0.45f, 0.55f * band);
+            } else if (d <= 0.72f) {             // faint interior wash
+                c = new Color(1f, 0.95f, 0.65f, 0.06f * (1f - d / 0.72f));
+            }
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, S, S), new Vector2(0.5f, 0.5f), S / 1.15f);
     }
 
     void FixedUpdate() {

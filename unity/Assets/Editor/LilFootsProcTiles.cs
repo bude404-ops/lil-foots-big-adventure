@@ -339,6 +339,8 @@ public static class LilFootsProcTiles {
                 for (int i = 0; i < 64; i++) wp[i] = new Color32(255, 255, 255, 255);
                 tex.SetPixels32(wp); tex.Apply();
             }
+            else if (name == "unity_print") tex = FootprintTex();
+            else if (name == "unity_charm") tex = CharmTex();
             else tex = HeartTex();
             File.WriteAllBytes(path, tex.EncodeToPNG());
         }
@@ -354,6 +356,70 @@ public static class LilFootsProcTiles {
         ti.spritePixelsPerUnit = 100f;
         ti.SaveAndReimport();
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+
+    /// <summary>[FOOTPRINT TRAIL Sept 27 PM - BudE approved] HUD lives icon: Bigfoot's
+    /// glowing gold footprint on a small dark mossy disc - the same emblem language as
+    /// the Big Token coin and the bump blocks.</summary>
+    public static Texture2D FootprintTex() {
+        const int S = 64;
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+            Color c = Color.clear;
+            float nx = (x - S / 2f + 0.5f), ny = (y - S / 2f + 0.5f);
+            float d = Mathf.Sqrt(nx * nx + ny * ny);
+            // dark mossy disc
+            if (d < 29f) {
+                float moss = 0.5f + 0.5f * VNoise(x / 7f, y / 7f, 780 + Region);
+                c = Color.Lerp(new Color(0.16f, 0.20f, 0.13f), new Color(0.24f, 0.30f, 0.19f), moss);
+                // soft rim
+                c = Color.Lerp(c, new Color(0.30f, 0.24f, 0.15f), Mathf.Clamp01((d - 23f) / 6f));
+                // gold footprint: sole ellipse + 5 toes (Big Token emblem math)
+                float ex = nx / 6.6f, ey = (y - 28f) / 8.0f;
+                bool toe = false;
+                for (int t = 0; t < 5; t++) {
+                    float ang = (t - 2f) * 0.42f;
+                    float tx = x - (S / 2f + Mathf.Sin(ang) * 8.4f), ty = y - (13f + (2f - Mathf.Abs(t - 2f)) * 2.8f);
+                    toe = toe || (tx * tx + ty * ty * 1.3f < 2.4f * 2.4f);
+                }
+                if (ex * ex + ey * ey < 1f || toe) {
+                    c = Color.Lerp(new Color(1f, 0.86f, 0.38f), c, 0.10f);
+                    c = Color.Lerp(c, new Color(1f, 1f, 0.88f), 0.30f * Mathf.Clamp01(1f - ex * ex - ey * ey));
+                } else {
+                    float halo = Mathf.Exp(-d / 9f) * 0.22f;
+                    c = Color.Lerp(c, new Color(1f, 0.90f, 0.55f), halo);
+                }
+            }
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return tex;
+    }
+
+    /// <summary>[SPIRIT CHARM Sept 27 PM] the lore-native extra-life pickup (replaces the
+    /// classic heart): a small forest-spirit wisp - pale gold-green glow orb with a soft
+    /// core, reads as a living spark of the woods.</summary>
+    public static Texture2D CharmTex() {
+        const int S = 48;
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+            float nx = (x - S / 2f + 0.5f) / (S / 2f), ny = (y - S / 2f + 0.5f) / (S / 2f);
+            float d = Mathf.Sqrt(nx * nx + ny * ny);
+            Color c = Color.clear;
+            if (d < 1f) {
+                // wisp tail: slightly pear-shaped glow (wider up top, tapering below)
+                float shape = d * (1f - 0.25f * Mathf.Clamp01(ny));
+                float a = Mathf.Clamp01(1f - shape);
+                a = a * a * 1.6f;
+                Color core = new Color(1f, 0.98f, 0.85f);
+                Color edge = new Color(0.62f, 0.85f, 0.52f);
+                c = Color.Lerp(edge, core, Mathf.Clamp01(1f - shape * 1.15f));
+                c.a = Mathf.Clamp01(a);
+            }
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return tex;
     }
 
     // ==================== [DETAIL PASS Sept 27] CHARACTER-SELECT BACKDROP + CARD PANEL

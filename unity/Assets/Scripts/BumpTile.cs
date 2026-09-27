@@ -29,9 +29,16 @@ namespace LilFoots {
             var p = PlayerController.Instance;
             if (p != null) {
                 if (content == "heart") {
+                    // [SPIRIT CHARM Sept 27 PM - BudE approved] extra life = forest-spirit
+                    // wisp (lore-native heart replacement), restored on the trail.
                     p.lives++;
                     if (AudioManager.Instance != null) AudioManager.Instance.Play("heart");
-                    StartCoroutine(PopOut(MakeSprite(HeartTex(), 0.34f), 0f, 0f));
+                    StartCoroutine(PopOut(MakeSprite(CharmTex(), 0.34f), 0f, 0f));
+                } else if (content == "bark") {
+                    // [CEDAR BARK HIDE Sept 27 PM - BudE approved power-up] pops out and
+                    // waits on the ground below: touch it to gain ONE FREE HIT (gold rim
+                    // glow while held; the glow pops instead of a footprint when you take it).
+                    StartCoroutine(BarkOut());
                 } else {
                     int n = content == "big" ? 5 : 1;
                     for (int i = 0; i < n; i++)
@@ -99,6 +106,90 @@ namespace LilFoots {
             tex.Apply();
             return tex;
         }
+        /// [SPIRIT CHARM Sept 27 PM] runtime wisp (lore-native heart), same look as the edit-time unity_charm.
+        static Texture2D CharmTex() {
+            const int S = 26;
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+                float nx = (x - S / 2f + 0.5f) / (S / 2f), ny = (y - S / 2f + 0.5f) / (S / 2f);
+                float d = Mathf.Sqrt(nx * nx + ny * ny);
+                Color c = Color.clear;
+                if (d < 1f) {
+                    float shape = d * (1f - 0.25f * Mathf.Clamp01(ny));
+                    float a = Mathf.Clamp01(1f - shape); a = a * a * 1.6f;
+                    c = Color.Lerp(new Color(0.62f, 0.85f, 0.52f), new Color(1f, 0.98f, 0.85f), Mathf.Clamp01(1f - shape * 1.15f));
+                    c.a = Mathf.Clamp01(a);
+                }
+                tex.SetPixel(x, y, c);
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        /// [CEDAR BARK HIDE Sept 27 PM] pickup chip: cedar bark with a glowing gold rim.
+        static Texture2D BarkTex() {
+            const int S = 24;
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+            for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+                float dx = Mathf.Max(0f, Mathf.Abs(x - S / 2f + 0.5f) - (S / 2f - 3f));
+                float dy = Mathf.Max(0f, Mathf.Abs(y - S / 2f + 0.5f) - (S / 2f - 3f));
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                Color c = Color.clear;
+                if (d <= 3f) {
+                    float fy = y / (float)S;
+                    c = Color.Lerp(new Color(0.47f, 0.36f, 0.22f), new Color(0.33f, 0.25f, 0.15f), fy);
+                    float grain = 0.5f + 0.5f * Mathf.Sin(y * 1.7f + Mathf.Sin(x * 0.9f) * 2f);
+                    c *= 0.90f + 0.12f * grain;
+                    if (d > 1.2f) c = Color.Lerp(c, new Color(1f, 0.87f, 0.45f), 0.85f);   // glowing gold rim
+                }
+                tex.SetPixel(x, y, c);
+            }
+            tex.Apply();
+            return tex;
+        }
+
+        /// Bark pickup: pops out of the block, drifts to the ground below, bobs until touched.</summary>
+        IEnumerator BarkOut() {
+            var go = new GameObject("BarkPickup");
+            var spr = MakeSprite(BarkTex(), 0.42f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            if (spr != null) { sr.sprite = spr; sr.sortingOrder = 11; go.transform.localScale = Vector3.one; }
+            var cc = go.AddComponent<CircleCollider2D>(); cc.isTrigger = true; cc.radius = 0.40f;
+            var bp = go.AddComponent<BarkPickup>();
+            // pop out of the block, then fall until just above the ground below
+            Vector3 from = transform.position + Vector3.up * 0.4f;
+            float t = 0;
+            while (t < 0.35f) {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / 0.35f);
+                go.transform.position = Vector3.Lerp(from, from + Vector3.up * 0.45f, k)
+                                      + Vector3.up * (0.22f * Mathf.Sin(k * Mathf.PI));
+                yield return null;
+            }
+            int mask = LayerMask.GetMask("Ground");
+            var hit = Physics2D.Raycast(go.transform.position, Vector2.down, 6f, mask);
+            float restY = hit ? hit.point.y + 0.45f : 6.65f;
+            bp.basePos = new Vector3(go.transform.position.x, restY, 0f);
+            bp.settle = true;
+        }
+
+        /// Bark pickup body: bobs at rest; player touch -> one free hit.</summary>
+        class BarkPickup : MonoBehaviour {
+            public Vector3 basePos;
+            public bool settle;
+            void Update() {
+                if (!settle) return;
+                transform.position = basePos + Vector3.up * (Mathf.Sin(Time.time * 3f) * 0.08f);
+            }
+            void OnTriggerEnter2D(Collider2D c) {
+                var p = c.GetComponentInParent<PlayerController>();
+                if (p == null || p.bark > 0) return;   // one hide at a time
+                p.bark = 1;
+                Sfx.Play(Sfx.Clip.Coin);
+                Destroy(gameObject);
+            }
+        }
+
         static Texture2D HeartTex() {
             const int S = 26;
             var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);

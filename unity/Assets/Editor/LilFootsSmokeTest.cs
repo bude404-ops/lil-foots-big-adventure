@@ -85,6 +85,11 @@ public static class LilFootsSmokeTest {
         C(UnityEngine.GameObject.Find("DepthFringe_0") != null, "depth: foreground fringe present");
         // [BUMP TILES Sept 27 PM - BudE: "hittable if you [hit] below them like in mario"]
         C(UnityEngine.GameObject.Find("BumpBlock_0") != null, "bump: hittable bump block present (mario-style)");
+        // [FOOTPRINT TRAIL Sept 27 PM - BudE approved: lives = glowing footprint trail, not hearts]
+        C(UnityEngine.GameObject.Find("HUDPrint0") != null, "hud: footprint trail present (lore-native lives)");
+        bool anyBark = false;
+        foreach (var bt in UnityEngine.Object.FindObjectsOfType<LilFoots.BumpTile>()) if (bt.content == "bark") { anyBark = true; break; }
+        C(anyBark, "power: Cedar Bark Hide block placed (one free hit)");
 
         // [JUMP FACING Sept 26 PM: BudE "the jump is still one directional"] the flip law is
         // now GATED IN CI: the bridge must mirror the rig for right (scale.x < 0) and show the

@@ -782,7 +782,9 @@ namespace LilFoots.EditorTools
                 if (bumpArt != null) ChildSprite(child.gameObject, "BumpArt", bumpArt, 0.9f, 4, false, 0.5f);
             }
 
-            var heartArt = isTile ? LilFootsProcTiles.EnsureSprite("unity_heart") : Art("art_heart.png");   // [CLEANSE Sept 26] tilemap heart is Unity-built
+            // [SPIRIT CHARM Sept 27 PM - BudE approved] the extra-life pickup is a forest-spirit
+            // wisp (lore-native heart replacement), in the same glow language as the coin.
+            var heartArt = isTile ? LilFootsProcTiles.EnsureSprite("unity_charm") : Art("art_heart.png");
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
             if (sh != null && heartArt != null && L(2)) {
                 var hb = new GameObject("SecretHeart");
@@ -991,14 +993,23 @@ namespace LilFoots.EditorTools
             }
         }
 
-        /// <summary>HUD: hearts row + wooden panel token counter, camera-pinned (world + UI paths share it).</summary>
+        /// <summary>HUD: FOOTPRINT TRAIL (BudE approved Sept 27 PM: lives = Bigfoot's glowing
+        /// footprint trail, not hearts) + wooden panel token counter, camera-pinned.</summary>
         static void BuildHud(UnityEngine.Camera cam) {
-            var heartArt = Art("art_heart.png");
-            if (heartArt != null) {
-                for (int i = 0; i < 3; i++)
-                    SpriteGo("HUDHeart" + i, heartArt, Vector3.zero, 0.62f, 100, cam.transform)
-                        .transform.localPosition = new Vector3(-5.9f + i * 0.75f, 3.2f, 10f);
+            // [FOOTPRINT TRAIL Sept 27 PM] same system (3 lives, checkpoint respawn), lore-native
+            // icon: lit gold footprints; a lost life fades its print from the trail.
+            var printArt = LilFootsProcTiles.EnsureSprite("unity_print");
+            if (printArt == null) printArt = Art("art_heart.png");   // fallback only
+            var trailGo = new GameObject("FootprintTrail");
+            trailGo.transform.SetParent(cam.transform, false);
+            var trail = trailGo.AddComponent<LilFoots.FootprintTrail>();
+            var trailIcons = new SpriteRenderer[3];
+            for (int i = 0; i < 3; i++) {
+                var pr = SpriteGo("HUDPrint" + i, printArt, Vector3.zero, 0.62f, 100, cam.transform);
+                pr.transform.localPosition = new Vector3(-5.9f + i * 0.75f, 3.2f, 10f);
+                trailIcons[i] = pr.GetComponent<SpriteRenderer>();
             }
+            trail.icons = trailIcons;
             // TOKEN BAR (Bude: 'the bar need to be moved over to the right not behind the hearts'):
             // top-right corner, mirroring the hearts row at top-left. Hearts stay top-left.
             var panelArt = Art("art_panel.png");
