@@ -150,6 +150,27 @@ public static class LilFootsLevelBuilder {
             t.AddComponent<TokenCollectible>().tier = (int)F(to["tier"]);
         }
 
+        // ---- BUMP TILES (BudE Sept 27 PM: "can we make certain tiles hittable if you [hit]
+        // below them like in mario? For where hidden stuff can be?") solid little blocks you
+        // jump into from below; contents burst out. hidden=true blocks are INVISIBLE until
+        // first bumped (classic secret blocks). ----
+        if (data.ContainsKey("bumps")) {
+            var bumps = (System.Collections.Generic.List<object>)data["bumps"];
+            int bi = 0;
+            foreach (var bo in bumps.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
+                float bx = F(bo["x"]), by = F(bo["y"]);
+                var b = new GameObject("BumpBlock_" + bi++);
+                b.transform.SetParent(root.transform);
+                b.transform.position = new Vector3(bx / 100f, 2f * GY - by / 100f, 0);
+                var bc = b.AddComponent<BoxCollider2D>();
+                bc.size = new Vector2(0.9f, 0.9f);
+                var btile = b.AddComponent<LilFoots.BumpTile>();
+                btile.content = bo.ContainsKey("content") ? bo["content"].ToString() : "token";
+                btile.hidden = bo.ContainsKey("hidden") && System.Convert.ToBoolean(bo["hidden"]);
+            }
+            Debug.Log("[LevelBuilder] bump tiles placed: " + bi + " (contents: mario-style underside hits)");
+        }
+
         // ---- gate ----
         var gate = new GameObject("Gate");
         gate.transform.SetParent(root.transform);

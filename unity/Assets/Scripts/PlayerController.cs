@@ -123,6 +123,13 @@ public class PlayerController : MonoBehaviour {
 
     void OnCollisionStay2D(Collision2D c) {
         if (c.GetContact(0).normal.y > 0.5f) onGround = true;
+        // [BUMP TILES Sept 27 PM - BudE: "can we make certain tiles hittable if you [hit]
+        // below them like in mario? For where hidden stuff can be?"] head hits a tile's
+        // underside (contact normal points down) -> the tile bumps + pops its content.
+        if (c.GetContact(0).normal.y < -0.5f) {
+            var bt = c.gameObject.GetComponentInParent<LilFoots.BumpTile>();
+            if (bt != null) bt.Bump();
+        }
     }
     void OnCollisionExit2D(Collision2D c) { onGround = false; }
 

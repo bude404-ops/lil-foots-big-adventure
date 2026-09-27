@@ -679,6 +679,58 @@ public static class LilFootsProcTiles {
         return tex;
     }
 
+    /// <summary>Mario-style bump block (BudE Sept 27 PM): carved cedar block, moss cap
+    /// (region palette), soft inner rim, and the glowing gold FOOTPRINT emblem - the
+    /// Big Token language on a hittable tile. After a bump the runtime dims it to "used".</summary>
+    public static Texture2D BumpBlockTex() {
+        const int S = 128;
+        var pal = Palette(Region);
+        var tex = new Texture2D(S, S, TextureFormat.RGBA32, false);
+        for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) {
+            Color c = Color.clear;
+            // rounded-square body
+            float dx = Mathf.Max(0f, Mathf.Abs(x - S / 2f + 0.5f) - (S / 2f - 12f));
+            float dy = Mathf.Max(0f, Mathf.Abs(y - S / 2f + 0.5f) - (S / 2f - 12f));
+            float d = Mathf.Sqrt(dx * dx + dy * dy);
+            if (d <= 12f) {
+                float fy = y / (float)S;
+                // cedar body, darker toward the base, faint grain
+                c = Color.Lerp(new Color(0.44f, 0.34f, 0.21f), new Color(0.30f, 0.23f, 0.14f), fy);
+                float grain = 0.5f + 0.5f * VNoise(x / 9f, y / 5f, 770 + Region);
+                c *= 0.92f + 0.10f * grain;
+                // moss cap: top 18% wears the region's cap green w/ a crisp edge
+                float mossEdge = 0.82f + 0.05f * VNoise(x / 16f, 0f, 771 + Region);
+                if (fy > mossEdge) c = Color.Lerp(pal.capEdge, pal.capBody, (fy - mossEdge) / 0.18f);
+                // dark outline
+                float edge = Mathf.Clamp01((12f - d) / 5f);
+                if (edge < 1f) c = Color.Lerp(new Color(0.16f, 0.12f, 0.08f), c, edge);
+                // GLOWING GOLD FOOTPRINT EMBLEM: sole ellipse + 5 toes, gold with halo
+                float ex = (x - S / 2f) / 14f, ey = (y - 62f) / 17f;
+                float sole = ex * ex + ey * ey;
+                bool toe = false;
+                for (int t = 0; t < 5; t++) {
+                    float ang = (t - 2f) * 0.42f;
+                    float tx = x - (S / 2f + Mathf.Sin(ang) * 17f), ty = y - (30f + (2f - Mathf.Abs(t - 2f)) * 5.5f);
+                    toe = toe || (tx * tx + ty * ty * 1.3f < 4.5f * 4.5f);
+                }
+                float halo = Mathf.Exp(-Mathf.Min(Mathf.Abs(x - S / 2f) / 26f, 1f) * 1.4f)
+                           * Mathf.Exp(-Mathf.Abs(y - 48f) / 24f);
+                if (sole < 1f || toe) {
+                    c = Color.Lerp(new Color(0.99f, 0.82f, 0.34f), c, 0.10f);           // solid gold fill
+                    c = Color.Lerp(c, new Color(1f, 1f, 0.85f), 0.35f * Mathf.Clamp01(1f - sole / 1f)); // lit core
+                } else if (halo > 0.10f) {
+                    c = Color.Lerp(c, new Color(1f, 0.88f, 0.50f), 0.30f * halo);        // soft glow ring
+                }
+            }
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return tex;
+    }
+    public static Sprite EnsureBumpBlock() {
+        return EnsureGeneratedTex("unity_bump_r" + Region, BumpBlockTex);
+    }
+
     static Sprite EnsureGeneratedTex(string name, System.Func<Texture2D> paint) {
         string path = "Assets/Art/Generated/" + name + ".png";
         Directory.CreateDirectory("Assets/Art/Generated");

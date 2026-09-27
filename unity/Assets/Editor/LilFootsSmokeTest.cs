@@ -83,6 +83,8 @@ public static class LilFootsSmokeTest {
         C(UnityEngine.GameObject.Find("DepthRidgeFar_0") != null, "depth: far ridge band present");
         C(UnityEngine.GameObject.Find("DepthRidgeMid_0") != null, "depth: mid ridge band present");
         C(UnityEngine.GameObject.Find("DepthFringe_0") != null, "depth: foreground fringe present");
+        // [BUMP TILES Sept 27 PM - BudE: "hittable if you [hit] below them like in mario"]
+        C(UnityEngine.GameObject.Find("BumpBlock_0") != null, "bump: hittable bump block present (mario-style)");
 
         // [JUMP FACING Sept 26 PM: BudE "the jump is still one directional"] the flip law is
         // now GATED IN CI: the bridge must mirror the rig for right (scale.x < 0) and show the

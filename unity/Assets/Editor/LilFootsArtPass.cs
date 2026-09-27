@@ -761,13 +761,27 @@ namespace LilFoots.EditorTools
             // COINS BACK ON (Bude, Sept 20: "there are no tokens to collect"): the trail was
             // re-placed along the actual platform path (surface lines + arc bridges over the
             // gaps - no floaters), so the art goes back on at the map-data positions.
-            var token = isTile ? LilFootsProcTiles.EnsureSprite("unity_coin") : Art("art_token.png");   // [CLEANSE Sept 26] tilemap tokens wear the clean Unity-built coin
+            // [ACTUAL COINS Sept 27 PM - BudE: "start adding in the actual coins we are
+            // going to use"] his verdict-locked Big Token (piece 6: cedar coin + glowing
+            // footprint emblem, "Keep 6") IS the in-game coin now - the Unity coin is the fallback.
+            var token = Art("art_token.png");
+            if (token == null) token = LilFootsProcTiles.EnsureSprite("unity_coin");
             foreach (Transform child in map.transform) {
                 if (!child.name.StartsWith("Token_")) continue;
                 var oldTa = child.transform.Find("TokenArt");
                 if (oldTa != null) Object.DestroyImmediate(oldTa.gameObject); // no stale floaters
                 if (token != null) ChildSprite(child.gameObject, "TokenArt", token, 0.28f, 5, false, 0.5f); // [SCALE LAW Sept 21] 0.28u - Mario-coin size vs 0.82u Lily
             }
+            // [BUMP TILES Sept 27 PM] mossy cedar blocks with the glowing footprint emblem -
+            // the same language as the coin, so a bumpable block reads at a glance.
+            var bumpArt = LilFootsProcTiles.EnsureBumpBlock();
+            foreach (Transform child in map.transform) {
+                if (!child.name.StartsWith("BumpBlock_")) continue;
+                var oldBa = child.transform.Find("BumpArt");
+                if (oldBa != null) Object.DestroyImmediate(oldBa.gameObject);
+                if (bumpArt != null) ChildSprite(child.gameObject, "BumpArt", bumpArt, 0.9f, 4, false, 0.5f);
+            }
+
             var heartArt = isTile ? LilFootsProcTiles.EnsureSprite("unity_heart") : Art("art_heart.png");   // [CLEANSE Sept 26] tilemap heart is Unity-built
             var sh = data.ContainsKey("secretHeart") ? data["secretHeart"] as Dictionary<string, object> : null;
             if (sh != null && heartArt != null && L(2)) {
