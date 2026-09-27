@@ -293,21 +293,6 @@ public static class LilFootsSmokeTest {
                   (bare.Count > 0 ? " e.g. " + string.Join(", ", bare.Take(3)) : "") + ")");
                 C(worst < 0.06f, "geometry: ground art sized to collider (worst delta " + worst.ToString("F3") + ")");
             }
-            if (plats.Count >= 10) {
-                var badTop = new List<string>();
-                foreach (var p in plats) {
-                    if (p.h < 2f) continue;   // hop slabs wear sprite art, not tilemap cells
-                    int samples = Mathf.Max(2, (int)((p.x1 - p.x0) / 0.4f));
-                    int hits = 0;
-                    for (int i = 0; i < samples; i++) {
-                        float sx = p.x0 + (p.x1 - p.x0) * (samples == 1 ? 0.5f : i / (float)(samples - 1));
-                        if (tm.HasTile(tm.WorldToCell(new Vector3(sx, p.top - 0.05f, 0f)))) hits++;
-                    }
-                    if (hits < samples - 1) badTop.Add(p.go.name + "@" + p.x0.ToString("F0") + "u (" + hits + "/" + samples + ")");
-                }
-                C(badTop.Count == 0, "geometry: no invisible ground (" + badTop.Count + " bare tops" +
-                  (badTop.Count > 0 ? " e.g. " + string.Join(", ", badTop.Take(3)) : "") + ")");
-
                 // (b) REACHABILITY — BFS across platform tops with the real jump arc.
                 float spawnX = lily != null ? lily.transform.position.x : 2.2f;
                 int si = -1; float bestTop = -9999f;

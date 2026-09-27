@@ -216,7 +216,8 @@ public static class LilFootsTilemapSkin {
 
     // seeded hash / value noise
     static float Hsh(int x, int y, int s) {
-        int h = x * 374761393 + y * 668265263 + s * 2246822519;
+        // unchecked int math is mod 2^32 — the big seed constant stays bit-identical
+        int h = x * 374761393 + y * 668265263 + s * unchecked((int)2246822519u);
         h = (h ^ (h >> 13)) * 1274126177;
         return ((h ^ (h >> 16)) & 0x7fffffff) / (float)0x7fffffff;
     }
