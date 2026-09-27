@@ -187,7 +187,17 @@ public static class LilFootsProcTiles {
                                  : CapTex(VariantOf(name), lipL, lipR);
             File.WriteAllBytes(png, tex.EncodeToPNG());
         }
+        // [FRESH-RUNNER FIX 2 Sept 27] same crash family as EnsureSprite/EnsureSky:
+        // a tile PNG written this session is INVISIBLE to AssetImporter until the
+        // database refreshes - GetAtPath returned null and NRE'd run 36291315199's
+        // WebGL job at the ti.textureType bind (fresh runner, first tile load).
+        // Refresh FIRST and never dereference a null importer.
+        AssetDatabase.Refresh();
         var ti = (TextureImporter)AssetImporter.GetAtPath(png);
+        if (ti == null) {
+            Debug.LogError("[ProcTiles] tile importer missing for " + png + " - refresh failed");
+            return null;   // LoadSet tolerates nulls; LoadTiles reports the failure
+        }
         ti.textureType = TextureImporterType.Sprite;
         ti.spriteImportMode = SpriteImportMode.Single;
         ti.spritePixelsPerUnit = 256f;
@@ -195,6 +205,10 @@ public static class LilFootsProcTiles {
         ti.mipmapEnabled = false;
         ti.SaveAndReimport();
         var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(png);
+        if (sprite == null) {
+            Debug.LogError("[ProcTiles] tile sprite failed to import for " + png);
+            return null;   // never bind a null sprite into a persisted tile asset
+        }
         var t = AssetDatabase.LoadAssetAtPath<UnityEngine.Tilemaps.Tile>(asset);
         if (t == null) {
             t = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();

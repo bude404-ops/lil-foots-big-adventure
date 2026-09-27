@@ -87,15 +87,14 @@ jobs:
         run: docker pull "$UIMG"
       - name: License + build scene + art pass + QC shots
         id: forge
-        env:
-          UUSER: ${{ inputs.uuser }}
-          UPASS: ${{ inputs.upass }}
         run: |
           set +e
+          echo "::add-mask::${{ inputs.upass }}"
+          echo "::add-mask::${{ inputs.uuser }}"
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER -e UPASS -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
+            -e UUSER="${{ inputs.uuser }}" -e UPASS="${{ inputs.upass }}" -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -256,15 +255,14 @@ jobs:
         run: docker pull "$UIMG"
       - name: License + WebGL build
         id: webgl
-        env:
-          UUSER: ${{ inputs.uuser }}
-          UPASS: ${{ inputs.upass }}
         run: |
           set +e
+          echo "::add-mask::${{ inputs.upass }}"
+          echo "::add-mask::${{ inputs.uuser }}"
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e WEBGL_OUT=/project/unity/Builds/WebGL \
-            -e UUSER -e UPASS -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
+            -e UUSER="${{ inputs.uuser }}" -e UPASS="${{ inputs.upass }}" -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
