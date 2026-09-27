@@ -180,9 +180,15 @@ public class PlayerController : MonoBehaviour {
         // [BUMP TILES Sept 27 PM - BudE: "can we make certain tiles hittable if you [hit]
         // below them like in mario? For where hidden stuff can be?"] head hits a tile's
         // underside (contact normal points down) -> the tile bumps + pops its content.
-        if (c.GetContact(0).normal.y < -0.5f) {
-            var bt = c.gameObject.GetComponentInParent<LilFoots.BumpTile>();
-            if (bt != null) bt.Bump();
+        // [BUMP REGISTRATION FIX Sept 27 PM - BudE: "map isnt registering invisible blocks"]
+        // GetContact(0) is just the FIRST contact point - on a head bonk the first contact is
+        // often a shoulder/side touch with a sideways normal, so the bump never fired. Scan
+        // ALL contacts: if ANY of them points down, the head hit the underside.
+        for (int ci = 0; ci < c.contactCount; ci++) {
+            if (c.GetContact(ci).normal.y < -0.5f) {
+                var bt = c.gameObject.GetComponentInParent<LilFoots.BumpTile>();
+                if (bt != null) { bt.Bump(); break; }
+            }
         }
     }
     void OnCollisionExit2D(Collision2D c) { onGround = false; }

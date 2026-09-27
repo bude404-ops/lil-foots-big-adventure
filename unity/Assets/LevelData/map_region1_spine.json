@@ -670,9 +670,14 @@
  },
  "bumps": [
   {
-   "x": 1550,
+   "x": 1650,
    "y": 370,
    "content": "token"
+  },
+  {
+   "x": 2400,
+   "y": 220,
+   "content": "bark"
   },
   {
    "x": 3450,
@@ -680,19 +685,31 @@
    "content": "token"
   },
   {
+   "x": 3800,
+   "y": 370,
+   "content": "heart",
+   "hidden": true
+  },
+  {
    "x": 5600,
    "y": 370,
    "content": "token"
   },
   {
-   "x": 7600,
-   "y": 370,
+   "x": 7500,
+   "y": 310,
    "content": "big"
   },
   {
-   "x": 10250,
-   "y": 370,
+   "x": 10360,
+   "y": 270,
    "content": "token"
+  },
+  {
+   "x": 11790,
+   "y": 230,
+   "content": "heart",
+   "hidden": true
   },
   {
    "x": 12900,
@@ -700,37 +717,20 @@
    "content": "token"
   },
   {
-   "x": 16100,
+   "x": 17200,
    "y": 370,
    "content": "big"
   },
   {
-   "x": 19900,
-   "y": 370,
-   "content": "token"
-  },
-  {
-   "x": 4600,
-   "y": 370,
-   "content": "heart",
-   "hidden": true
-  },
-  {
-   "x": 11900,
-   "y": 370,
-   "content": "heart",
-   "hidden": true
-  },
-  {
-   "x": 18500,
+   "x": 19500,
    "y": 370,
    "content": "big",
    "hidden": true
   },
   {
-   "x": 2500,
-   "y": 370,
-   "content": "bark"
+   "x": 20050,
+   "y": 220,
+   "content": "token"
   },
   {
    "x": 21300,
