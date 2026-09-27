@@ -279,7 +279,7 @@ public static class LilFootsProcTiles {
     /// brightness jitter so treads never read as a photocopied grid. Null when absent.</summary>
     static Texture2D _paintGrass, _paintDirt;
     static int _capTopRow = -1;   // detected grass-cap edge in paint_grass.png
-    static Texture2D PaintedTileTex(bool dirt, int variant) {
+    static Texture2D PaintedTileTex(bool dirt, int variant, bool lipL = false, bool lipR = false) {
         try {
             if (dirt && _paintDirt == null && System.IO.File.Exists("Assets/Art/paint_dirt.png"))
                 { _paintDirt = new Texture2D(2, 2); _paintDirt.LoadImage(System.IO.File.ReadAllBytes("Assets/Art/paint_dirt.png")); }
@@ -320,8 +320,34 @@ public static class LilFootsProcTiles {
                     outc[y * T + x] = src[sy * W + sx];
                 }
             }
-            // per-variant brightness jitter (subtle: -4%..+4%) so repeats never photocopy
-            float jit = 0.96f + 0.08f * (((variant * 37) % 7) / 6f);
+            // [STORYBOOK Sept 27 PM] exposed-edge caps: the open side of a ground gets a
+            // soft mossy curl highlight at the top corner and a gentle vertical shade
+            // down the edge - the lip reads as a rounded storybook earth edge, not a cut.
+            if (lipL || lipR) {
+                int E = 30;
+                for (int x = 0; x < E; x++) {
+                    float u = x / (float)(E - 1);
+                    float f = lipL ? (1f - u) : u;                     // 1 at the exposed column
+                    float mul = 1f - 0.20f * f;
+                    for (int y = 0; y < T; y++) {
+                        int xi = lipL ? x : (T - 1 - x);
+                        var cc = outc[y * T + xi];
+                        cc.r = (byte)(cc.r * mul); cc.g = (byte)(cc.g * mul); cc.b = (byte)(cc.b * mul);
+                        if (y < 8) {                                     // mossy curl light at the lip crest
+                            float hi = (1f - y / 8f) * f * 0.18f;
+                            cc.r = (byte)Mathf.Min(255, cc.r + 255 * hi * 0.6f);
+                            cc.g = (byte)Mathf.Min(255, cc.g + 255 * hi);
+                            cc.b = (byte)Mathf.Min(255, cc.b + 255 * hi * 0.4f);
+                        }
+                        outc[y * T + xi] = cc;
+                    }
+                }
+            }
+            // [STORYBOOK Sept 27 PM] dirt variants are DEPTH SHADES: soil gets warmer-
+            // darker the deeper the tile sits (storybook cross-section feel). Caps keep a
+            // subtle random jitter so the grass never photocopies.
+            float jit = dirt ? 1f - 0.055f * variant
+                             : 0.96f + 0.08f * (((variant * 37) % 7) / 6f);
             var tex = new Texture2D(T, T, TextureFormat.RGBA32, false);
             tex.SetPixels32(outc);
             var px = tex.GetPixels();
@@ -352,7 +378,7 @@ public static class LilFootsProcTiles {
             // present, tiles are cut FROM IT instead of the flat cleanse painters. The world
             // now shares the characters' brush. Falls back to the Unity-built painters if
             // the painted files are absent (never a hard dependency).
-            Texture2D tex = PaintedTileTex(dirt, VariantOf(name));
+            Texture2D tex = PaintedTileTex(dirt, VariantOf(name), lipL, lipR);
             if (tex == null) tex = dirt ? DirtTex(VariantOf(name), lipL, lipR)
                                         : CapTex(VariantOf(name), lipL, lipR);
             File.WriteAllBytes(png, tex.EncodeToPNG());

@@ -160,7 +160,13 @@ public static class LilFootsTilemapSkin {
             } else {
                 if (openL && _dirtsL.Length > 0) t = _dirtsL[0];
                 else if (openR && _dirtsR.Length > 0) t = _dirtsR[0];
-                else t = _dirts[Hash(c, r) % _dirts.Length];
+                else if (_dirts.Length > 0) {
+                    // [STORYBOOK Sept 27 PM] DEPTH-ORDERED soil: the deeper the cell sits
+                    // below the grass cap, the darker its tile variant - the ground reads
+                    // like a storybook earth cross-section instead of a random speckle.
+                    int k = 0; while (Has(c, r + k + 1)) k++;
+                    t = _dirts[Mathf.Min(_dirts.Length - 1, k / 2)];
+                }
             }
             tm.SetTile(new Vector3Int(c, r, 0), t);
             painted++;
