@@ -84,12 +84,14 @@ public static class LilFootsSmokeTest {
         // left-native art for left (scale.x > 0). The frames are canonical left-native
         // (tools/normalize_facing.py), the bridge is the single flip authority.
         if (lily != null) {
+            // [SAME-CHARACTER LAW, BudE Sept 27 PM] generated frame sets are RETIRED from the
+            // player rig: the moving character must BE his actual upright art (whole_lily.png)
+            // posed by the bone controller + bridge motion. FrameAnimator present = regression.
             var fa = lily.GetComponentInChildren<LilFoots.FrameAnimator>();
-            C(fa != null, "anim: FrameAnimator wired on the player rig");
-            C(fa != null && fa.idle != null && fa.idle.Length >= 4,
-              "anim: 4-panel CHARACTER-SPECIFIC idle set wired (found " + (fa != null && fa.idle != null ? fa.idle.Length : 0) + ")");
-            C(fa != null && fa.jump != null && fa.jump.Length >= 4,
-              "anim: 4-frame jump set wired (found " + (fa != null && fa.jump != null ? fa.jump.Length : 0) + ")");
+            C(fa == null, "anim: no generated frame sets on the player rig (same-character law)");
+            var art2 = lily.GetComponentInChildren<SpriteRenderer>();
+            C(art2 != null && art2.sprite != null,
+              "anim: player rig renders the actual upright art (whole_* sprite)");
             var bridge = lily.GetComponentInChildren<LilFoots.PlayerAnimBridge>();
             if (bridge != null && pc != null) {
                 var rigRoot = bridge.transform;

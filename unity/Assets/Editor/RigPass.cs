@@ -202,7 +202,13 @@ namespace LilFoots.EditorTools
                 if (isDefault) active = rig.Root;
                 // flip anchor for PlayerAnimBridge: store the base scale so facing flips are sign-safe
                 rig.Root.AddComponent<PlayerAnimBridge>();
-                WireFrameAnimator(rig.Root, names[i]);   // generated frame sets replace procedural motion when present
+                // [SAME-CHARACTER LAW, BudE Sept 27 PM: "instead of using the actual upright and
+                // changing its pose you made different images... it isn't even the same character
+                // while moving around"] NO generated frame sets in gameplay. The rig renders his
+                // ACTUAL art (whole_lily/buddy/emma) and animation = pose changes on that art:
+                // the native bone controller (idle/walk/jump states off speed/air) + the bridge's
+                // paper motion (step bob, stride wobble, take-off stretch, landing squash, lean).
+                // The AI frame sheets are RETIRED from gameplay: they were different characters.
             }
             return active;
         }
@@ -507,7 +513,8 @@ namespace LilFoots.EditorTools
             var rigs = new List<CharRig>();
             foreach (var c in chars) {
                 var cardRig = BuildRig(c.name, "Assets/Art/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f), StanceFor(c.name));
-                WireFrameAnimator(cardRig.Root, c.name);   // select cards breathe the generated idle frames
+                // [SAME-CHARACTER LAW Sept 27] select cards show the real art's baked idle
+                // stance too - no generated idle frames (different characters).
                 rigs.Add(cardRig);
             }
 
