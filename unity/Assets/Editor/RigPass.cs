@@ -192,6 +192,9 @@ namespace LilFoots.EditorTools
                 rig.Root.transform.localPosition = new Vector3(0f, off, 0f);
                 // bake the arms-down idle stance into the saved scene (same as the select cards)
                 ApplyPoseFromClip(rig, rig.IdleClip, 1f / 6f);
+                // [FIGURE ANIMATION Sept 27 PM] gameplay rigs wear the multi-figure frame sets
+                // (the misplaced call in the QC card loop killed run 36357730930 with CS0103)
+                WireFrameAnimator(rig.Root, names[i]);
                 var anim = rig.Root.GetComponent<Animator>();
                 if (anim != null) {
                     anim.cullingMode = AnimatorCullingMode.AlwaysAnimate; // in-game rig never sleeps
@@ -519,7 +522,6 @@ namespace LilFoots.EditorTools
                 // frame sets are BACK on the gameplay rigs and the select cards - each frame
                 // is an identity-preserving pose edit of his actual upright art (palette QC
                 // vs the source), left-native, feet-baselined, keyed-out on the same canvas.
-                WireFrameAnimator(rig.Root, names[i]);   // figure frames carry the stride
                 WireFrameAnimator(cardRig.Root, c.name);   // select cards breathe the idle frames
                 rigs.Add(cardRig);
             }

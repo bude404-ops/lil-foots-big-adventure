@@ -333,11 +333,14 @@ public static class LilFootsProcTiles {
             bool tmpl = (W == H);
             int x0, y0;
             if (dirt) {
-                if (tmpl) { x0 = (v % 2) * 256; y0 = 256 + (v / 2) * 512; }
+                if (tmpl) { x0 = lipL ? 0 : (lipR ? W - 256 : (v % 2) * 256); y0 = 256 + (v / 2) * 512; }
                 else { x0 = v * (W / 4) % W; y0 = 128 + (v / 2) * 128; }
             } else if (tmpl) {
+                // full-bleed square template: caps keep the painted blade-to-soil structure
+                // at y=0; exposed lips crop the template's own left/right edges
                 x0 = lipL ? 0 : (lipR ? W - 256 : v * 256); y0 = 0;
-                // legacy sheet path: crop from the DETECTED grass line
+            } else {
+                // legacy sheet path: crop from the DETECTED grass line (non-square sources)
                 x0 = v * (W / 4) % W;
                 int capTop = _capTopRow;
                 if (capTop < 0) {
