@@ -514,7 +514,13 @@ namespace LilFoots.EditorTools
             foreach (var c in chars) {
                 var cardRig = BuildRig(c.name, "Assets/Art/" + c.file, 2.6f, new Vector3(c.x, 2.0f, 0f), StanceFor(c.name));
                 // [SAME-CHARACTER LAW Sept 27] select cards show the real art's baked idle
-                // stance too - no generated idle frames (different characters).
+                // [FIGURE ANIMATION Sept 27 PM - BudE: 'animations aren't like they should
+                // be with more figures to make it look like they are animated'] the multi-figure
+                // frame sets are BACK on the gameplay rigs and the select cards - each frame
+                // is an identity-preserving pose edit of his actual upright art (palette QC
+                // vs the source), left-native, feet-baselined, keyed-out on the same canvas.
+                WireFrameAnimator(rig.Root, names[i]);   // figure frames carry the stride
+                WireFrameAnimator(cardRig.Root, c.name);   // select cards breathe the idle frames
                 rigs.Add(cardRig);
             }
 

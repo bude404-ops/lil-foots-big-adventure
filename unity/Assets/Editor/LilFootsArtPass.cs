@@ -634,24 +634,27 @@ namespace LilFoots.EditorTools
                     // [TILEMAP CLEANSE Sept 26] tile-mode hops: flat Unity quads only (sage cap + flat earth
                     // body) - zero painted files, matches the flat tilemap canon. Never falls through to the
                     // painted earth/cap/edge paths.
-                    var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
-                    if (quad != null) {
-                        // [BUD-E Sept 27: "hidden or invisible boxes"] a flat brown/sage slab
-                        // with no outline VANISHES against the terrain caps and pale sky -
-                        // colliders the eye can't see. Added: dark rim outline behind the body
-                        // (reads on any background) + brighter mossy cap + dark base shadow.
-                        var hopRim = SpriteGo("HopSlabRim", quad, new Vector3(child.position.x, child.position.y, 0), 1f, -3, child);
-                        hopRim.transform.localScale = new Vector3(w + 0.14f, h + 0.14f, 1f);
-                        hopRim.GetComponent<SpriteRenderer>().color = new Color(0.13f, 0.17f, 0.11f);
-                        var hopBody = SpriteGo("HopSlabBody", quad, new Vector3(child.position.x, child.position.y - 0.15f, 0), 1f, -2, child);
-                        hopBody.transform.localScale = new Vector3(w, h - 0.3f, 1f);
-                        hopBody.GetComponent<SpriteRenderer>().color = new Color(0.42f, 0.33f, 0.24f);
-                        var hopCap = SpriteGo("HopSlabCap", quad, new Vector3(child.position.x, child.position.y + h / 2f - 0.15f, 0), 1f, -1, child);
-                        hopCap.transform.localScale = new Vector3(w, 0.3f, 1f);
-                        hopCap.GetComponent<SpriteRenderer>().color = new Color(0.71f, 0.82f, 0.56f);
-                        var hopBase = SpriteGo("HopSlabBase", quad, new Vector3(child.position.x, child.position.y - h / 2f + 0.06f, 0), 1f, -1, child);
-                        hopBase.transform.localScale = new Vector3(w - 0.05f, 0.12f, 1f);
-                        hopBase.GetComponent<SpriteRenderer>().color = new Color(0.20f, 0.15f, 0.11f);
+                    // [PER-TILE ART Sept 27 PM - BudE: 'the map looks like shit' -> real art on
+                    // every block] hop slabs wear the approved storybook hop-block TILE FACE
+                    // (mossy cedar + gold footprint emblem), tiled one 1x1 face per unit of
+                    // width like a Mario block row - no flat tinted quads anywhere. The dark
+                    // rim quad stays behind the faces so the slab reads on any background.
+                    var hopFace = LilFootsProcTiles.EnsureSprite("unity_hopface");
+                    if (hopFace != null) {
+                        var quad = LilFootsProcTiles.EnsureSprite("unity_quad");
+                        if (quad != null) {
+                            var hopRim = SpriteGo("HopSlabRim", quad, new Vector3(child.position.x, child.position.y, 0), 1f, -3, child);
+                            hopRim.transform.localScale = new Vector3(w + 0.14f, h + 0.14f, 1f);
+                            hopRim.GetComponent<SpriteRenderer>().color = new Color(0.13f, 0.17f, 0.11f);
+                        }
+                        float cursor = child.position.x - w / 2f;
+                        int i = 0;
+                        while (cursor < child.position.x + w / 2f - 0.001f) {
+                            float cw = Mathf.Min(1f, child.position.x + w / 2f - cursor);
+                            var face = SpriteGo("HopFace" + i, hopFace, new Vector3(cursor + cw / 2f, child.position.y, 0), 1f, -2, child);
+                            face.transform.localScale = new Vector3(cw, h, 1f);   // 1 face per unit; last face squeezes the remainder
+                            cursor += cw; i++;
+                        }
                         continue;
                     }
                 }

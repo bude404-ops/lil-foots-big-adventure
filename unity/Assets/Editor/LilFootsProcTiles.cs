@@ -324,15 +324,21 @@ public static class LilFootsProcTiles {
             var src = srcTex.GetPixels32();
             var outc = new Color32[T * T];
             int v = ((variant % 4) + 4) % 4;
-            int y0;
+            // [PER-TILE TEMPLATE Sept 27 PM - BudE: 'it should only be the tiles themselves']
+            // paint_grass/paint_dirt are now FULL-BLEED 1024x1024 tile templates (edge-to-edge
+            // art, white margins auto-stripped). Square sources use direct template crops:
+            // grass caps keep their painted blade-to-soil structure intact at y=0, dirt
+            // variants sample deeper soil bands. Non-square sources fall through to the
+            // legacy sheet-band math.
+            bool tmpl = (W == H);
+            int x0, y0;
             if (dirt) {
-                // dirt: two clean soil windows, skipping the washed-out top quarter
-                y0 = 128 + (v / 2) * 128;
-            } else {
-                // cap: crop from the DETECTED grass line (the painted source can carry a
-                // light wash above the cap - the generated art puts sky glow there), so
-                // find the first strongly green-dominant row and put the organic edge at
-                // the top of the tile: blade tips peek in, grass cap, soil below.
+                if (tmpl) { x0 = (v % 2) * 256; y0 = 256 + (v / 2) * 512; }
+                else { x0 = v * (W / 4) % W; y0 = 128 + (v / 2) * 128; }
+            } else if (tmpl) {
+                x0 = lipL ? 0 : (lipR ? W - 256 : v * 256); y0 = 0;
+                // legacy sheet path: crop from the DETECTED grass line
+                x0 = v * (W / 4) % W;
                 int capTop = _capTopRow;
                 if (capTop < 0) {
                     var cpx = srcTex.GetPixels32();
@@ -348,8 +354,9 @@ public static class LilFootsProcTiles {
             }
             for (int y = 0; y < T; y++) {
                 int sy = y0 + y;
+                if (sy < 0 || sy >= H) continue;
                 for (int x = 0; x < T; x++) {
-                    int sx = (v * (W / 4) + x * (W / 4) / T) % W;             // 4 windows, wrapping seam
+                    int sx = (x0 + x) % W;                                     // template: direct window; legacy wraps
                     outc[y * T + x] = src[sy * W + sx];
                 }
             }

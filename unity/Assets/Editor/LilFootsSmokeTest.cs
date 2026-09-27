@@ -107,11 +107,15 @@ public static class LilFootsSmokeTest {
         // left-native art for left (scale.x > 0). The frames are canonical left-native
         // (tools/normalize_facing.py), the bridge is the single flip authority.
         if (lily != null) {
-            // [SAME-CHARACTER LAW, BudE Sept 27 PM] generated frame sets are RETIRED from the
-            // player rig: the moving character must BE his actual upright art (whole_lily.png)
-            // posed by the bone controller + bridge motion. FrameAnimator present = regression.
+            // [FIGURE ANIMATION Sept 27 PM - BudE: 'more figures to make it look like they
+            // are animated'] multi-figure frame sets are REQUIRED on the player rig again.
+            // FrameAnimator absent = regression (motion fell back to single-sprite bob).
             var fa = lily.GetComponentInChildren<LilFoots.FrameAnimator>();
-            C(fa == null, "anim: no generated frame sets on the player rig (same-character law)");
+            C(fa != null, "anim: figure frame set wired on the player rig");
+            if (fa != null)
+                C(fa.walk != null && fa.walk.Length >= 6 && fa.jump != null && fa.jump.Length >= 4
+                  && fa.idle != null && fa.idle.Length >= 2,
+                  "anim: figure set complete (walk>=6, jump>=4, idle>=2)");
             // edit-time sprite state is NOT a valid witness (the skinning bridge assigns the
             // deformed copy at runtime; QC shots prove the character renders) - the structural
             // witness is the rig itself: BuildPlayerRigs builds LilyRig from whole_lily.png.
