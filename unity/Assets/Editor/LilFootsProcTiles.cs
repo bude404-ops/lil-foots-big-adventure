@@ -302,11 +302,11 @@ public static class LilFootsProcTiles {
                 // the top of the tile: blade tips peek in, grass cap, soil below.
                 int capTop = _capTopRow;
                 if (capTop < 0) {
-                    var px = srcTex.GetPixels32();
+                    var cpx = srcTex.GetPixels32();
                     int best = H / 3;
                     for (int r = 8; r < H - 8; r++) {
                         float gd = 0f;
-                        for (int xx = 0; xx < W; xx += 8) { var c = px[r * W + xx]; gd += c.g - c.r; }
+                        for (int xx = 0; xx < W; xx += 8) { var c = cpx[r * W + xx]; gd += c.g - c.r; }
                         if (gd / (W / 8) > 10f) { best = r; break; }
                     }
                     _capTopRow = capTop = best;
