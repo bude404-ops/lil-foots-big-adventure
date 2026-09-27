@@ -278,6 +278,7 @@ public static class LilFootsProcTiles {
     /// crops quadrants of paint_dirt.png (seamless both axes). Variants get a tiny per-tile
     /// brightness jitter so treads never read as a photocopied grid. Null when absent.</summary>
     static Texture2D _paintGrass, _paintDirt;
+    static int _capTopRow = -1;   // detected grass-cap edge in paint_grass.png
     static Texture2D PaintedTileTex(bool dirt, int variant) {
         try {
             if (dirt && _paintDirt == null && System.IO.File.Exists("Assets/Art/paint_dirt.png"))
@@ -290,9 +291,30 @@ public static class LilFootsProcTiles {
             var src = srcTex.GetPixels32();
             var outc = new Color32[T * T];
             int v = ((variant % 4) + 4) % 4;
+            int y0;
+            if (dirt) {
+                // dirt: two clean soil windows, skipping the washed-out top quarter
+                y0 = 128 + (v / 2) * 128;
+            } else {
+                // cap: crop from the DETECTED grass line (the painted source can carry a
+                // light wash above the cap - the generated art puts sky glow there), so
+                // find the first strongly green-dominant row and put the organic edge at
+                // the top of the tile: blade tips peek in, grass cap, soil below.
+                int capTop = _capTopRow;
+                if (capTop < 0) {
+                    var px = srcTex.GetPixels32();
+                    int best = H / 3;
+                    for (int r = 8; r < H - 8; r++) {
+                        float gd = 0f;
+                        for (int xx = 0; xx < W; xx += 8) { var c = px[r * W + xx]; gd += c.g - c.r; }
+                        if (gd / (W / 8) > 10f) { best = r; break; }
+                    }
+                    _capTopRow = capTop = best;
+                }
+                y0 = Mathf.Clamp(capTop - 24, 0, H - T);
+            }
             for (int y = 0; y < T; y++) {
-                int sy = dirt ? (v / 2) * (H / 2) + y * (H / 2) / T            // dirt: quadrant rows
-                             : y * (H / 2) / T;                               // cap: top half band
+                int sy = y0 + y;
                 for (int x = 0; x < T; x++) {
                     int sx = (v * (W / 4) + x * (W / 4) / T) % W;             // 4 windows, wrapping seam
                     outc[y * T + x] = src[sy * W + sx];
