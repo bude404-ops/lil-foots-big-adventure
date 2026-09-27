@@ -54,6 +54,17 @@ public static class LilFootsTilemapSkin {
         _dirts  = LoadSet("lf_dirt_a", "lf_dirt_b", "lf_dirt_c", "lf_dirt_d");
         _dirtsL = LoadSet("lf_dirt_l");
         _dirtsR = LoadSet("lf_dirt_r");
+        // painted template (verdict-locked) overrides the procedural set when present
+        if (PaintedTerrainReady()) {
+            var pc = SlicePainted("Assets/Art/art_terrain_paint.png", 0);
+            var pd = SlicePainted("Assets/Art/art_terrain_paint.png", 1);
+            if (pc.Length > 0 && pd.Length > 0) {
+                _caps = pc; _dirts = pd;
+                _capsL = new TileBase[] { pc[0] }; _capsR = new TileBase[] { pc[pc.Length - 1] };
+                _dirtsL = new TileBase[] { pd[0] }; _dirtsR = new TileBase[] { pd[pd.Length - 1] };
+                Debug.Log("[TilemapSkin] PAINTED terrain template active (BudE verdict-locked)");
+            }
+        }
         _ready = _caps.Length > 0 && _dirts.Length > 0;
         if (_ready) Debug.Log("[TilemapSkin] UNITY-GENERATED tiles ready: " + _caps.Length + " caps + "
                               + _dirts.Length + " dirt (+lip variants: " + (_capsL.Length + _capsR.Length + _dirtsL.Length + _dirtsR.Length) + ")");
@@ -65,6 +76,37 @@ public static class LilFootsTilemapSkin {
         var list = new List<TileBase>();
         foreach (var n in names) { var t = LilFootsProcTiles.EnsureTile(n); if (t != null) list.Add(t); }
         return list.ToArray();
+    }
+
+    // [PAINTED TEMPLATE PRIORITY Sept 27 PM - BudE: "I want us to generate templates and
+    // that's how the maps should actually look"] when a painted terrain template exists
+    // (art_terrain_paint.png, generated in the characters' own style and verdict-locked
+    // by BudE), it REPLACES the procedural tile set: sliced into cap tiles (top band,
+    // the mossy grass line) and dirt tiles (fill below), left/right lip variants mirrored
+    // from the edge columns. No file = zero behavior change (procedural fallback).
+    static TileBase[] SlicePainted(string path, int band) {
+        var bytes = System.IO.File.ReadAllBytes(path);
+        var tex = new UnityEngine.Texture2D(2, 2);
+        if (!tex.LoadImage(bytes)) return new TileBase[0];
+        int N = 128;
+        int cols = Mathf.Max(1, tex.width / N);
+        var set = new List<TileBase>();
+        for (int cx = 0; cx < cols; cx++) {
+            var t = new UnityEngine.Texture2D(N, N);
+            int sy = band == 0 ? 0 : N;   // band 0 = top (grass cap), band 1 = fill (earth)
+            t.SetPixels(tex.GetPixels(cx * N, Mathf.Max(0, tex.height - sy - N), N, N));
+            t.Apply();
+            Sprite s = UnityEngine.Sprite.Create(t, new UnityEngine.Rect(0, 0, N, N), new UnityEngine.Vector2(0.5f, 0.5f), 100f);
+            var tile = UnityEngine.ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
+            tile.sprite = s; tile.flags = UnityEngine.Tilemaps.TileFlags.None;
+            set.Add(tile);
+        }
+        Debug.Log("[TilemapSkin] painted template sliced: " + set.Count + " tiles (band " + band + ")");
+        return set.ToArray();
+    }
+
+    static bool PaintedTerrainReady() {
+        return System.IO.File.Exists("Assets/Art/art_terrain_paint.png");
     }
 
     static int Hash(int c, int r) { return ((c * 73856093) ^ (r * 19349663)) & 0x7fffffff; }

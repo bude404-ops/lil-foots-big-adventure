@@ -68,19 +68,31 @@ public class PlayerAnimBridge : MonoBehaviour {
         sc.y = baseScaleY * sq;
         transform.localScale = sc;
         // ---- RUN CYCLE (whole-art motion, no cuts): step-synced bob + stride wobble ----
+        // [READABILITY CRANK Sept 27 PM - BudE: "the character animations are still off"]
+        // the old values were calibrated on the QC stills, not at game zoom: a 0.06u bob
+        // on a 1.2u character is sub-pixel. Paper motion now reads at a glance:
+        //   bob 0.06 -> 0.17u (a real hop per stride), sway 2.2 -> 5deg, lean 6 -> 11deg,
+        //   idle gets a gentle breathing scale so standing is alive too.
         float wobble = 0f;
         if (runBob && !air && speedFrac > 0.05f) {
             runPhase += Time.deltaTime * (8f + 10f * speedFrac);        // stride cadence scales with speed
-            float bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.06f * speedFrac;   // a little hop each step
-            wobble = Mathf.Sin(runPhase * 2f) * 2.2f * speedFrac;              // light stride sway
+            float bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.17f * speedFrac;   // a visible hop each step
+            wobble = Mathf.Sin(runPhase * 2f) * 5f * speedFrac;                // pronounced stride sway
             transform.localPosition = baseLocalPos + new Vector3(0f, bob, 0f);
         } else {
             runPhase = 0f;
             transform.localPosition = baseLocalPos;                      // settle back on the anchor
+            if (!air) {                                                  // idle breathing (scale, no cut)
+                sq = 1f + Mathf.Sin(Time.time * 2.1f) * 0.018f;          // gentle life while standing
+                var sb = transform.localScale;
+                sb.x = baseScaleX * -pc.facing / Mathf.Sqrt(sq);
+                sb.y = baseScaleY * sq;
+                transform.localScale = sb;
+            }
         }
         // lean into the run (reads as forward momentum; halved mid-air so jumps read clean)
         transform.localRotation = Quaternion.Euler(0f, 0f,
-            -pc.facing * 6f * speedFrac * (air ? 0.5f : 1f) + wobble);
+            -pc.facing * 11f * speedFrac * (air ? 0.5f : 1f) + wobble);
     }
 }
 }
