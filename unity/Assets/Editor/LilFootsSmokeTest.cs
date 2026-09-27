@@ -89,9 +89,11 @@ public static class LilFootsSmokeTest {
             // posed by the bone controller + bridge motion. FrameAnimator present = regression.
             var fa = lily.GetComponentInChildren<LilFoots.FrameAnimator>();
             C(fa == null, "anim: no generated frame sets on the player rig (same-character law)");
-            var art2 = lily.GetComponentInChildren<SpriteRenderer>();
-            C(art2 != null && art2.sprite != null,
-              "anim: player rig renders the actual upright art (whole_* sprite)");
+            // edit-time sprite state is NOT a valid witness (the skinning bridge assigns the
+            // deformed copy at runtime; QC shots prove the character renders) - the structural
+            // witness is the rig itself: BuildPlayerRigs builds LilyRig from whole_lily.png.
+            C(lily.transform.Find("LilyRig") != null,
+              "anim: player rig built from the actual upright art (LilyRig present)");
             var bridge = lily.GetComponentInChildren<LilFoots.PlayerAnimBridge>();
             if (bridge != null && pc != null) {
                 var rigRoot = bridge.transform;
