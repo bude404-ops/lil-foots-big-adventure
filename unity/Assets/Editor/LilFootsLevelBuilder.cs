@@ -171,8 +171,25 @@ public static class LilFootsLevelBuilder {
             Debug.Log("[LevelBuilder] bump tiles placed: " + bi + " (contents: mario-style underside hits)");
         }
 
+        // ---- BUILD IDENTITY (BudE Sept 27 PM: 'only sends the fixed updated versions'):
+        // every shipped scene carries proof of what it is. The smoke gate asserts this
+        // matches the MAP_DATA/BUILD_SHA the dispatcher asked for — a stale or wrong map
+        // can never reach the live link silently again.
+        {
+            var idGo = new GameObject("MapIdentity");
+            var id = idGo.AddComponent<LilFoots.MapIdentity>();
+            id.dataFile = System.IO.Path.GetFileName(DataPath);
+            var sha = System.Environment.GetEnvironmentVariable("BUILD_SHA");
+            var stampv = System.Environment.GetEnvironmentVariable("BUILD_STAMP");
+            id.buildSha = string.IsNullOrEmpty(sha) ? "local" : sha;
+            id.buildStamp = string.IsNullOrEmpty(stampv) ? "local" : stampv;
+            if (data.ContainsKey("plats") && data["plats"] is System.Collections.IEnumerable pe) { foreach (var _ in pe) id.plats++; }
+            if (data.ContainsKey("tokens") && data["tokens"] is System.Collections.IEnumerable te) { foreach (var _ in te) id.tokens++; }
+            if (data.ContainsKey("bumps") && data["bumps"] is System.Collections.IEnumerable be) { foreach (var _ in be) id.bumps++; }
+            Debug.Log("[LevelBuilder] identity: " + id.Describe() + " plats=" + id.plats + " tokens=" + id.tokens + " bumps=" + id.bumps);
+        }
+
         // ---- gate ----
-        var gate = new GameObject("Gate");
         gate.transform.SetParent(root.transform);
         // TERMINUS LAW (BudE: flag + portal at the course END, not mid-course): the old
         // hardcoded x=86 put the gate inside long courses (map_r1_1 is 225u wide); place

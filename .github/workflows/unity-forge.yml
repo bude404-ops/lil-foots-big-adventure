@@ -71,6 +71,8 @@ jobs:
       RIG: ${{ inputs.rig }}
       IDLE: ${{ inputs.idle }}
       SHIP: ${{ inputs.ship || '0' }}
+      BUILD_SHA: ${{ github.sha }}
+      BUILD_STAMP: run-${{ github.run_number }}
       MAP_SCENE: ${{ inputs.map_scene || 'Map001' }}
       MAP_DATA: ${{ inputs.map_data || 'map001.json' }}
       LILFOOTS_TILEMAP: ${{ inputs.tilemap || '0' }}
@@ -94,7 +96,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e APK_OUT=/project/unity/Builds/LilFoots.apk \
-            -e UUSER="${{ inputs.uuser }}" -e UPASS="${{ inputs.upass }}" -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
+            -e UUSER="${{ inputs.uuser }}" -e UPASS="${{ inputs.upass }}" -e LAYERS -e LILFOOTS_LAYERS -e LILFOOTS_UI -e RIG -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA -e BUILD_SHA -e BUILD_STAMP \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -194,7 +196,11 @@ jobs:
             # NO QC SHOT DMs (art-fatigue rule). A shipped build DMs the playable link only.
             if [ "$FX" = "0" ]; then
               SMOKE=$(grep -o '"passed": [0-9]*' smoke-report.json 2>/dev/null | grep -o '[0-9]*' || true)
-              if [ "$SHIP" != "1" ]; then
+              # [SHIP-PURITY Sept 27 PM - BudE: 'only send fixed updated versions'] this job
+              # must NEVER DM the live link: it fires before the webgl build exists, which is
+              # exactly how stale-map DMs went out. The ONLY link DM is the publish job, sent
+              # after the fresh artifact is published and Pages serves HTTP 200, with identity.
+              if false; then
                 curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" -F "chat_id=${BIG_CHAT}" \
                   -F "text=New playable build is live: https://mcontwitter-glitch.github.io/lil-foots-v2-live/ (Chrome on desktop/Android). Machine play-test green: ${SMOKE:-all} checks passed." || true
               fi
@@ -280,6 +286,8 @@ jobs:
       LILFOOTS_TILEMAP: ${{ inputs.tilemap || '0' }}
       MAP_SCENE: ${{ inputs.map_scene || 'Map001' }}
       MAP_DATA: ${{ inputs.map_data || 'map001.json' }}
+      BUILD_SHA: ${{ github.sha }}
+      BUILD_STAMP: run-${{ github.run_number }}
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -300,7 +308,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/project" -w /project \
             -e QC_OUT=/project/unity/QCShots -e WEBGL_OUT=/project/unity/Builds/WebGL \
-            -e UUSER="${{ inputs.uuser }}" -e UPASS="${{ inputs.upass }}" -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA \
+            -e UUSER="${{ inputs.uuser }}" -e UPASS="${{ inputs.upass }}" -e LILFOOTS_TILEMAP -e MAP_SCENE -e MAP_DATA -e BUILD_SHA -e BUILD_STAMP \
             "$UIMG" bash -c '
               LIC=$(find /opt/unity -type f -name "Unity.Licensing.Client" 2>/dev/null | head -1)
               if [ -z "$LIC" ]; then LIC=$(find /opt/unity -type f -iname "*Licensing.Client*" ! -name "*.config" ! -name "*.dll" 2>/dev/null | head -1); fi
@@ -362,6 +370,8 @@ jobs:
           rm -rf site && mkdir -p site
           unzip -q lilfoots-webgl-site.zip -d site
           ls site
+          # [SHIP-PURITY Sept 27 PM] the published site states exactly what build it is
+          echo "lil-foots build ${{ github.sha }} (run-${{ github.run_number }}) map=${{ inputs.map_data || 'map001.json' }}" > site/version.txt
           # ---- WEBGL PHONE INPUT FIX (Sept 20, Bude: jump button dead + stuck on select):
           # phone browsers claim canvas touches for scroll/pull-to-refresh, which kills
           # Unity's uGUI pointer events (touch deck AND character select go dead).
@@ -399,4 +409,4 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${BTOK}/sendMessage" \
             -F "chat_id=${BIG_CHAT}" \
-            -F "text=NEW PLAYABLE IS LIVE: ${URL} — this link is freshly shipped from this build, not a cached one. Open in CHROME (Telegram's built-in browser blocks WebGL). On-screen LEFT/RIGHT/JUMP buttons, also works with a mouse." || true
+            -F "text=NEW PLAYABLE IS LIVE: ${URL} — build ${{ github.sha }} (run-${{ github.run_number }}), map ${{ inputs.map_data || 'map001.json' }}, play-test green. The version stamp bottom-right on the menu shows the same, so you can always confirm you're on the newest one. Open in CHROME (Telegram's built-in browser blocks WebGL). On-screen LEFT/RIGHT/JUMP buttons, also works with a mouse." || true

@@ -1043,6 +1043,24 @@ namespace LilFoots.EditorTools
         ///    select law is ANIMATED idle, not a static portrait. Static-sprite fallback if the
         ///    rig stage can't build.</summary>
         static void BuildCharacterMenu(UnityEngine.Camera cam) {
+        // [BUILD IDENTITY LABEL Sept 27 PM] tiny corner stamp so anyone (BudE included)
+        // can see at a glance WHICH build they are playing — kills 'is this the newest?' forever.
+        {
+            var vgo = new GameObject("BuildStampLabel");
+            vgo.transform.SetParent(cam.transform, false);
+            var vt = vgo.AddComponent<UnityEngine.UI.Text>();
+            vt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            vt.fontSize = 14;
+            vt.color = new UnityEngine.Color(1f, 1f, 1f, 0.45f);
+            vt.alignment = TextAnchor.LowerRight;
+            var vr = vgo.AddComponent<UnityEngine.UI.Text>() != null ? vgo.GetComponent<UnityEngine.UI.Text>() : vt;
+            var rt = vgo.GetComponent<UnityEngine.RectTransform>();
+            rt.anchorMin = new Vector2(1f, 0f); rt.anchorMax = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-6f, 4f); rt.sizeDelta = new Vector2(300f, 18f);
+            var id = UnityEngine.Object.FindObjectOfType<LilFoots.MapIdentity>();
+            vr.text = id != null ? ("Lil Foots build " + id.buildStamp + " - " + id.buildSha.Substring(0, System.Math.Min(7, id.buildSha.Length)) + " - " + id.dataFile)
+                                 : "Lil Foots build (local)";
+        }
             // 1) EventSystem first - but check the SCENE, not EventSystem.current (current is
             // null in edit mode even when one exists; a duplicate EventSystem breaks uGUI input
             // stability at runtime - the Sept 19 jump-button suspect).

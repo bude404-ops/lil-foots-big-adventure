@@ -85,6 +85,17 @@ public static class LilFootsSmokeTest {
         C(UnityEngine.GameObject.Find("DepthFringe_0") != null, "depth: foreground fringe present");
         // [BUMP TILES Sept 27 PM - BudE: "hittable if you [hit] below them like in mario"]
         C(UnityEngine.GameObject.Find("BumpBlock_0") != null, "bump: hittable bump block present (mario-style)");
+        // [IDENTITY GATE Sept 27 PM - BudE: 'only sends the fixed updated versions'] the
+        // shipping scene must PROVE it is the requested map from the requested commit.
+        {
+            var id = UnityEngine.Object.FindObjectOfType<LilFoots.MapIdentity>();
+            string want = System.Environment.GetEnvironmentVariable("MAP_DATA");
+            if (string.IsNullOrEmpty(want)) want = "map001.json";
+            string wantFile = want.Contains("/") ? want.Substring(want.LastIndexOf('/') + 1) : want;
+            string sha = System.Environment.GetEnvironmentVariable("BUILD_SHA");
+            bool ok = id != null && id.dataFile == wantFile && (string.IsNullOrEmpty(sha) || id.buildSha == sha);
+            C(ok, "identity: shipping the REQUESTED map + commit (" + (id != null ? id.Describe() : "NO MapIdentity - STALE SCENE") + ", asked for " + wantFile + ")");
+        }
         // [FOOTPRINT TRAIL Sept 27 PM - BudE approved: lives = glowing footprint trail, not hearts]
         C(UnityEngine.GameObject.Find("HUDPrint0") != null, "hud: footprint trail present (lore-native lives)");
         bool anyBark = false;
