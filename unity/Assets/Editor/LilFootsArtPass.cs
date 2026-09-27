@@ -1003,7 +1003,9 @@ namespace LilFoots.EditorTools
             dim.anchorMin = Vector2.zero; dim.anchorMax = Vector2.one;
             dim.sizeDelta = Vector2.zero;
             var dimImg = dim.gameObject.AddComponent<UnityEngine.UI.Image>();
-            dimImg.color = new Color(0f, 0f, 0f, 0.30f);
+            // [CINEMATIC VISTA Sept 27 PM] lighter veil - the region vista carries the depth now,
+            // and the cards own their own contrast via the panel backing
+            dimImg.color = new Color(0f, 0f, 0f, 0.18f);
 
             // title
             var title = MakeUi(go.transform, "Title");
@@ -1014,6 +1016,20 @@ namespace LilFoots.EditorTools
             tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             tt.fontSize = 64; tt.alignment = TextAnchor.MiddleCenter; tt.color = new Color(1f, 0.92f, 0.55f);
             tt.text = "CHOOSE YOUR LIL FOOT";
+
+            // [CINEMATIC VISTA Sept 27 PM - BudE: "a cinematic look of what the region is per
+            // map"] the region label sits under the title so the select screen names the world
+            // you are about to enter (matches the terrain palette table + backdrop).
+            var rsub = MakeUi(go.transform, "RegionSub");
+            rsub.anchorMin = rsub.anchorMax = new Vector2(0.5f, 1f);
+            rsub.pivot = new Vector2(0.5f, 1f);
+            rsub.anchoredPosition = new Vector2(0f, -148f);
+            rsub.sizeDelta = new Vector2(700f, 44f);
+            var rst = rsub.gameObject.AddComponent<UnityEngine.UI.Text>();
+            rst.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            rst.fontSize = 30; rst.alignment = TextAnchor.MiddleCenter;
+            rst.color = new Color(0.92f, 0.89f, 0.72f);
+            rst.text = LilFootsProcTiles.RegionCaption();
 
             // ---- IDLE RIG STAGE (select law): 3 rigged characters on an off-map stage,
             // one shared RenderTexture; each card shows its third. Fails soft to static art. ----
