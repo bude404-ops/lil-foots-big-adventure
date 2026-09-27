@@ -27,6 +27,8 @@ public class PlayerAnimBridge : MonoBehaviour {
     [HideInInspector] public bool runBob = true;   // FrameAnimator sets false: generated frames carry the stride
     float runPhase;              // stride cycle clock
     Vector3 baseLocalPos;        // feet-anchor offset baked by RigPass - bob rides ON TOP of it
+    int prevFacing;              // [MOTION-FEEL Sept 27 PM] turn snap: an overshoot spring on direction change
+    float turnSnap, turnVel;
 
     void Awake() {
         baseScaleX = Mathf.Abs(transform.localScale.x);
@@ -53,11 +55,24 @@ public class PlayerAnimBridge : MonoBehaviour {
             squash = 1.16f; squashVel = 0f;               // TAKE-OFF: tall stretch snap
         }
         wasAir = air;
+        // [MOTION-FEEL Sept 27 PM - BudE: "character animations are still off"] AIR POSE
+        // PHASES: the whole flight now reads - rising stretches tall (neutral 1.10), the
+        // apex floats neutral, falling flattens (0.94) like bracing for the plant. The
+        // spring chases the PHASE neutral, not a flat 1.0, so the arc has shape.
+        float vy = pc.rb.velocity.y;
+        float neutral = 1f;
+        if (air) neutral = vy > 1.5f ? 1.10f : (vy < -2f ? 0.94f : 1.02f);
         // spring back to neutral (stiff spring, heavy damping - snappy, no wobble)
         float k = 170f, d = 15f;
-        squashVel += (k * (1f - squash) - d * squashVel) * Time.deltaTime;
+        squashVel += (k * (neutral - squash) - d * squashVel) * Time.deltaTime;
         squash += squashVel * Time.deltaTime;
         float sq = Mathf.Clamp(squash, 0.72f, 1.24f);
+        // turn snap: a quick overshoot rotation when the direction flips - the character
+        // visibly ANSWERS the input instead of gluing flat.
+        if (prevFacing != 0 && pc.facing != prevFacing) { turnSnap = pc.facing * 7f; turnVel = 0f; }
+        prevFacing = pc.facing;
+        turnVel += (220f * (0f - turnSnap) - 18f * turnVel) * Time.deltaTime;
+        turnSnap += turnVel * Time.deltaTime;
 
         // ---- facing + paper scale + run lean, composed (flip law unchanged) ----
         // ART FACES LEFT NATIVELY (same law as the JS engine): moving RIGHT (facing=+1)
@@ -73,10 +88,12 @@ public class PlayerAnimBridge : MonoBehaviour {
         // on a 1.2u character is sub-pixel. Paper motion now reads at a glance:
         //   bob 0.06 -> 0.17u (a real hop per stride), sway 2.2 -> 5deg, lean 6 -> 11deg,
         //   idle gets a gentle breathing scale so standing is alive too.
-        float wobble = 0f;
+        float wobble = 0f, idleSway = 0f;
         if (runBob && !air && speedFrac > 0.05f) {
             runPhase += Time.deltaTime * (8f + 10f * speedFrac);        // stride cadence scales with speed
-            float bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.17f * speedFrac;   // a visible hop each step
+            // ASYMMETRIC HOP: sharp plant, floaty top (pow 0.7 shapes the |sin| wave) -
+            // a symmetric bob reads as a sewing machine; this reads as steps.
+            float bob = Mathf.Pow(Mathf.Abs(Mathf.Sin(runPhase)), 0.7f) * 0.17f * speedFrac;
             wobble = Mathf.Sin(runPhase * 2f) * 5f * speedFrac;                // pronounced stride sway
             transform.localPosition = baseLocalPos + new Vector3(0f, bob, 0f);
         } else {
@@ -88,11 +105,12 @@ public class PlayerAnimBridge : MonoBehaviour {
                 sb.x = baseScaleX * -pc.facing / Mathf.Sqrt(sq);
                 sb.y = baseScaleY * sq;
                 transform.localScale = sb;
+                idleSway = Mathf.Sin(Time.time * 1.7f) * 1.4f;           // slow sway so standing feels alive
             }
         }
-        // lean into the run (reads as forward momentum; halved mid-air so jumps read clean)
+        // lean into the run (momentum) + stride sway + turn snap + idle sway, composed
         transform.localRotation = Quaternion.Euler(0f, 0f,
-            -pc.facing * 11f * speedFrac * (air ? 0.5f : 1f) + wobble);
+            -pc.facing * 9f * speedFrac * (air ? 0.35f : 1f) + wobble + turnSnap + idleSway);
     }
 }
 }

@@ -272,6 +272,46 @@ public static class LilFootsProcTiles {
         return char.IsDigit(c) ? (c - '0') : (char.ToLower(c) - 'a');
     }
 
+    /// <summary>[STYLE MATCH Sept 27 PM] cuts a 256px tile out of the painterly terrain
+    /// art that matches the character style. Caps crop from the TOP band of paint_grass.png
+    /// (grass line + soil transition, horizontally seamless so wrapped crops tile); dirt
+    /// crops quadrants of paint_dirt.png (seamless both axes). Variants get a tiny per-tile
+    /// brightness jitter so treads never read as a photocopied grid. Null when absent.</summary>
+    static Texture2D _paintGrass, _paintDirt;
+    static Texture2D PaintedTileTex(bool dirt, int variant) {
+        try {
+            if (dirt && _paintDirt == null && System.IO.File.Exists("Assets/Art/paint_dirt.png"))
+                { _paintDirt = new Texture2D(2, 2); _paintDirt.LoadImage(System.IO.File.ReadAllBytes("Assets/Art/paint_dirt.png")); }
+            if (!dirt && _paintGrass == null && System.IO.File.Exists("Assets/Art/paint_grass.png"))
+                { _paintGrass = new Texture2D(2, 2); _paintGrass.LoadImage(System.IO.File.ReadAllBytes("Assets/Art/paint_grass.png")); }
+            var srcTex = dirt ? _paintDirt : _paintGrass;
+            if (srcTex == null) return null;
+            int W = srcTex.width, H = srcTex.height, T = 256;
+            var src = srcTex.GetPixels32();
+            var outc = new Color32[T * T];
+            int v = ((variant % 4) + 4) % 4;
+            for (int y = 0; y < T; y++) {
+                int sy = dirt ? (v / 2) * (H / 2) + y * (H / 2) / T            // dirt: quadrant rows
+                             : y * (H / 2) / T;                               // cap: top half band
+                for (int x = 0; x < T; x++) {
+                    int sx = (v * (W / 4) + x * (W / 4) / T) % W;             // 4 windows, wrapping seam
+                    outc[y * T + x] = src[sy * W + sx];
+                }
+            }
+            // per-variant brightness jitter (subtle: -4%..+4%) so repeats never photocopy
+            float jit = 0.96f + 0.08f * (((variant * 37) % 7) / 6f);
+            var tex = new Texture2D(T, T, TextureFormat.RGBA32, false);
+            tex.SetPixels32(outc);
+            var px = tex.GetPixels();
+            for (int i = 0; i < px.Length; i++) px[i] = new Color(px[i].r * jit, px[i].g * jit, px[i].b * jit, 1f);
+            tex.SetPixels(px); tex.Apply();
+            return tex;
+        } catch (System.Exception e) {
+            Debug.LogWarning("[ProcTiles] painted tile source unavailable, using Unity painter: " + e.Message);
+            return null;
+        }
+    }
+
     /// <summary>Generates the PNG if missing (Unity builds it), imports at 256ppu, and
     /// returns a persistent Tile asset. No painted art is loaded - the file at
     /// Assets/Art/Tiles/<name>.png IS the Unity-generated skin.</summary>
@@ -284,8 +324,15 @@ public static class LilFootsProcTiles {
             bool dirt = name.Contains("dirt");
             bool lipL = name.EndsWith("_l");
             bool lipR = name.EndsWith("_r");
-            Texture2D tex = dirt ? DirtTex(VariantOf(name), lipL, lipR)
-                                 : CapTex(VariantOf(name), lipL, lipR);
+            // [STYLE MATCH Sept 27 PM - BudE: "art graphics arent quality or match the art of
+            // our characters"] PAINTERLY SOURCE: if the generated painterly terrain art
+            // (painted to match the character art, committed at Assets/Art/paint_*.png) is
+            // present, tiles are cut FROM IT instead of the flat cleanse painters. The world
+            // now shares the characters' brush. Falls back to the Unity-built painters if
+            // the painted files are absent (never a hard dependency).
+            Texture2D tex = PaintedTileTex(dirt, VariantOf(name));
+            if (tex == null) tex = dirt ? DirtTex(VariantOf(name), lipL, lipR)
+                                        : CapTex(VariantOf(name), lipL, lipR);
             File.WriteAllBytes(png, tex.EncodeToPNG());
         }
         // [FRESH-RUNNER FIX 2 Sept 27] same crash family as EnsureSprite/EnsureSky:
@@ -818,8 +865,12 @@ public static class LilFootsProcTiles {
 
     /// <summary>The Unity-generated sky as a loadable Sprite (camera-pinned backdrop).</summary>
     public static Sprite EnsureSky() {
-        const string path = "Assets/Art/Generated/unity_sky_v2.png";   // v2 = clean flat cleanse (no stale textured sky)
+        // [STYLE MATCH Sept 27 PM] the painterly sky (painted to match the character art)
+        // takes precedence; the flat cleanse sky is only the fallback.
+        const string painted = "Assets/Art/paint_sky.png";
+        const string path = "Assets/Art/Generated/unity_sky_painted.png";
         Directory.CreateDirectory("Assets/Art/Generated");
+        if (System.IO.File.Exists(painted)) System.IO.File.Copy(painted, path, true);
         if (!File.Exists(path)) File.WriteAllBytes(path, SkyTex().EncodeToPNG());
         // [FRESH-RUNNER FIX Sept 26 PM] see EnsureSprite: refresh before GetAtPath,
         // null-guard the importer. This exact line NRE'd run 36283818694's WebGL job.
