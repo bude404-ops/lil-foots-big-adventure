@@ -483,7 +483,7 @@ namespace LilFoots.EditorTools
             var water = Art("art_stream.png");
             var plats = (List<object>)data["plats"];
             var sorted = plats.Cast<List<object>>()
-                .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]) })
+                .Select(p => new float[] { F(p[0]), F(p[1]), F(p[2]), F(p[3]), p.Count > 4 ? F(p[4]) : 0f })   // [KIT Sept 28] 5th elem = hop kind (1=branchL 2=branchR 3=rockL 4=rockR)
                 .OrderBy(a => a[0]).ToList();
             if (water != null && L(2) && !isLong && !isEpic && !isDt && !isTile) {   // [TILEMAP CLEANSE Sept 26] painted water retired on tile maps
                 // MAP v2 (Bude, Sept 20 course redo): hop blocks now float OVER ground, so the
@@ -615,6 +615,16 @@ namespace LilFoots.EditorTools
                 }
             }
 
+            // [KIT Sept 28] hop kind lookup: plat GameObjects are named "Plat_<canvasX>", so the
+            // 5th element of the matching raw plats entry gives the directional hop art kind.
+            System.Func<string, int> hopKindOf = (goName) => {
+                if (!goName.StartsWith("Plat_")) return 0;
+                float nx; if (!float.TryParse(goName.Substring(5), out nx)) return 0;
+                foreach (var pe in plats.Cast<List<object>>())
+                    if (F(pe[0]) == nx && pe.Count > 4) return (int)F(pe[4]);
+                return 0;
+            };
+
             // ---- PLATFORM SKINS: real earth body + ground strip top (procedural slabs retired) ----
             var earth = Art("art_earth_new.png"); // NEW world skin (BudE: fresh art with the new building system)
             // [ZONE REBUILD] old flat grass strip art RETIRED (BudE Sept 21: remove the old blocks and arts) - surface is the organic cap + edge system
@@ -630,6 +640,20 @@ namespace LilFoots.EditorTools
 
                 // HOP BLOCKS (PIECE 2, BudE 'Keep' Sept 20): thin floaters (h < 2u) are NOT
                 // ground - they wear the approved hop-block slab instead of earth + grass.
+                // [KIT Sept 28 - BudE: hop platforms must be the actual left/right side of the
+                // tree/rock they mimic] a plat carrying a hop KIND wears its bare-object kit
+                // sprite (branch_L/R, rockledge_L/R) sized to the slab - the same worldskin art
+                // as the background so it reads as the lit front edge of a real structure.
+                if (isTile && h < 2f && hopKindOf(child.name) > 0) {
+                    int kind = hopKindOf(child.name);
+                    string kitFile = kind == 1 ? "t_branch_L.png" : kind == 2 ? "t_branch_R.png"
+                                  : kind == 3 ? "t_rockledge_L.png" : "t_rockledge_R.png";
+                    var kit = LilFootsProcTiles.KitSprite(kitFile);
+                    if (kit != null) {
+                        SpriteGo("HopKit", kit, new Vector3(child.position.x, child.position.y, 0), w * 1.12f, -2, child);
+                        continue;
+                    }
+                }
                 if (isTile && h < 2f) {
                     // [TILEMAP CLEANSE Sept 26] tile-mode hops: flat Unity quads only (sage cap + flat earth
                     // body) - zero painted files, matches the flat tilemap canon. Never falls through to the
@@ -731,7 +755,8 @@ namespace LilFoots.EditorTools
             // ---- CHECKPOINT TOTEMS (PIECE 5, BudE 'Keep piece 5' Sept 21): approved mossy cedar
             // trail totem with glowing footprint emblem. Unlit = dim moss tint; the controller
             // brightens it to full color when the player claims it.
-            var totem = isTile ? LilFootsProcTiles.EnsureSprite("unity_totem") : Art("art_checkpoint.png");   // [CLEANSE Sept 26 ~1:36 AM ET] tilemap maps wear the clean Unity-built totem
+            var totem = LilFootsProcTiles.KitSprite("t_totem.png");   // [KIT Sept 28] authored carved totem (sizing law: 1.7u tall)
+            if (totem == null) totem = isTile ? LilFootsProcTiles.EnsureSprite("unity_totem") : Art("art_checkpoint.png");   // [CLEANSE Sept 26 ~1:36 AM ET] tilemap maps wear the clean Unity-built totem
             if (totem != null && !isDt) {
                 for (int ci = 0; ci < 64; ci++) {
                     var cp = GameObject.Find("Checkpoint_" + ci);
@@ -740,10 +765,11 @@ namespace LilFoots.EditorTools
                     // of the grass'): the totem was centered on the cp trigger at the ground
                     // LINE, sinking it half into the earth. The art rides a child raised so its
                     // FEET sit ON the grass (top = GroundY), trigger stays put.
-                    float cf = 3.4f / totem.bounds.size.y;   // [SCALE LAW Sept 21] totem 3.4u tall - world dwarfs the character (BudE: 'objects way bigger than the lil foots')
+                    float totemH = 1.7f;   // [SIZING LAW Sept 28] totem 1.7u tall, center at surface+0.85
+                    float cf = totemH / totem.bounds.size.y;
                     var to = new GameObject("TotemArt");
                     to.transform.SetParent(cp.transform, false);
-                    to.transform.localPosition = new Vector3(0f, 1.7f, 0f); // feet on the grass
+                    to.transform.localPosition = new Vector3(0f, totemH / 2f, 0f); // feet on the grass
                     to.transform.localScale = new Vector3(cf, cf, 1f);
                     var sr = to.AddComponent<SpriteRenderer>();
                     sr.sprite = totem; sr.sortingOrder = 1;
@@ -793,6 +819,13 @@ namespace LilFoots.EditorTools
             // ---- FINISH: flagpole gate + portal (real props) ----
             var gate = GameObject.Find("Gate");
             if (gate != null && L(2) && !isFull && !isLong && !isEpic && !isDt) {   // [FULL MAP] flag + portal are painted into the terminus (trigger stays)
+                // [KIT Sept 28] the finish flag is the authored kit gate (carved pole + footprint
+                // flag, 3.2u, base on the gate surface) - procedural quads are the fallback only.
+                var kitGate = LilFootsProcTiles.KitSprite("t_flag_gate.png");
+                if (kitGate != null) {
+                    float gx0 = gate.transform.position.x; float gs = gate.transform.position.y;
+                    Reskin("FlagGateArt", kitGate, new Vector3(gx0, gs + 1.6f, 0), 3.2f, 4, map.transform);
+                } else
                 if (isTile) {
                     // [TILEMAP CLEANSE Sept 26] tile-mode finish: flat Unity-built flag + portal
                     // (pole, flag, arch pillars + lintel + veil) - zero painted prop files.

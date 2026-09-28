@@ -177,6 +177,56 @@ public static class LilFootsLevelBuilder {
             Debug.Log("[LevelBuilder] bump tiles placed: " + bi + " (contents: mario-style underside hits)");
         }
 
+        // ---- GULLY WATER [Sept 28 - BudE: platforms cross "rivers"]: {x,y,w} canvas planes of
+        // the locked stream art tiling across a carved gully bottom. Visual (no kill plane):
+        // falling in means running the gully floor to the shore ramp - never a softlock. ----
+        if (data.ContainsKey("water")) {
+            var waters = (System.Collections.Generic.List<object>)data["water"];
+            var stream = Art("art_stream.png");
+            int wi = 0;
+            if (stream != null) {
+                foreach (var wo in waters.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
+                    float wx = F(wo["x"]) / 100f, wy = 2f * GY - F(wo["y"]) / 100f, ww = F(wo["w"]) / 100f;
+                    float wf = 1.6f / stream.bounds.size.y;   // stream surface strip ~1.6u tall
+                    float tileW = stream.bounds.size.x * wf;
+                    for (float tx = wx - ww / 2f; tx < wx + ww / 2f - 0.05f; tx += tileW) {
+                        var tw = new GameObject("Water_" + (wi++));
+                        tw.transform.SetParent(root.transform);
+                        tw.transform.position = new Vector3(tx + tileW / 2f, wy - 0.28f, 0);
+                        tw.transform.localScale = new Vector3(wf, wf, 1f);
+                        var tsr = tw.AddComponent<SpriteRenderer>();
+                        tsr.sprite = stream; tsr.sortingOrder = -3;   // behind hops, above gully dirt
+                    }
+                }
+            }
+            Debug.Log("[LevelBuilder] water planes placed: " + wi);
+        }
+
+        // ---- DEPTH SETPIECES [Sept 28 kit]: {type,x,base,dim} cedar giants / rock spines as
+        // bare-object kit sprites standing BEHIND the play layer, dimmed to sit into their depth
+        // plane - the diorama's landmarks (they are never colliders). ----
+        if (data.ContainsKey("setpieces")) {
+            var sps = (System.Collections.Generic.List<object>)data["setpieces"];
+            int si = 0;
+            foreach (var so in sps.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
+                string type = so.ContainsKey("type") ? so["type"].ToString() : "cedar";
+                var sprite = LilFootsProcTiles.KitSprite(type == "cedar" ? "t_cedar_giant.png" : "t_rock_spine.png");
+                if (sprite == null) continue;
+                float spx = F(so["x"]) / 100f, baseY = 2f * GY - F(so["base"]) / 100f;
+                float spH = type == "cedar" ? 6.5f : 4.0f;   // sizing law: cedar 6.5u, rock spine 4u
+                var go = new GameObject("Setpiece_" + type + "_" + (si++));
+                go.transform.SetParent(root.transform);
+                go.transform.position = new Vector3(spx, baseY + spH / 2f, 0);
+                float f = spH / sprite.bounds.size.y;
+                go.transform.localScale = new Vector3(f, f, 1f);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = sprite; sr.sortingOrder = -58;   // behind play layer (-2), above far bands (-70)
+                float dim = so.ContainsKey("dim") ? (float)System.Convert.ToDouble(so["dim"]) : 0.72f;
+                sr.color = new Color(dim, dim + 0.06f, dim + 0.03f, 1f);   // dimmed into its depth plane
+            }
+            Debug.Log("[LevelBuilder] setpieces placed: " + si);
+        }
+
         // ---- BUILD IDENTITY (BudE Sept 27 PM: 'only sends the fixed updated versions'):
         // every shipped scene carries proof of what it is. The smoke gate asserts this
         // matches the MAP_DATA/BUILD_SHA the dispatcher asked for — a stale or wrong map
@@ -288,6 +338,19 @@ public static class LilFootsLevelBuilder {
     }
 
     static float F(object o) { return System.Convert.ToSingle(o); }
+    /// <summary>[GULLY WATER Sept 28] loads a plain art sprite (fallback null) for LevelBuilder-side
+    /// prop placement (the locked stream water).</summary>
+    static Sprite Art(string file) {
+        string path = "Assets/Art/" + file;
+        if (!System.IO.File.Exists(path)) return null;
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) return null;
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = 100f;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
 
     /// <summary>Placeholder white slab sprite (visible until the art pass swaps in art-bible surfaces).</summary>
     /// <summary>Painted slope wedge: grass cap band on top + dirt cross-section below,
