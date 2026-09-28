@@ -949,6 +949,8 @@ public static class LilFootsProcTiles {
         return tex;
     }
     public static Sprite EnsureBumpBlock() {
+        var kit = KitSprite("t_bump_block2.png");   // [KIT Sept 28] authored mossy-cedar bump block first
+        if (kit != null) return kit;
         return EnsureGeneratedTex("unity_bump_r" + Region, BumpBlockTex);
     }
 
@@ -962,6 +964,23 @@ public static class LilFootsProcTiles {
         ti.textureType = TextureImporterType.Sprite;
         ti.spriteImportMode = SpriteImportMode.Single;
         ti.spritePixelsPerUnit = 100f;
+        ti.SaveAndReimport();
+        return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+    }
+    /// <summary>[KIT WIRING Sept 28 - BudE green-lit the full art template kit] loads a bare-object
+    /// kit prop (Assets/Art/Props/*.png): chroma-born isolated art per the no-cutout law, painted
+    /// from the same worldskin reference as the backgrounds so it matches the layer it is placed
+    /// on. Returns null when the file is absent so every caller keeps its procedural fallback.</summary>
+    public static Sprite KitSprite(string file) {
+        string path = "Assets/Art/Props/" + file;
+        if (!File.Exists(path)) return null;
+        AssetDatabase.Refresh();
+        var ti = (TextureImporter)AssetImporter.GetAtPath(path);
+        if (ti == null) { Debug.LogWarning("[ProcTiles] kit prop importer missing: " + path); return null; }
+        ti.textureType = TextureImporterType.Sprite;
+        ti.spriteImportMode = SpriteImportMode.Single;
+        ti.spritePixelsPerUnit = 100f;
+        ti.alphaIsTransparency = true;
         ti.SaveAndReimport();
         return AssetDatabase.LoadAssetAtPath<Sprite>(path);
     }

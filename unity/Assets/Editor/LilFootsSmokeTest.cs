@@ -266,6 +266,25 @@ public static class LilFootsSmokeTest {
                 .OrderBy(p => p.x0).ToList();
             C(plats.Count >= 10, "geometry: platform colliders present (" + plats.Count + ")");
 
+            // [SLOPED TERRAIN Sept 28 - BudE: hills the player runs on] ramp surfaces join the
+            // reachability graph as walk nodes: each ramp contributes TWO endpoint nodes (the
+            // surface line at each end). Ramps must wear a SpriteRenderer (a bare rotated
+            // collider would be an invisible slope) and their art must cover the collider.
+            var rampNodes = new List<UnityEngine.Vector3>(); // x, top, x(other end) pairs
+            {
+                var ramps = UnityEngine.Object.FindObjectsOfType<Transform>()
+                    .Where(t => t.name.StartsWith("Ramp_") && t.GetComponent<BoxCollider2D>() != null).ToList();
+                int bareRamps = 0;
+                foreach (var rp in ramps) {
+                    if (rp.GetComponent<SpriteRenderer>() == null || rp.GetComponent<SpriteRenderer>().sprite == null) bareRamps++;
+                    foreach (Transform ch in rp) {
+                        if (ch.name == "RampEnd0" || ch.name == "RampEnd1")
+                            rampNodes.Add(ch.position);
+                    }
+                }
+                C(bareRamps == 0, "geometry: no invisible slopes (" + bareRamps + " bare ramps)");
+            }
+
             // (a) ONE-PIECE ART COVERAGE (Sept 27 PM: 'one large piece should be one large
             // art piece' + the invisible-ground bug): every ground collider must wear a
             // continuous GroundArt canvas whose bounds match the collider — the canvas
@@ -300,17 +319,24 @@ public static class LilFootsSmokeTest {
                 }
                 C(si >= 0, "geometry: spawn stands on a platform");
                 if (si >= 0) {
-                    bool[] reach = new bool[plats.Count]; reach[si] = true;
+                    // unified node set: platform tops + ramp endpoint surfaces (x, top).
+                    int NP = plats.Count, NR = rampNodes.Count;
+                    var nodeX0 = new float[NP + NR]; var nodeX1 = new float[NP + NR]; var nodeTop = new float[NP + NR];
+                    for (int i = 0; i < NP; i++) { nodeX0[i] = plats[i].x0; nodeX1[i] = plats[i].x1; nodeTop[i] = plats[i].top; }
+                    for (int i = 0; i < NR; i++) { nodeX0[NP + i] = rampNodes[i].x - 0.4f; nodeX1[NP + i] = rampNodes[i].x + 0.4f; nodeTop[NP + i] = rampNodes[i].y; }
+                    bool[] reach = new bool[NP + NR]; reach[si] = true;
                     var q2 = new Queue<int>(); q2.Enqueue(si);
                     while (q2.Count > 0) {
-                        int ai = q2.Dequeue(); var a = plats[ai];
-                        for (int bi = 0; bi < plats.Count; bi++) {
+                        int ai = q2.Dequeue();
+                        for (int bi = 0; bi < NP + NR; bi++) {
                             if (reach[bi]) continue;
-                            var b = plats[bi];
-                            float rise = b.top - a.top;
-                            if (rise > 1.95f) continue;                    // above the jump arc
-                            float gap = b.x0 > a.x1 ? b.x0 - a.x1 : (a.x0 > b.x1 ? a.x0 - b.x1 : 0f);
-                            if (gap <= 3.7f - Mathf.Max(0f, rise) * 0.9f) { reach[bi] = true; q2.Enqueue(bi); }
+                            float rise = nodeTop[bi] - nodeTop[ai];
+                            float gap = nodeX0[bi] > nodeX1[ai] ? nodeX0[bi] - nodeX1[ai] : (nodeX0[ai] > nodeX1[bi] ? nodeX0[ai] - nodeX1[bi] : 0f);
+                            bool jump = rise <= 1.95f && gap <= 3.7f - Mathf.Max(0f, rise) * 0.9f;
+                            // walk-link: surfaces at the SAME height with overlapping x (ramp ends weld into
+                            // their grounds at identical tops by construction) are walked, not jumped
+                            bool walk = Mathf.Abs(rise) < 0.15f && gap <= 0f && gap > -8f;
+                            if (jump || walk) { reach[bi] = true; q2.Enqueue(bi); }
                         }
                     }
                     bool gateOk = false;

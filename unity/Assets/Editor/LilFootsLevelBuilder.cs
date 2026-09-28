@@ -101,6 +101,51 @@ public static class LilFootsLevelBuilder {
         }
         lm.checkpoints = cpTransforms;
 
+        // ---- SLOPED TERRAIN (BudE Sept 28: wants hills the player RUNS on, not just flat
+        // planes with platforms as the only height): map data "ramps" = [[x1,y1,x2,y2],...]
+        // in the SAME canvas space as plats (y grows down from the top). Each ramp becomes a
+        // thin rotated BoxCollider2D whose TOP edge lies exactly on the line - the capsule +
+        // contact-normal ground check (normal.y > 0.5) runs slopes natively, so no engine
+        // change is needed. The art is a painted wedge (grass cap + dirt cross-section from
+        // the same storybook paint_grass/paint_dirt the grounds use) so a hill READS as
+        // terrain rising out of the meadow, not a floating plank. RampEnd marker children
+        // record the two world endpoints for the smoke BFS walk-links. ----
+        if (data.ContainsKey("ramps") && data["ramps"] is System.Collections.IEnumerable rampList) {
+            int ri = 0;
+            foreach (var ro in rampList) {
+                var r = (System.Collections.Generic.List<object>)ro;
+                float x1 = F(r[0]), y1 = F(r[1]), x2 = F(r[2]), y2 = F(r[3]);
+                float ux1 = x1 / 100f, uy1 = 2f * GY - y1 / 100f, ux2 = x2 / 100f, uy2 = 2f * GY - y2 / 100f;
+                float dx = ux2 - ux1, dy = uy2 - uy1;
+                float len = Mathf.Sqrt(dx * dx + dy * dy);
+                if (len < 0.5f) continue;
+                float ang = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+                float ext = 0.25f;                       // weld 0.25u INTO the neighbors so the flat/slope seam can never snag the capsule
+                float L = len + 2f * ext;
+                float thick = 0.28f, face = 2.2f;        // face depth: art reaches down INTO the ground body below
+                float nx = -Mathf.Sin(ang * Mathf.Deg2Rad), ny = Mathf.Cos(ang * Mathf.Deg2Rad); // surface normal (up)
+                float mx = (ux1 + ux2) / 2f, my = (uy1 + uy2) / 2f;
+                var ramp = new GameObject("Ramp_" + (ri++));
+                ramp.transform.SetParent(root.transform);
+                // sprite center sits face/2 BELOW the surface line along the normal; the collider is a thin
+                // slab whose top edge is ON the line (local offset accounts for the sprite center offset)
+                ramp.transform.position = new Vector3(mx - nx * face / 2f, my - ny * face / 2f, 0);
+                ramp.transform.rotation = Quaternion.Euler(0f, 0f, ang);
+                var bc = ramp.AddComponent<BoxCollider2D>();
+                bc.size = new Vector2(L, thick);
+                bc.offset = new Vector2(0f, face / 2f - thick / 2f);
+                var sr = ramp.AddComponent<SpriteRenderer>();
+                sr.sprite = SlopeSprite(L, face);
+                sr.sortingOrder = 2;                     // above ground art, below hops/fringe
+                ramp.layer = ground;
+                var e0 = new GameObject("RampEnd0"); e0.transform.SetParent(ramp.transform, false);
+                e0.transform.position = new Vector3(ux1, uy1, 0);
+                var e1 = new GameObject("RampEnd1"); e1.transform.SetParent(ramp.transform, false);
+                e1.transform.position = new Vector3(ux2, uy2, 0);
+            }
+            Debug.Log("[LevelBuilder] built " + ri + " ramps");
+        }
+
         // ---- tokens (73, 4 tiers) ----
         var tokens = (System.Collections.Generic.List<object>)data["tokens"];
         foreach (var to in tokens.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
@@ -245,6 +290,32 @@ public static class LilFootsLevelBuilder {
     static float F(object o) { return System.Convert.ToSingle(o); }
 
     /// <summary>Placeholder white slab sprite (visible until the art pass swaps in art-bible surfaces).</summary>
+    /// <summary>Painted slope wedge: grass cap band on top + dirt cross-section below,
+    /// cropped from the storybook paint_grass / paint_dirt tile templates so hills match
+    /// the flat ground art exactly (same files, same palette).</summary>
+    static Sprite SlopeSprite(float lenU, float faceU) {
+        int W = Mathf.Clamp((int)(lenU * 100f), 32, 4096), H = Mathf.Clamp((int)(faceU * 100f), 32, 1024);
+        var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+        Texture2D grass = LoadStoryTex("Assets/Art/paint_grass.png");
+        Texture2D dirt = LoadStoryTex("Assets/Art/paint_dirt.png");
+        int cap = Mathf.Min((int)(H * 0.30f), grass != null ? grass.height / 4 : 64);
+        for (int y = 0; y < H; y++) for (int x = 0; x < W; x++) {
+            Color c;
+            if (y >= H - cap && grass != null) c = grass.GetPixel(x % grass.width, (grass.height - cap + (y - (H - cap))) % grass.height); // TOP band of paint_grass holds the canopy (Unity row flip)
+            else if (dirt != null) c = dirt.GetPixel(x % dirt.width, y % dirt.height);
+            else c = new Color(0.32f, 0.52f, 0.36f);
+            tex.SetPixel(x, y, c);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f), 100f);
+    }
+    static Texture2D LoadStoryTex(string path) {
+        if (!System.IO.File.Exists(path)) return null;
+        var t = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        t.LoadImage(System.IO.File.ReadAllBytes(path));
+        return t;
+    }
+
     static Sprite SlabSprite(float w, float h) {
         var tex = new Texture2D((int)(w*32), (int)(h*32), TextureFormat.RGBA32, false);
         for (int y = 0; y < tex.height; y++) for (int x = 0; x < tex.width; x++) tex.SetPixel(x, y, new Color(0.32f, 0.52f, 0.36f));
