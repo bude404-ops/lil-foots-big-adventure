@@ -1283,7 +1283,7 @@ namespace LilFoots.EditorTools
         // MAP_DATA accepts a bare filename or a full path - same law as LevelBuilder.DataPath.
         static string MapDataPath() {
             var v = System.Environment.GetEnvironmentVariable("MAP_DATA");
-            if (string.IsNullOrEmpty(v)) v = "map001.json";
+            if (string.IsNullOrEmpty(v)) v = "map_region1_spine.json";
             if (!v.Contains("/")) v = "Assets/LevelData/" + v;
             return v;
         }

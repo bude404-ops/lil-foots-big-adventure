@@ -37,7 +37,7 @@ public static class LilFootsTilemapBuilder {
     static string DataPath {
         get {
             var v = System.Environment.GetEnvironmentVariable("MAP_DATA");
-            if (string.IsNullOrEmpty(v)) v = "map_r1_depth_test.json";
+            if (string.IsNullOrEmpty(v)) v = "map_region1_spine.json";
             if (!v.Contains("/")) v = "Assets/LevelData/" + v;
             return v;
         }

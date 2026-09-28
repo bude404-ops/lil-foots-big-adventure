@@ -42,7 +42,7 @@ public static class LilFootsSmokeTest {
         var es = UnityEngine.Object.FindObjectsOfType<EventSystem>();
         C(es.Length == 1, "input: exactly ONE EventSystem (found " + es.Length + ")");
 
-        bool m1 = (System.Environment.GetEnvironmentVariable("MAP_DATA") == "map_m1.json") || sceneName.StartsWith("MapM1");
+        bool m1 = false;   // (M1 clean-floor era retired - old maps purged from the repo)
         var cams = UnityEngine.Object.FindObjectsOfType<Camera>();
         var mains = cams.Where(c => c.CompareTag("MainCamera")).ToList();
         C(mains.Count == 1, "camera: exactly one MainCamera (found " + mains.Count + ")");
@@ -91,7 +91,7 @@ public static class LilFootsSmokeTest {
         {
             var id = UnityEngine.Object.FindObjectOfType<LilFoots.MapIdentity>();
             string want = System.Environment.GetEnvironmentVariable("MAP_DATA");
-            if (string.IsNullOrEmpty(want)) want = "map001.json";
+            if (string.IsNullOrEmpty(want)) want = "map_region1_spine.json";
             string wantFile = want.Contains("/") ? want.Substring(want.LastIndexOf('/') + 1) : want;
             string sha = System.Environment.GetEnvironmentVariable("BUILD_SHA");
             bool ok = id != null && id.dataFile == wantFile && (string.IsNullOrEmpty(sha) || id.buildSha == sha);
@@ -211,9 +211,6 @@ public static class LilFootsSmokeTest {
             C(tokens.Length == 0, "M1: no tokens on the floor (found " + tokens.Length + ")");
             var cps0 = UnityEngine.Object.FindObjectsOfType<LilFoots.CheckpointController>();
             C(cps0.Length == 0, "M1: no checkpoints (found " + cps0.Length + ")");
-            var h0 = UnityEngine.Object.FindObjectsOfType<LilFoots.HoundController>();
-            C(h0.Length == 0, "M1: no hounds (found " + h0.Length + ")");
-            C(UnityEngine.Object.FindObjectsOfType<LilFoots.DroneController>().Length == 0, "M1: no drone");
         } else {
             C(tokens.Length >= 30, "course: >=30 Big Tokens across tiers (found " + tokens.Length + ")");
             var cps = UnityEngine.Object.FindObjectsOfType<LilFoots.CheckpointController>();

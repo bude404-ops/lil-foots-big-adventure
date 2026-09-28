@@ -18,7 +18,7 @@ public static class LilFootsLevelBuilder {
         get {
             // MAP_DATA accepts a bare filename (map011.json) or a full path (Assets/LevelData/map011.json).
             var v = System.Environment.GetEnvironmentVariable("MAP_DATA");
-            if (string.IsNullOrEmpty(v)) v = "map001.json";
+            if (string.IsNullOrEmpty(v)) v = "map_region1_spine.json";
             if (!v.Contains("/")) v = "Assets/LevelData/" + v;
             return v;
         }
@@ -100,45 +100,6 @@ public static class LilFootsLevelBuilder {
             cpTransforms[i] = cp.transform;
         }
         lm.checkpoints = cpTransforms;
-
-        // ---- hounds ----
-        var hounds = (System.Collections.Generic.List<object>)data["hounds"];
-        foreach (var ho in hounds.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
-            var h = new GameObject("Hound");
-            h.transform.SetParent(root.transform);
-            h.transform.position = new Vector3(F(ho["x"])/100f, GY + 0.35f, 0); // spawn ABOVE the slab
-            // (Sept 20: spawning at GY-0.3 embedded the hound's 0.6-tall box INTO the ground -
-            // depenetration jitter + a "stale model" look. Box half-height is 0.3, so GY+0.35
-            // falls 0.05 to a clean rest.)
-            var hc = h.AddComponent<HoundController>();
-            hc.minX = F(ho["min"])/100f; hc.maxX = F(ho["max"])/100f;
-            hc.dir = (int)F(ho["dir"]); hc.speed = F(ho["spd"])/100f;
-            var bc = h.AddComponent<BoxCollider2D>(); bc.size = new Vector2(0.9f, 0.6f);
-            var tr = h.AddComponent<CircleCollider2D>(); tr.isTrigger = true; tr.radius = 0.55f;
-            var rb = h.AddComponent<Rigidbody2D>(); rb.freezeRotation = true;
-            h.layer = LayerMask.NameToLayer("Enemy");
-            HoundManager.Register(hc);
-        }
-
-        // ---- trail cams (tree-mounted snitches) ----
-        var cams = (System.Collections.Generic.List<object>)data["cams"];
-        foreach (var co in cams.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
-            var c = new GameObject("TrailCam");
-            c.transform.SetParent(root.transform);
-            c.transform.position = new Vector3(F(co["x"])/100f, 2f * GY - F(co["y"])/100f, 0); // canvas-y flip
-            var cc = c.AddComponent<CircleCollider2D>(); cc.isTrigger = true; cc.radius = 0.45f;
-            c.AddComponent<TrailCamController>();
-            BuildTreeArt(root.transform, c.transform.position); // REAL TREE, not a pole (playtest fix)
-        }
-
-        // ---- drone (v2 M1: maps carry no drone - the clean floor ships without it) ----
-        var drone = data.ContainsKey("drone") ? data["drone"] as System.Collections.Generic.Dictionary<string, object> : null;
-        if (drone != null) {
-            var d = new GameObject("Drone");
-            d.transform.SetParent(root.transform);
-            d.transform.position = new Vector3(F(drone["x"])/100f, 2f * GY - F(drone["y"])/100f, 0); // canvas-y flip
-            d.AddComponent<DroneController>();
-        }
 
         // ---- tokens (73, 4 tiers) ----
         var tokens = (System.Collections.Generic.List<object>)data["tokens"];
@@ -278,8 +239,7 @@ public static class LilFootsLevelBuilder {
                   (am.sfxCheckpoint != null) + (am.sfxDeath != null) + (am.sfxLevelComplete != null) + (am.sfxHeart != null));
 
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-        Debug.Log("[LilFoots] Map 001 built: " + plats.Count + " plats, " + hounds.Count + " hounds, "
-                  + cams.Count + " cams, " + tokens.Count + " tokens, " + cpList.Count + " checkpoints. Ctrl+S to save the scene.");
+        Debug.Log("[LilFoots] Map built: " + plats.Count + " plats, " + tokens.Count + " tokens, " + cpList.Count + " checkpoints. Ctrl+S to save the scene.");
     }
 
     static float F(object o) { return System.Convert.ToSingle(o); }
@@ -292,13 +252,6 @@ public static class LilFootsLevelBuilder {
         return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 32f);
     }
 
-    /// <summary>Chunky woodland tree the cam mounts on (flared trunk + bark + canopy, per art bible).</summary>
-    static void BuildTreeArt(Transform root, Vector3 camPos) {
-        var tree = new GameObject("CamTree");
-        tree.transform.SetParent(root);
-        tree.transform.position = new Vector3(camPos.x, GameManager.GroundY/2f, 0.5f);
-        // art pass: replace primitives with the drawn tree (trunk + bark ridges + 6-blob canopy + branch stub)
-    }
 }
 
 /// <summary>Tiny JSON parser (no external packages) — map001.json only needs dict/list/number/string.</summary>

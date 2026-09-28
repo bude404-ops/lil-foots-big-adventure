@@ -24,7 +24,7 @@ on:
         description: 'Scene to build (default Map001) - e.g. Map011 for 1-1 Meadow Run'
         required: false
       map_data:
-        description: 'Level data file (default map001.json) - e.g. map011.json'
+        description: 'Level data file (default map_region1_spine.json)'
         required: false
       layers:
         description: 'Layer-by-layer review mode: build only the first N map layers (99 = full map)'
@@ -46,10 +46,6 @@ on:
         description: 'New playable content ready for Bude (1 = DM the build link, 0 = silent internal pass)'
         required: false
         default: '0'
-      tilemap:
-        description: 'Unity Tilemap terrain skin (1 = native Grid+Tilemap build, geometry skinned in Unity)'
-        required: false
-        default: '1'
 
 permissions:
   contents: read
@@ -92,8 +88,8 @@ jobs:
       BUILD_SHA: ${{ github.sha }}
       BUILD_STAMP: run-${{ github.run_number }}
       MAP_SCENE: ${{ inputs.map_scene || 'Map001' }}
-      MAP_DATA: ${{ inputs.map_data || 'map001.json' }}
-      LILFOOTS_TILEMAP: ${{ inputs.tilemap || '0' }}
+      MAP_DATA: ${{ inputs.map_data || 'map_region1_spine.json' }}
+      LILFOOTS_TILEMAP: 1
     steps:
       - name: Free disk for the Unity image
         run: |
@@ -156,7 +152,6 @@ jobs:
             exit 0
           fi
           PRE="LIL FOOTS UNITY PASS 1"
-          if [ "${{ inputs.map_data }}" = "map_m1.json" ]; then PRE="LIL FOOTS: BIG ADVENTURES — v2 M1 CLEAN FLOOR (fresh Unity project, command-script built)"; fi
           if [ "$LAYERS" = "3" ]; then PRE="MAP REBUILD - ALL 3 LAYERS (fix plan executed: organic seams, baked atmosphere, foreground props, HQ Lily)"; fi
           if [ "$LAYERS" != "99" ] && [ -n "$LAYERS" ] && [ "$LAYERS" != "3" ]; then PRE="MAP REBUILD - LAYER $LAYERS of 3 (3-layer doctrine: 1=static vista, 2=gameplay plane, 3=foreground props; layers above $LAYERS intentionally absent)"; fi
           if [ "$LILFOOTS_UI" = "1" ]; then PRE="UI PASS - CHARACTER MENU / CONTROLS / HEARTS (HQ style, no world layers in this build)"; fi
@@ -299,12 +294,12 @@ jobs:
       UIMG: unityci/editor:ubuntu-2022.3.50f1-webgl-3.2.2
       # [LIVE-LINK MAP FIX Sept 27] ROOT CAUSE of 'the map hadn't changed at all from the
       # others' (BudE): this job's env never received map_scene/map_data/tilemap from the
-      # dispatch inputs, so EVERY live-link build silently fell back to map001.json in
+      # dispatch inputs, so EVERY live-link build silently fell back to the default map in
       # legacy (non-tilemap) mode while the QC/APK job built the real course. The live
       # game was always one whole map behind what the shots showed.
-      LILFOOTS_TILEMAP: ${{ inputs.tilemap || '0' }}
+      LILFOOTS_TILEMAP: 1
       MAP_SCENE: ${{ inputs.map_scene || 'Map001' }}
-      MAP_DATA: ${{ inputs.map_data || 'map001.json' }}
+      MAP_DATA: ${{ inputs.map_data || 'map_region1_spine.json' }}
       BUILD_SHA: ${{ github.sha }}
       BUILD_STAMP: run-${{ github.run_number }}
     steps:
@@ -390,7 +385,7 @@ jobs:
           unzip -q lilfoots-webgl-site.zip -d site
           ls site
           # [SHIP-PURITY Sept 27 PM] the published site states exactly what build it is
-          echo "lil-foots build ${{ github.sha }} (run-${{ github.run_number }}) map=${{ inputs.map_data || 'map001.json' }}" > site/version.txt
+          echo "lil-foots build ${{ github.sha }} (run-${{ github.run_number }}) map=${{ inputs.map_data || 'map_region1_spine.json' }}" > site/version.txt
           # ---- WEBGL PHONE INPUT FIX (Sept 20, Bude: jump button dead + stuck on select):
           # phone browsers claim canvas touches for scroll/pull-to-refresh, which kills
           # Unity's uGUI pointer events (touch deck AND character select go dead).
@@ -431,4 +426,4 @@ jobs:
         # with the playtest verdict. A build can publish to the site silently (ship=1
         # included) and the DM only goes out after the agent's playtest passes.
         run: |
-          echo "PLAYTEST PENDING — build ${{ github.sha }} (run-${{ github.run_number }}), map ${{ inputs.map_data || 'map001.json' }} published. Agent playtests https://mcontwitter-glitch.github.io/lil-foots-v2-live/ before any DM."
+          echo "PLAYTEST PENDING — build ${{ github.sha }} (run-${{ github.run_number }}), map ${{ inputs.map_data || 'map_region1_spine.json' }} published. Agent playtests https://mcontwitter-glitch.github.io/lil-foots-v2-live/ before any DM."
