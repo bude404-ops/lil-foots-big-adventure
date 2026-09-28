@@ -57,8 +57,26 @@ permissions:
   id-token: write
 
 jobs:
+  lint:
+    name: Map lint (fast physics/reachability fail)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Lint the map data (exit 1 = broken geometry, no 25-min build)
+        run: |
+          MAP="${{ github.event.inputs.map_data || 'map_region1_spine.json' }}"
+          if [ -f "unity/Assets/LevelData/$MAP" ]; then
+            python3 tools/map_lint.py "unity/Assets/LevelData/$MAP"
+          else
+            echo "map file unity/Assets/LevelData/$MAP not found - linting default spine map"
+            python3 tools/map_lint.py unity/Assets/LevelData/map_region1_spine.json
+          fi
+
   build:
     name: Build map 001 + QC shots + APK
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -268,6 +286,7 @@ jobs:
 
   webgl:
     name: Build WebGL (live web preview for Bude)
+    needs: lint
     # Bude (Sept 18 ~11:54 PM ET): "this link the game was still incorrect lets make sure its right
     # before you build" -> NO live-link publishes while a review is open (layer QC or UI QC).
     # The link only updates once the map layers are approved; reviews go shot-by-shot via DM.
