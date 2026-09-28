@@ -49,7 +49,7 @@ on:
       tilemap:
         description: 'Unity Tilemap terrain skin (1 = native Grid+Tilemap build, geometry skinned in Unity)'
         required: false
-        default: '0'
+        default: '1'
 
 permissions:
   contents: read
