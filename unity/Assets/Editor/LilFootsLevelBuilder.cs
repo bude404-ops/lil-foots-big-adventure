@@ -49,7 +49,7 @@ public static class LilFootsLevelBuilder {
             if (!(y >= 600f || w >= 400f) || h < 200f) { smallSegs.Add(new float[]{x,y,w,h}); continue; }
             System.Collections.Generic.List<float[]> row = null;
             foreach (var rw in groundSegs) {
-                if (Mathf.Abs(rw[0][1] - y) < 0.5f && (x - w / 2f) / 100f <= rw[rw.Count-1][4] + 0.6f) { row = rw; break; }
+                if (Mathf.Abs(rw[0][1] - y) < 0.5f && (x - w / 2f) / 100f <= rw.Max(s => s[4]) + 0.6f) { row = rw; break; } // [FIX Sept 27] row MAX right edge, not last-added - same-height segs touching an EARLIER member were missed (0.2u seam gaps)
             }
             if (row == null) { row = new System.Collections.Generic.List<float[]>(); groundSegs.Add(row); }
             row.Add(new float[]{x, y, w, h, (x + w / 2f) / 100f});

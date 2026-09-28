@@ -262,7 +262,7 @@ public static class LilFootsSmokeTest {
         // A map failing any of these can never ship again.
         try {
             var plats = UnityEngine.Object.FindObjectsOfType<Transform>()
-                .Where(t => t.name.StartsWith("Plat_") && t.GetComponent<BoxCollider2D>() != null)
+                .Where(t => (t.name.StartsWith("Plat_") || t.name.StartsWith("PlatWeld_")) && t.GetComponent<BoxCollider2D>() != null)  // welds are real ground too
                 .Select(t => { var b = t.GetComponent<BoxCollider2D>();
                               return new { go = t.gameObject, x0 = b.bounds.min.x, x1 = b.bounds.max.x,
                                            y0 = b.bounds.min.y, top = b.bounds.max.y, h = b.bounds.size.y }; })
