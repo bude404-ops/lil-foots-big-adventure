@@ -785,8 +785,25 @@ public static class LilFootsProcTiles {
         return tex;
     }
 
-    /// <summary>Menu backdrop as a loadable Sprite (fresh-runner-safe: refresh + guard).</summary>
+    /// <summary>Menu backdrop as a loadable Sprite (fresh-runner-safe: refresh + guard).
+    /// [STORYBOOK SELECT Sept 28 - BudE: "make sure the character select screen matches the
+    /// proper background art"] the select screen wears the AUTHORED storybook backdrop first
+    /// (art_menu_backdrop_r{N}.png, painted in the worldskin gouache style); the ProcTiles
+    /// vista is only the fallback if the authored file is missing.</summary>
     public static Sprite EnsureMenuBackdrop() {
+        string authored = "Assets/Art/art_menu_backdrop_r" + Region + ".png";
+        if (File.Exists(authored)) {
+            AssetDatabase.Refresh();
+            var ati = (TextureImporter)AssetImporter.GetAtPath(authored);
+            if (ati != null) {
+                ati.textureType = TextureImporterType.Sprite;
+                ati.spriteImportMode = SpriteImportMode.Single;
+                ati.spritePixelsPerUnit = 100f;
+                ati.SaveAndReimport();
+                var authoredSprite = AssetDatabase.LoadAssetAtPath<Sprite>(authored);
+                if (authoredSprite != null) return authoredSprite;
+            }
+        }
         string path = "Assets/Art/Generated/unity_menu_backdrop_cinematic_r" + Region + ".png";
         Directory.CreateDirectory("Assets/Art/Generated");
         if (!File.Exists(path)) File.WriteAllBytes(path, MenuBackdropTex().EncodeToPNG());
