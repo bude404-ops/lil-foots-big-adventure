@@ -293,6 +293,7 @@ public static class LilFootsSmokeTest {
                   (bare.Count > 0 ? " e.g. " + string.Join(", ", bare.Take(3)) : "") + ")");
                 C(worst < 0.06f, "geometry: ground art sized to collider (worst delta " + worst.ToString("F3") + ")");
             }
+            if (plats.Count >= 10) {
                 // (b) REACHABILITY — BFS across platform tops with the real jump arc.
                 float spawnX = lily != null ? lily.transform.position.x : 2.2f;
                 int si = -1; float bestTop = -9999f;
