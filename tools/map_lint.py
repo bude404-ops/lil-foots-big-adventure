@@ -26,7 +26,7 @@ def lint(path, gate_x=None, spawn_x=6.52):
     idx_plats = sorted(enumerate(plats), key=lambda ip: (ip[1][1], ip[1][0] - ip[1][2]/2))
     rows = []
     for i, p in idx_plats:
-        cx, y, w_, h = p
+        cx, y, w_, h = p[0], p[1], p[2], p[3]   # [KIT Sept 28] plats may carry a 5th hop-kind element
         x0, x1 = (cx - w_/2)/ppu, (cx + w_/2)/ppu
         if (y >= 600 or w_ >= 400) and h >= 200:
             placed = False
@@ -41,7 +41,7 @@ def lint(path, gate_x=None, spawn_x=6.52):
             nodes.append(dict(x0=r['minl'], x1=r['maxr'], top=top_of(r['y']), ids=list(r['ids'])))
     for i, p in enumerate(plats):
         if any(i in n['ids'] for n in nodes): continue
-        cx, y, w_, h = p
+        cx, y, w_, h = p[0], p[1], p[2], p[3]   # [KIT Sept 28] plats may carry a 5th hop-kind element
         nodes.append(dict(x0=(cx-w_/2)/ppu, x1=(cx+w_/2)/ppu, top=top_of(y), ids=[i]))
 
     # BFS from spawn (mirrors the smoke gate)
