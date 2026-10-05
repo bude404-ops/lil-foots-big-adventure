@@ -18,7 +18,7 @@ on:
         description: 'Unity account password'
         required: true
       gtok:
-        description: 'Token to push the WebGL build to the live repo (mcontwitter-glitch/lil-foots-live)'
+        description: 'Token to push the WebGL build to the live repo (mcontwitter-glitch/lil-foots-v2-live)'
         required: true
       map_scene:
         description: 'Scene to build (default Map001) - e.g. Map011 for 1-1 Meadow Run'
@@ -259,7 +259,7 @@ jobs:
           APK="unity/Builds/LilFoots.apk"
           if [ ! -f "$APK" ]; then echo "no APK this run"; exit 0; fi
           export GH_TOKEN="$GTOK"
-          LIVE_REPO="mcontwitter-glitch/lil-foots-live"
+          LIVE_REPO="mcontwitter-glitch/lil-foots-v2-live"
           # refresh the stable apk-latest release (same tag every build -> same URL every time)
           gh release delete apk-latest --repo "$LIVE_REPO" --yes --cleanup-tag 2>/dev/null || true
           gh release create apk-latest "$APK#LilFoots.apk" \
