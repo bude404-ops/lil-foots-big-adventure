@@ -31,7 +31,7 @@ public class SLCharacterController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        movement.x = Input.GetAxisRaw("Horizontal");
+        movement.x = TouchInput.moveX != 0f ? TouchInput.moveX : Input.GetAxisRaw("Horizontal"); // touch first, keyboard fallback
         // movement.y = Input.GetAxisRaw("Vertical"); // y: look up/down
 
         if (animator.GetBool("Jumping") && rb.velocity.y <= 0)
@@ -51,7 +51,7 @@ public class SLCharacterController : MonoBehaviour
         }
 
         // Jump
-        if (grounded && Input.GetButtonDown("Jump"))
+        if (grounded && (TouchInput.jumpPressed || Input.GetButtonDown("Jump"))) // touch jump + keyboard
         {
             jumpPressed = true;
         }

@@ -15,12 +15,14 @@ public class OnewayPlatform : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetButtonDown("Jump") && !Input.GetKey(KeyCode.DownArrow))
+        bool jumpPressed = TouchInput.jumpPressed || Input.GetButtonDown("Jump");
+        bool downHeld = TouchInput.downHeld || Input.GetKey(KeyCode.DownArrow);
+        if (jumpPressed && !downHeld)
         {
             effector.rotationalOffset = 0f;
         }
         // if (Input.GetKey(KeyCode.DownArrow))
-        if (Input.GetKey(KeyCode.DownArrow) && Input.GetButtonDown("Jump"))
+        if (downHeld && jumpPressed)
         {
             effector.rotationalOffset = 180f;
             // if (waittime <= 0f)
