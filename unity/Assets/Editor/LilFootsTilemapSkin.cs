@@ -135,6 +135,8 @@ public static class LilFootsTilemapSkin {
     static bool _painted;
 
     public static void PaintGrounds(GameObject mapRoot) {
+        LilFootsSmoothTerrain.Apply(mapRoot); return; // [SMOOTH TERRAIN Oct 12] BudE: jagged rectangles retired - one flowing silhouette
+
         // [ONE-PIECE ART LAW Sept 27 PM - BudE: 'one large piece should be one large art
         // piece not blocked together with a bunch to make that size' + 'make sure you are
         // sizing stuff properly to the tiles'] Every ground body is ONE CONTINUOUS PAINTED

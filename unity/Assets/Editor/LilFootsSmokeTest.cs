@@ -292,18 +292,18 @@ public static class LilFootsSmokeTest {
             // invisible ground and invisible walls in one assertion.
             {
                 var arts = UnityEngine.Object.FindObjectsOfType<SpriteRenderer>()
-                    .Where(s => s.gameObject.name.StartsWith("GroundArt") && s.sprite != null).ToList();
+                    .Where(s => (s.gameObject.name.StartsWith("GroundArt") || s.gameObject.name.StartsWith("SmoothGround")) && s.sprite != null).ToList();
                 var bare = new List<string>(); float worst = 0f;
                 foreach (var p in plats) {
                     if (p.h < 2f) continue;
                     var ctr = new Vector3((p.x0 + p.x1) / 2f, p.top - p.h / 2f, 0f);
-                    var sr = arts.OrderBy(a => Vector3.Distance(a.bounds.center, ctr)).FirstOrDefault();
-                    if (sr == null || Vector3.Distance(sr.bounds.center, ctr) > 0.08f) {
+                    var sr = arts.OrderBy(a => Vector3.Distance(a.bounds.center, ctr)).FirstOrDefault(a => a.bounds.min.x <= ctr.x + 0.06f && a.bounds.max.x >= ctr.x - 0.06f && a.bounds.min.y < ctr.y + 0.1f);
+                    if (sr == null) {
                         bare.Add(p.go.name + "@" + p.x0.ToString("F0") + "u"); continue;
                     }
                     worst = Mathf.Max(worst,
-                        Mathf.Max(Mathf.Abs(sr.bounds.size.x - (p.x1 - p.x0)),
-                                  Mathf.Abs(sr.bounds.size.y - p.h)));
+                        Mathf.Max(Mathf.Abs(sr.bounds.size.x - (sr.gameObject.name.StartsWith("SmoothGround") ? (Mathf.Min(sr.bounds.max.x, p.x1) - Mathf.Max(sr.bounds.min.x, p.x0)) : (p.x1 - p.x0))),
+                                  Mathf.Abs(sr.bounds.size.y - p.h - (sr.gameObject.name.StartsWith("SmoothGround") ? 0.30f : 0f))));
                 }
                 C(bare.Count == 0, "geometry: no invisible ground/walls (" + bare.Count + " bare colliders" +
                   (bare.Count > 0 ? " e.g. " + string.Join(", ", bare.Take(3)) : "") + ")");
