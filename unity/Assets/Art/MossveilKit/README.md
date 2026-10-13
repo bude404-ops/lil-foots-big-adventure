@@ -1,34 +1,36 @@
-# Mossveil Terrain Kit (batch 1)
+# Mossveil Terrain Kit - batch 1
 
-Storybook gouache terrain pieces for hand-built maps, matching the Mossveil world art
-(paint_grass / paint_dirt palette, sage-green caps, warm loam bodies). All PNGs are
-transparent-keyed, tight-cropped, no white fringe. Made for BudE's map-building pass.
+Storybook gouache terrain pieces for hand-building maps. Generated in the
+Mossveil PNW style to match the existing world art (paint_grass/paint_dirt
+palette, sage sky, warm loam). White backgrounds are flood-keyed to real
+transparency - safe to drop straight into scenes.
 
-## Suggested import settings (Unity)
-- Texture Type: Sprite (2D and UI)
-- Pixels Per Unit: **100** (matches the painted terrain art, ~100px per world unit)
-- Filter Mode: Bilinear, Compression: None (keeps the gouache edges clean)
+## Pieces
 
-## Pieces (native px @ PPU 100)
-| File | What it is | Size (px / units) |
+| File | What it is | Recommended use |
 |---|---|---|
-| slope_grass_gentle.png | low grassy hill ramp, tall left -> flat right | 875x372 (~8.8 x 3.7 u) |
-| slope_grass_steep.png | tall grassy hill ramp | 877x574 (~8.8 x 5.7 u) |
-| slope_loam.png | exposed loam slope, thin grass cap | 893x390 (~8.9 x 3.9 u) |
-| slope_stone_mossy.png | mossy stone ledge slope (2 steps) | 989x540 (~9.9 x 5.4 u) |
-| cliff_loam.png | loam cliff face with grass lip | 817x825 (~8.2 x 8.3 u) |
-| shore_bank.png | grass-to-loam stream bank edge | 841x273 (~8.4 x 2.7 u) |
-| water_stream.png | painterly stream water strip | 1024x152 (~10.2 x 1.5 u) |
-| floor_forest.png | old-growth forest floor strip | 966x151 (~9.7 x 1.5 u) |
+| slope_grass_gentle.png | low grassy hill ramp, tall left -> flat right | gentle rises between platforms |
+| slope_grass_steep.png | tall grassy hill ramp | bigger climbs, back-layer hills |
+| slope_loam.png | bare loam ramp with worn grass cap | dirt paths, eroded banks |
+| slope_stone_mossy.png | mossy stone ledges stepping down | stone staircases, cliff steps |
+| cliff_loam.png | vertical loam cliff face with grass top | walls, level boundaries |
+| shore_bank.png | grass bank breaking to loam + river stones | stream edges |
+| water_stream.png | painterly water strip | streams, ponds (stack strips) |
+| floor_forest.png | old-growth forest floor strip | alternate ground texture |
 
-## Pairing notes
-- Slopes face "downhill to the right". For a left-falling slope, mirror the sprite in
-  Unity (terrain mirroring is fine - no characters here).
-- Chain slopes: steep -> gentle -> floor_forest reads as one continuous hill.
-- shore_bank + water_stream: bank first, water strip tucked behind/below the bank edge.
-- Colliders: add PolygonCollider2D from the sprite outline, or BoxCollider2D on the
-  ramp face for the walk line (see LilFootsSmoothTerrain for the cap-height recipe).
-- Per the doctrine: bake these into terrain layers, don't stack on top of the painted ground art.
+## Using them
 
-Batch 2 on deck (say the word): diagonal/45-degree corner slope caps, grass-to-dirt
-transition tiles, stone steps stackable set, cedar root clumps, boulder props.
+- Suggested import: PPU 128 (a 512-wide piece = 4 world units). Drop the
+  Art/MossveilKit folder in, set Texture Type = Sprite (2D and UI),
+  Pixels Per Unit 128, Filter Point or Bilinear.
+- Slopes read best snapped edge-to-edge (flat right side meets next piece's
+  tall left side, or mirror/flip a copy to descend the other way).
+- Match colliders to the visual top surface; use EdgeCollider2D or a simple
+  PolygonCollider2D on the grass cap.
+- These are painted art pieces, not autotiles - overlap 1-2px to hide seams.
+- _style_reference.png is the palette/style board used to generate them -
+  keep it around as the reference for future batches (bridges, ladders,
+  background hills, cave mouths are good next candidates).
+
+Batch 2 candidates on request: mirrored slopes, background hill strips,
+wooden bridge, ladder, cave entrance, big cedar trunks.
