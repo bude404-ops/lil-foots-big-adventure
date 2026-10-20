@@ -17,6 +17,8 @@ namespace LilFoots.EditorTools
                 Debug.LogError("[CourseMenu] map data missing: Assets/LevelData/" + mapData + " - pull the repo / extract the kit zip first");
                 return;
             }
+            // remember the spine so the Token Tweaker writes drags back into the right file
+            EditorPrefs.SetString("LilFoots_TweakSpine", "Assets/LevelData/" + mapData);
             System.Environment.SetEnvironmentVariable("MAP_DATA", mapData);
             System.Environment.SetEnvironmentVariable("MAP_SCENE", sceneName);
             LilFootsArtPass.BuildAndShootCore();

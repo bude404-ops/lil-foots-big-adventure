@@ -135,8 +135,27 @@ public static class LilFootsLevelBuilder {
                 bc.size = new Vector2(L, thick);
                 bc.offset = new Vector2(0f, face / 2f - thick / 2f);
                 var sr = ramp.AddComponent<SpriteRenderer>();
-                sr.sprite = SlopeSprite(L, face);
                 sr.sortingOrder = 2;                     // above ground art, below hops/fringe
+                // [KIT TERRAIN Oct 20 - BudE "remake the maps with the new terrain models"]
+                // authored slope pieces where available (child GO so the collider scale stays
+                // true); painted wedge remains the fallback. Gentle->grass gentle, steeper->
+                // grass steep, harsh->stone mossy; mirrored when the ramp runs downhill right.
+                float riseDeg = Mathf.Abs(ang);
+                Sprite kitSlope = Art(riseDeg < 24f ? "MossveilKit/slope_grass_gentle.png"
+                                  : riseDeg < 42f ? "MossveilKit/slope_grass_steep.png"
+                                  : "MossveilKit/slope_stone_mossy.png");
+                if (kitSlope != null) {
+                    var kb = kitSlope.bounds;
+                    float fx = L / kb.size.x, fy = face / kb.size.y;
+                    var artGo = new GameObject("SlopeArt");
+                    artGo.transform.SetParent(ramp.transform, false);
+                    var asr = artGo.AddComponent<SpriteRenderer>();
+                    asr.sprite = kitSlope; asr.sortingOrder = 2;
+                    artGo.transform.localScale = new Vector3(fx * (ang < 0f ? -1f : 1f), fy, 1f);
+                    sr.enabled = false;
+                } else {
+                    sr.sprite = SlopeSprite(L, face);
+                }
                 ramp.layer = ground;
                 var e0 = new GameObject("RampEnd0"); e0.transform.SetParent(ramp.transform, false);
                 e0.transform.position = new Vector3(ux1, uy1, 0);
@@ -182,7 +201,8 @@ public static class LilFootsLevelBuilder {
         // falling in means running the gully floor to the shore ramp - never a softlock. ----
         if (data.ContainsKey("water")) {
             var waters = (System.Collections.Generic.List<object>)data["water"];
-            var stream = Art("art_stream.png");
+            var stream = Art("MossveilKit/water_stream.png");   // [KIT TERRAIN Oct 20] authored kit stream
+                if (stream == null) stream = Art("art_stream.png");   // painted fallback
             int wi = 0;
             if (stream != null) {
                 foreach (var wo in waters.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
@@ -217,6 +237,8 @@ public static class LilFootsLevelBuilder {
                 else if (type == "fern") spFile = "fern_giant.png";
                 else if (type == "snag") spFile = "branch_fork_snag.png";
                 else if (type == "log") spFile = "log_hollow.png";
+                else if (type == "shore") spFile = "shore_bank.png";
+                else if (type == "cliff") spFile = "cliff_loam.png";
                 var sprite = LilFootsProcTiles.KitSprite(spFile);
                 if (sprite == null) continue;
                 float spx = F(so["x"]) / 100f, baseY = 2f * GY - F(so["base"]) / 100f;
@@ -225,6 +247,8 @@ public static class LilFootsLevelBuilder {
                 else if (type == "fern") spH = 5.5f;              // giant fern 5.5u
                 else if (type == "snag") spH = 6.0f;              // forked snag 6.0u (tall vertical piece)
                 else if (type == "log") spH = 2.2f;              // hollow log 2.2u
+                else if (type == "shore") spH = 3.0f;            // stream bank 3.0u
+                else if (type == "cliff") spH = 4.5f;            // loam cliff face 4.5u
                 var go = new GameObject("Setpiece_" + type + "_" + (si++));
                 go.transform.SetParent(root.transform);
                 go.transform.position = new Vector3(spx, baseY + spH / 2f, 0);
