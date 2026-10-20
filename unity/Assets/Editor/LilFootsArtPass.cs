@@ -1010,7 +1010,7 @@ namespace LilFoots.EditorTools
 
         /// <summary>Overlay canvases don't render into a camera texture — pin them to the cam.</summary>
         static void PinCanvasesToCam(UnityEngine.Camera cam) {
-            foreach (var canvas in Object.FindObjectsOfType<UnityEngine.Canvas>()) {
+            foreach (var canvas in Object.FindObjectsByType<UnityEngine.Canvas>(FindObjectsSortMode.None)) {
                 // QC-only pin: overlay canvases (menu included since the Sept 19 rewrite) don't
                 // render into a camera RT - pin them all for the UI-pass shots. Runtime builds
                 // (map pass) never call this: there the menu stays ScreenSpaceOverlay.
@@ -1084,14 +1084,14 @@ namespace LilFoots.EditorTools
             var rt = vgo.GetComponent<UnityEngine.RectTransform>();
             rt.anchorMin = new Vector2(1f, 0f); rt.anchorMax = new Vector2(1f, 0f);
             rt.anchoredPosition = new Vector2(-6f, 4f); rt.sizeDelta = new Vector2(300f, 18f);
-            var id = UnityEngine.Object.FindObjectOfType<LilFoots.MapIdentity>();
+            var id = Object.FindAnyObjectByType<LilFoots.MapIdentity>();
             vr.text = id != null ? ("Lil Foots build " + id.buildStamp + " - " + id.buildSha.Substring(0, System.Math.Min(7, id.buildSha.Length)) + " - " + id.dataFile)
                                  : "Lil Foots build (local)";
         }
             // 1) EventSystem first - but check the SCENE, not EventSystem.current (current is
             // null in edit mode even when one exists; a duplicate EventSystem breaks uGUI input
             // stability at runtime - the Sept 19 jump-button suspect).
-            if (UnityEngine.Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null) {
+            if (Object.FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() == null) {
                 var esGo = new GameObject("CharMenuEventSystem");
                 esGo.AddComponent<UnityEngine.EventSystems.EventSystem>();
                 esGo.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
@@ -1340,7 +1340,7 @@ namespace LilFoots.EditorTools
             BuildTouchDeck(); // MOBILE CONTROL DECK — the Sept 18 playability fix (Bude: "this isn't playable")
             // RUN TIMER (BudE Sept 26: "lets go your recommendation on the incentives") — clock
             // + medals + best-time panel; GameManager.Win() freezes it at the flag.
-            if (UnityEngine.Object.FindObjectOfType<RunTimer>() == null) new GameObject("RunTimer").AddComponent<RunTimer>();
+            if (Object.FindAnyObjectByType<RunTimer>() == null) new GameObject("RunTimer").AddComponent<RunTimer>();
             BuildCharacterMenu(GameObject.Find("MainCamera").GetComponent<UnityEngine.Camera>()); // UI PASS: character select at start
             Directory.CreateDirectory("Assets/Scenes");
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), "Assets/Scenes/" + (System.Environment.GetEnvironmentVariable("MAP_SCENE") ?? "Map001") + ".unity");
@@ -1382,7 +1382,7 @@ namespace LilFoots.EditorTools
         static void Snap(RenderTexture rt, string path) {
             var prev = RenderTexture.active;
             RenderTexture.active = rt;
-            var c = Camera.main != null ? Camera.main : UnityEngine.Object.FindObjectOfType<UnityEngine.Camera>();
+            var c = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<UnityEngine.Camera>();
             if (c == null) { Debug.LogError("[ArtPass] No camera to render QC shot - skipping " + path); return; }
             c.Render();
             var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
