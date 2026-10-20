@@ -57,8 +57,8 @@ namespace LilFoots.EditorTools
         };
         static float HeightFor(string file)
         {
-            foreach (var (k, h) in HeightTable)
-                if (file.Contains(k)) return h;
+            foreach (var kv in HeightTable)
+                if (file.Contains(kv.Item1)) return kv.Item2;
             return 3.0f;
         }
         static readonly string[] Excluded = { "t_branch_L", "t_branch_R", "t_flag_gate", "_style_reference" };

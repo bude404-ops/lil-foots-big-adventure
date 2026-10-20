@@ -264,14 +264,20 @@ namespace LilFoots.EditorTools
                     break; }
                 return l; }
             if (c == '"') return ParseString(s, ref i);
-            if (s.StartsWith("true", i)) { i += 4; return true; }
-            if (s.StartsWith("false", i)) { i += 5; return false; }
-            if (s.StartsWith("null", i)) { i += 4; return null; }
+            if (StartsAt(s, i, "true")) { i += 4; return true; }
+            if (StartsAt(s, i, "false")) { i += 5; return false; }
+            if (StartsAt(s, i, "null")) { i += 4; return null; }
             int j = i;
             while (j < s.Length && (char.IsDigit(s[j]) || s[j]=='-' || s[j]=='+' || s[j]=='.' || s[j]=='e' || s[j]=='E')) j++;
             double num; double.TryParse(s.Substring(i, j - i), System.Globalization.NumberStyles.Float,
                                          System.Globalization.CultureInfo.InvariantCulture, out num);
             i = j; return num;
+        }
+        static bool StartsAt(string s, int i, string w)
+        {
+            if (s.Length - i < w.Length) return false;
+            for (int k = 0; k < w.Length; k++) if (s[i + k] != w[k]) return false;
+            return true;
         }
         static string ParseString(string s, ref int i)
         {
