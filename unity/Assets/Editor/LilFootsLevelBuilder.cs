@@ -260,6 +260,43 @@ public static class LilFootsLevelBuilder {
                 sr.color = new Color(dim, dim + 0.06f, dim + 0.03f, 1f);   // dimmed into its depth plane
             }
             Debug.Log("[LevelBuilder] setpieces placed: " + si);
+
+            // ---- [PROP PLACER Oct 20] re-place props BudE placed with the Prop Placer tool
+            // (sidecar <map>_props.json) so hand-decorating survives course rebuilds ----
+            try {
+                string propsPath = DataPath.Replace("_spine.json", "_props.json");
+                if (File.Exists(propsPath)) {
+                    var proot = MiniJson.Deserialize(File.ReadAllText(propsPath)) as System.Collections.Generic.Dictionary<string, object>;
+                    var plist = proot != null && proot.ContainsKey("props")
+                        ? proot["props"] as System.Collections.Generic.List<object>
+                        : null;
+                    int placed = 0;
+                    if (plist != null) {
+                        foreach (var po_ in plist) {
+                            var po = po_ as System.Collections.Generic.Dictionary<string, object>;
+                            if (po == null || !po.ContainsKey("file")) continue;
+                            var art = Art(po["file"].ToString());
+                            if (art == null) continue;
+                            var pgo = new GameObject("Prop_" + System.IO.Path.GetFileNameWithoutExtension(po["file"].ToString()));
+                            pgo.transform.SetParent(root.transform);
+                            pgo.transform.position = new Vector3(F(po["x"]), F(po["y"]), 0f);
+                            pgo.transform.rotation = Quaternion.Euler(0f, 0f, po.ContainsKey("rot") ? F(po["rot"]) : 0f);
+                            var psr = pgo.AddComponent<SpriteRenderer>();
+                            psr.sprite = art;
+                            psr.sortingOrder = po.ContainsKey("order") ? (int)F(po["order"]) : -58;
+                            float dimv = po.ContainsKey("dim") ? F(po["dim"]) : 0f;
+                            psr.color = dimv > 0.5f ? new Color(0.72f, 0.78f, 0.75f, 1f) : Color.white;
+                            var mp = pgo.AddComponent<LilFoots.LilFootsProp>();
+                            mp.file = po["file"].ToString();
+                            mp.order = psr.sortingOrder;
+                            mp.rot = po.ContainsKey("rot") ? F(po["rot"]) : 0f;
+                            mp.dim = dimv;
+                            placed++;
+                        }
+                    }
+                    Debug.Log("[LevelBuilder] prop placer props re-placed: " + placed);
+                }
+            } catch (System.Exception ex) { Debug.LogWarning("[LevelBuilder] prop sidecar skip: " + ex.Message); }
         }
 
         // ---- BUILD IDENTITY (BudE Sept 27 PM: 'only sends the fixed updated versions'):
