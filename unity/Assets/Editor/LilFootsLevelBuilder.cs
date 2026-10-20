@@ -210,10 +210,21 @@ public static class LilFootsLevelBuilder {
             int si = 0;
             foreach (var so in sps.Cast<System.Collections.Generic.Dictionary<string, object>>()) {
                 string type = so.ContainsKey("type") ? so["type"].ToString() : "cedar";
-                var sprite = LilFootsProcTiles.KitSprite(type == "cedar" ? "t_cedar_giant.png" : "t_rock_spine.png");
+                // Fern Hollow kit (r1_2): ferns/snags/logs join the cedar/rock sizing law.
+                // Every type maps to a kit prop; unknown types keep the rock fallback.
+                string spFile = "t_rock_spine.png";
+                if (type == "cedar") spFile = "t_cedar_giant.png";
+                else if (type == "fern") spFile = "fern_giant.png";
+                else if (type == "snag") spFile = "branch_fork_snag.png";
+                else if (type == "log") spFile = "log_hollow.png";
+                var sprite = LilFootsProcTiles.KitSprite(spFile);
                 if (sprite == null) continue;
                 float spx = F(so["x"]) / 100f, baseY = 2f * GY - F(so["base"]) / 100f;
-                float spH = type == "cedar" ? 6.5f : 4.0f;   // sizing law: cedar 6.5u, rock spine 4u
+                float spH = 4.0f;                              // sizing law: rock spine 4u
+                if (type == "cedar") spH = 6.5f;                  // cedar 6.5u
+                else if (type == "fern") spH = 5.5f;              // giant fern 5.5u
+                else if (type == "snag") spH = 6.0f;              // forked snag 6.0u (tall vertical piece)
+                else if (type == "log") spH = 2.2f;              // hollow log 2.2u
                 var go = new GameObject("Setpiece_" + type + "_" + (si++));
                 go.transform.SetParent(root.transform);
                 go.transform.position = new Vector3(spx, baseY + spH / 2f, 0);
